@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>生产管理 - 户外广告派单系统</title>
+<style>
+  :root {
+    --brand-primary: #6366f1;
+    --brand-primary-hover: #4f46e5;
+    --brand-primary-light: rgba(99,102,241,0.08);
+    --text-primary: #1e293b;
+    --text-secondary: #64748b;
+    --card-bg: #ffffff;
+    --bg-page: #f1f5f9;
+    --border: #e2e8f0;
+    --border-light: #f1f5f9;
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
+    --radius-md: 10px;
+    --radius-lg: 12px;
+    --green: #10b981;
+    --green-bg: #ecfdf5;
+    --blue: #3b82f6;
+    --blue-bg: #eff6ff;
+    --amber: #f59e0b;
+    --amber-bg: #fffbeb;
+    --red: #ef4444;
+    --red-bg: #fef2f2;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif; background: var(--bg-page); color: var(--text-primary); line-height:1.5; font-size:14px; }
+
+  .page { max-width:1400px; margin:0 auto; padding:20px; }
+
+  /* ===== 页面标题 ===== */
+  .page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+  }
+  .page-title { font-size: 22px; font-weight: 800; color: var(--text-primary); }
+  .page-title span { font-size: 14px; font-weight: 400; color: var(--text-secondary); margin-left: 8px; }
+  .page-actions { display: flex; gap: 8px; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 8px 16px; border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--card-bg);
+    color: var(--text-primary);
+    font-size: 13px; font-weight: 500;
+    cursor: pointer; transition: all 0.15s;
+  }
+  .btn:hover { border-color: var(--brand-primary); color: var(--brand-primary); }
+  .btn-primary { background: var(--brand-primary); color: #fff; border-color: var(--brand-primary); }
+  .btn-primary:hover { background: var(--brand-primary-hover); }
+
+  /* ===== 统计卡片 ===== */
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .stat-card {
+    background: var(--card-bg);
+    border-radius: var(--radius-lg);
+    padding: 16px 20px;
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-sm);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .stat-card:hover {
+    border-color: var(--brand-primary);
+    box-shadow: 0 2px 8px rgba(99,102,241,0.12);
+    transform: translateY(-1px);
+  }
+  .stat-card.active {
+    border-color: var(--brand-primary);
+    background: var(--brand-primary-light);
+  }
+  .stat-icon {
+    width: 42px; height: 42px;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 20px; flex-shrink: 0;
+  }
+  .stat-icon.producing { background: var(--blue); }
+  .stat-icon.checking { background: var(--amber); }
+  .stat-icon.installing { background: var(--green); }
+  .stat-icon.total { background: #64748b; }
+  .stat-info { flex: 1; }
+  .stat-value { font-size: 24px; font-weight: 800; color: var(--text-primary); }
+  .stat-label { font-size: 12px; color: var(--text-secondary); font-weight: 500; }
+
+  /* ===== 筛选栏 ===== */
+  .filter-bar {
+    background: var(--card-bg);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-sm);
+    padding: 14px 20px;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .search-input {
+    flex: 1;
+    max-width: 300px;
+    padding: 8px 12px 8px 34px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 13px;
+    background: var(--card-bg) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 15-5.2-5.2'/%3E%3C/svg%3E") no-repeat 10px center;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .search-input:focus { border-color: var(--brand-primary); }
+  .filter-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+  .chip {
+    padding: 6px 14px;
+    border-radius: 99px;
+    border: 1px solid var(--border);
+    background: var(--card-bg);
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.15s;
+    user-select: none;
+  }
+  .chip:hover { border-color: var(--brand-primary); color: var(--brand-primary); }
+  .chip.active {
+    background: var(--brand-primary);
+    border-color: var(--brand-primary);
+    color: #fff;
+  }
+  .chip .chip-count {
+    display: inline-block;
+    background: rgba(0,0,0,0.08);
+    padding: 0 5px;
+    border-radius: 99px;
+    font-size: 10px;
+    margin-left: 4px;
+  }
+  .chip.active .chip-count { background: rgba(255,255,255,0.3); }
+
+  /* ===== 任务卡片列表 ===== */
+  .task-list { display: flex; flex-direction: column; gap: 10px; }
+  .task-card {
+    background: var(--card-bg);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-sm);
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    transition: all 0.2s;
+    cursor: pointer;
+  }
+  .task-card:hover {
+    border-color: var(--brand-primary);
+    box-shadow: 0 2px 8px rgba(99,102,241,0.12);
+    transform: translateX(4px);
+  }
+  .task-status {
+    width: 4px;
+    height: 100%;
+    min-height: 56px;
+    border-radius: 2px;
+    flex-shrink: 0;
+    align-self: stretch;
+  }
+  .task-status.producing { background: var(--blue); }
+  .task-status.checking { background: var(--amber); }
+  .task-status.done { background: var(--green); }
+
+  .task-info { flex: 1; min-width: 0; }
+  .task-top {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 6px;
+  }
+  .task-order-no {
+    font-family: 'SF Mono', Monaco, monospace;
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--text-primary);
+  }
+  .task-status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 10px;
+    border-radius: 99px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .task-status-badge.producing { background: var(--blue-bg); color: var(--blue); }
+  .task-status-badge.checking { background: var(--amber-bg); color: var(--amber); }
+  .task-status-badge.done { background: var(--green-bg); color: var(--green); }
+  .task-status-dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
+  .task-status-badge.producing .task-status-dot { background: var(--blue); }
+  .task-status-badge.checking .task-status-dot { background: var(--amber); }
+  .task-status-badge.done .task-status-dot { background: var(--green); }
+
+  .task-meta {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    font-size: 13px;
+    color: var(--text-secondary);
+    flex-wrap: wrap;
+  }
+  .task-meta-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+  }
+  .task-meta-item svg { width: 14px; height: 14px; flex-shrink: 0; opacity: 0.6; }
+  .task-meta-item strong { color: var(--text-primary); font-weight: 600; }
+
+  .task-progress {
+    margin-top: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .progress-bar {
+    flex: 1;
+    max-width: 200px;
+    height: 6px;
+    background: var(--bg-page);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.3s;
+  }
+  .progress-fill.blue { background: var(--blue); }
+  .progress-fill.amber { background: var(--amber); }
+  .progress-fill.green { background: var(--green); }
+  .progress-text { font-size: 11px; color: var(--text-secondary); font-weight: 600; min-width: 32px; }
+
+  .task-actions {
+    display: flex;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+  .task-btn {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 6px 12px; border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--card-bg);
+    color: var(--text-secondary);
+    font-size: 12px; font-weight: 500;
+    cursor: pointer; transition: all 0.15s;
+    text-decoration: none;
+  }
+  .task-btn:hover { border-color: var(--brand-primary); color: var(--brand-primary); }
+  .task-btn.primary { background: var(--blue); color: #fff; border-color: var(--blue); }
+  .task-btn.primary:hover { background: #2563eb; }
+  .task-btn.success { background: var(--amber); color: #fff; border-color: var(--amber); }
+  .task-btn.success:hover { background: #d97706; }
+
+  .task-side {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+  .task-materials { font-size: 12px; color: var(--text-secondary); }
+  .task-materials strong { color: var(--text-primary); font-weight: 700; font-size: 18px; }
+  .task-area { font-size: 11px; color: var(--brand-primary); font-weight: 600; }
+  .task-producer { font-size: 11px; color: var(--text-secondary); }
+
+  /* ===== 分页 ===== */
+  .pagination-wrapper {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 4px;
+    margin-top: 20px;
+    padding: 16px 0;
+  }
+  .page-btn {
+    width: 36px; height: 36px;
+    display: flex; align-items: center; justify-content: center;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--card-bg);
+    color: var(--text-secondary);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .page-btn:hover { border-color: var(--brand-primary); color: var(--brand-primary); }
+  .page-btn.active { background: var(--brand-primary); color: #fff; border-color: var(--brand-primary); }
+  .page-btn:disabled { opacity: 0.4; cursor: default; }
+  .page-info { font-size: 12px; color: var(--text-secondary); margin: 0 8px; }
+
+  /* 响应式 */
+  @media (max-width: 900px) {
+    .stats-row { grid-template-columns: repeat(2, 1fr); }
+    .task-card { flex-wrap: wrap; }
+    .task-side { width: 100%; flex-direction: row; justify-content: space-between; }
+    .task-actions { width: 100%; justify-content: flex-end; }
+  }
+  @media (max-width: 600px) {
+    .stats-row { grid-template-columns: 1fr 1fr; }
+    .filter-bar { flex-direction: column; align-items: stretch; }
+    .search-input { max-width: 100%; }
+    .filter-chips { overflow-x: auto; }
+    .task-meta { flex-direction: column; gap: 4px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="page">
+  <!-- 页面标题 -->
+  <div class="page-header">
+    <div class="page-title">
+      生产管理
+      <span>生产进度与核对</span>
+    </div>
+    <div class="page-actions">
+      <button class="btn">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 109-9 9.75 9.75 0 00-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+        刷新
+      </button>
+    </div>
+  </div>
+
+  <!-- 统计卡片 -->
+  <div class="stats-row">
+    <div class="stat-card active">
+      <div class="stat-icon total">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"/></svg>
+      </div>
+      <div class="stat-info">
+        <div class="stat-value">35</div>
+        <div class="stat-label">全部任务</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon producing">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9c.26.604.852.997 1.51 1H21a2 2 0 010 4h-.09c-.658.003-1.25.396-1.51 1z"/></svg>
+      </div>
+      <div class="stat-info">
+        <div class="stat-value">15</div>
+        <div class="stat-label">生产中</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon checking">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+      </div>
+      <div class="stat-info">
+        <div class="stat-value">3</div>
+        <div class="stat-label">待核对</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon installing">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+      </div>
+      <div class="stat-info">
+        <div class="stat-value">17</div>
+        <div class="stat-label">已交付安装</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 筛选栏 -->
+  <div class="filter-bar">
+    <input type="text" class="search-input" placeholder="搜索订单编号、客户...">
+    <div class="filter-chips">
+      <span class="chip active">全部 <span class="chip-count">35</span></span>
+      <span class="chip">生产中 <span class="chip-count">15</span></span>
+      <span class="chip">待核对 <span class="chip-count">3</span></span>
+      <span class="chip">已交付 <span class="chip-count">17</span></span>
+    </div>
+  </div>
+
+  <!-- 任务列表 -->
+  <div class="task-list">
+    <!-- 待核对 - 高优先级 -->
+    <div class="task-card">
+      <div class="task-status checking"></div>
+      <div class="task-info">
+        <div class="task-top">
+          <span class="task-order-no">GD-DL-01-2604-0001</span>
+          <span class="task-status-badge checking">
+            <span class="task-status-dot"></span>
+            待核对
+          </span>
+        </div>
+        <div class="task-meta">
+          <span class="task-meta-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            <strong>张三</strong> · 13800138000
+          </span>
+          <span class="task-meta-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            广州市天河区天河路888号商铺
+          </span>
+        </div>
+        <div class="task-progress">
+          <div class="progress-bar"><div class="progress-fill amber" style="width:100%"></div></div>
+          <span class="progress-text">100%</span>
+          <span style="font-size:11px;color:var(--text-secondary);">生产完成，等待核对</span>
+        </div>
+      </div>
+      <div class="task-side">
+        <div class="task-materials"><strong>6</strong> 面</div>
+        <div class="task-area">18.50㎡</div>
+        <div class="task-producer">生产员：李生产</div>
+      </div>
+      <div class="task-actions">
+        <button class="task-btn" onclick="event.stopPropagation();">详情</button>
+        <button class="task-btn success" onclick="event.stopPropagation();">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+          核对
+        </button>
+      </div>
+    </div>
+
+    <!-- 生产中 - 高进度 -->
+    <div class="task-card">
+      <div class="task-status producing"></div>
+      <div class="task-info">
+        <div class="task-top">
+          <span class="task-order-no">GD-DL-02-2604-0005</span>
+          <span class="task-status-badge producing">
+            <span class="task-status-dot"></span>
+            生产中
+          </span>
+        </div>
+        <div class="task-meta">
+          <span class="task-meta-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            <strong>李老板</strong> · 13900139000
+          </span>
+          <span class="task-meta-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            广州市越秀区中山五路68号
+          </span>
+        </div>
+        <div class="task-progress">
+          <div class="progress-bar"><div class="progress-fill blue" style="width:83%"></div></div>
+          <span class="progress-text">83%</span>
+          <span style="font-size:11px;color:var(--text-secondary);">5/6 面已完成</span>
+        </div>
+      </div>
+      <div class="task-side">
+        <div class="task-materials"><strong>6</strong> 面</div>
+        <div class="task-area">24.00㎡</div>
+        <div class="task-producer">生产员：王制作</div>
+      </div>
+      <div class="task-actions">
+        <button class="task-btn" onclick="event.stopPropagation();">详情</button>
+        <button class="task-btn primary" onclick="event.stopPropagation();">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+          完成生产
+        </button>
+      </div>
+    </div>
+
+    <div class="task-card">
+      <div class="task-status producing"></div>
+      <div class="task-info">
+        <div class="task-top">
+          <span class="task-order-no">GD-DL-03-2604-0007</span>
+          <span class="task-status-badge producing">
+            <span class="task-status-dot"></span>
+            生产中
+          </span>
+        </div>
+        <div class="task-meta">
+          <span class="task-meta-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            <strong>赵小姐</strong> · 13600136000
+          </span>
+          <span class="task-meta-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            广州市海珠区新港中路397号
+          </span>
+        </div>
+        <div class="task-progress">
+          <div class="progress-bar"><div class="progress-fill blue" style="width:50%"></div></div>
+          <span class="progress-text">50%</span>
+          <span style="font-size:11px;color:var(--text-secondary);">2/4 面已完成</span>
+        </div>
+      </div>
+      <div class="task-side">
+        <div class="task-materials"><strong>4</strong> 面</div>
+        <div class="task-area">12.00㎡</div>
+        <div class="task-producer">生产员：李生产</div>
+      </div>
+      <div class="task-actions">
+        <button class="task-btn" onclick="event.stopPropagation();">详情</button>
+        <button class="task-btn primary" onclick="event.stopPropagation();">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+          完成生产
+        </button>
+      </div>
+    </div>
+
+    <div class="task-card">
+      <div class="task-status producing"></div>
+      <div class="task-info">
+        <div class="task-top">
+          <span class="task-order-no">GD-DL-01-2604-0003</span>
+          <span class="task-status-badge producing">
+            <span class="task-status-dot"></span>
+            生产中
+          </span>
+        </div>
+        <div class="task-meta">
+          <span class="task-meta-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            <strong>陈先生</strong> · 13700137000
+          </span>
+          <span class="task-meta-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            广州市白云区机场路150号
+          </span>
+        </div>
+        <div class="task-progress">
+          <div class="progress-bar"><div class="progress-fill blue" style="width:25%"></div></div>
+          <span class="progress-text">25%</span>
+          <span style="font-size:11px;color:var(--text-secondary);">1/4 面已完成</span>
+        </div>
+      </div>
+      <div class="task-side">
+        <div class="task-materials"><strong>4</strong> 面</div>
+        <div class="task-area">8.60㎡</div>
+        <div class="task-producer">生产员：王制作</div>
+      </div>
+      <div class="task-actions">
+        <button class="task-btn" onclick="event.stopPropagation();">详情</button>
+        <button class="task-btn primary" onclick="event.stopPropagation();">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+          完成生产
+        </button>
+      </div>
+    </div>
+
+    <!-- 已交付 -->
+    <div class="task-card" style="opacity:0.75;">
+      <div class="task-status done"></div>
+      <div class="task-info">
+        <div class="task-top">
+          <span class="task-order-no">GD-DL-01-2603-0028</span>
+          <span class="task-status-badge done">
+            <span class="task-status-dot"></span>
+            已交付安装
+          </span>
+        </div>
+        <div class="task-meta">
+          <span class="task-meta-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            <strong>周女士</strong> · 13500135000
+          </span>
+          <span class="task-meta-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            广州市荔湾区上下九路88号
+          </span>
+        </div>
+        <div class="task-progress">
+          <div class="progress-bar"><div class="progress-fill green" style="width:100%"></div></div>
+          <span class="progress-text">100%</span>
+          <span style="font-size:11px;color:var(--text-secondary);">生产完成 · 已交付安装 · 04-08</span>
+        </div>
+      </div>
+      <div class="task-side">
+        <div class="task-materials"><strong>3</strong> 面</div>
+        <div class="task-area">6.80㎡</div>
+        <div class="task-producer">生产员：李生产</div>
+      </div>
+      <div class="task-actions">
+        <button class="task-btn" onclick="event.stopPropagation();">查看详情</button>
+      </div>
+    </div>
+
+    <div class="task-card" style="opacity:0.75;">
+      <div class="task-status done"></div>
+      <div class="task-info">
+        <div class="task-top">
+          <span class="task-order-no">GD-DL-02-2603-0020</span>
+          <span class="task-status-badge done">
+            <span class="task-status-dot"></span>
+            已交付安装
+          </span>
+        </div>
+        <div class="task-meta">
+          <span class="task-meta-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            <strong>刘总</strong> · 13300133000
+          </span>
+          <span class="task-meta-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            广州市番禺区市桥大北路100号
+          </span>
+        </div>
+        <div class="task-progress">
+          <div class="progress-bar"><div class="progress-fill green" style="width:100%"></div></div>
+          <span class="progress-text">100%</span>
+          <span style="font-size:11px;color:var(--text-secondary);">生产完成 · 已交付安装 · 04-06</span>
+        </div>
+      </div>
+      <div class="task-side">
+        <div class="task-materials"><strong>5</strong> 面</div>
+        <div class="task-area">15.20㎡</div>
+        <div class="task-producer">生产员：王制作</div>
+      </div>
+      <div class="task-actions">
+        <button class="task-btn" onclick="event.stopPropagation();">查看详情</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 分页 -->
+  <div class="pagination-wrapper">
+    <button class="page-btn" disabled>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+    </button>
+    <button class="page-btn active">1</button>
+    <button class="page-btn">2</button>
+    <button class="page-btn">3</button>
+    <span class="page-info">...</span>
+    <button class="page-btn">6</button>
+    <button class="page-btn">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+    </button>
+    <span class="page-info">共 35 条</span>
+  </div>
+</div>
+
+<script>
+function filterChip(el) {
+  document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+  document.querySelectorAll('.stat-card').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+}
+</script>
+
+</body>
+</html>

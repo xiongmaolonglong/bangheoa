@@ -1,0 +1,242 @@
+- generic [ref=e3]:
+  - navigation [ref=e4]:
+    - generic [ref=e5] [cursor=pointer]:
+      - img [ref=e6]
+      - generic [ref=e9]: 派单系统
+    - generic [ref=e10]:
+      - generic [ref=e11] [cursor=pointer]:
+        - img [ref=e13]
+        - generic [ref=e15]: 订单
+      - generic [ref=e16] [cursor=pointer]:
+        - img [ref=e18]
+        - generic [ref=e21]: 设计
+      - generic [ref=e22] [cursor=pointer]:
+        - img [ref=e24]
+        - generic [ref=e26]: 生产
+      - generic [ref=e27] [cursor=pointer]:
+        - img [ref=e29]
+        - generic [ref=e31]: 安装
+      - generic [ref=e32] [cursor=pointer]:
+        - img [ref=e34]
+        - generic [ref=e36]: 统计
+      - generic [ref=e37] [cursor=pointer]:
+        - img [ref=e39]
+        - generic [ref=e41]: 客户
+      - generic [ref=e42] [cursor=pointer]:
+        - img [ref=e44]
+        - generic [ref=e47]: 地图
+      - generic [ref=e48] [cursor=pointer]:
+        - img [ref=e50]
+        - generic [ref=e52]: 设置
+    - generic [ref=e53]:
+      - button [ref=e54] [cursor=pointer]
+      - button [ref=e56] [cursor=pointer]:
+        - img [ref=e59]
+      - button "a admin" [ref=e64] [cursor=pointer]:
+        - generic [ref=e65]: a
+        - generic [ref=e66]: admin
+        - img [ref=e68]
+  - generic [ref=e70]:
+    - complementary [ref=e71]:
+      - generic [ref=e73]: 订单
+      - menubar [ref=e74]:
+        - menuitem "全部订单" [ref=e75] [cursor=pointer]
+        - menuitem "待审核" [ref=e76] [cursor=pointer]
+        - menuitem "归档管理" [ref=e77] [cursor=pointer]
+    - generic [ref=e78]:
+      - generic [ref=e82] [cursor=pointer]: 首页
+      - main [ref=e83]:
+        - generic [ref=e84]:
+          - generic [ref=e85]:
+            - generic [ref=e86]: 订单管理 全部订单与流程跟踪
+            - generic [ref=e87]:
+              - button "导出" [ref=e88] [cursor=pointer]:
+                - generic [ref=e89]:
+                  - img [ref=e91]
+                  - text: 导出
+              - button "新建订单" [ref=e93] [cursor=pointer]:
+                - generic [ref=e94]:
+                  - img [ref=e96]
+                  - text: 新建订单
+          - generic [ref=e98]:
+            - generic [ref=e99] [cursor=pointer]:
+              - img [ref=e102]
+              - generic [ref=e104]:
+                - generic [ref=e105]: "3"
+                - generic [ref=e106]: 全部订单
+            - generic [ref=e107] [cursor=pointer]:
+              - img [ref=e110]
+              - generic [ref=e114]:
+                - generic [ref=e115]: "0"
+                - generic [ref=e116]: 待审核
+            - generic [ref=e117] [cursor=pointer]:
+              - img [ref=e120]
+              - generic [ref=e122]:
+                - generic [ref=e123]: "2"
+                - generic [ref=e124]: 设计中
+            - generic [ref=e125] [cursor=pointer]:
+              - img [ref=e128]
+              - generic [ref=e130]:
+                - generic [ref=e131]: "1"
+                - generic [ref=e132]: 生产中
+            - generic [ref=e133] [cursor=pointer]:
+              - img [ref=e136]
+              - generic [ref=e138]:
+                - generic [ref=e139]: "0"
+                - generic [ref=e140]: 安装中
+          - generic [ref=e141]:
+            - generic [ref=e142]: 流程
+            - generic [ref=e143]:
+              - generic [ref=e145]: 待审核
+              - generic [ref=e146]: "0"
+            - generic [ref=e147]: →
+            - generic [ref=e148]:
+              - generic [ref=e150]: 设计中
+              - generic [ref=e151]: "2"
+            - generic [ref=e152]: →
+            - generic [ref=e153]:
+              - generic [ref=e155]: 生产中
+              - generic [ref=e156]: "1"
+            - generic [ref=e157]: →
+            - generic [ref=e158]:
+              - generic [ref=e160]: 安装中
+              - generic [ref=e161]: "0"
+            - generic [ref=e162]: →
+            - generic [ref=e163]:
+              - generic [ref=e165]: 已归档
+              - generic [ref=e166]: "0"
+          - generic [ref=e167]:
+            - generic [ref=e168]:
+              - generic [ref=e169]: 本月面积
+              - generic [ref=e170]: "129.44"
+              - generic [ref=e171]: ㎡
+            - generic [ref=e172]:
+              - generic [ref=e173]: 本年面积
+              - generic [ref=e174]: "129.44"
+              - generic [ref=e175]: ㎡
+          - generic [ref=e176]:
+            - textbox "搜索订单号/客户/标题..." [ref=e177]
+            - generic [ref=e178]:
+              - generic [ref=e179] [cursor=pointer]:
+                - text: 全部
+                - generic [ref=e180]: "3"
+              - generic [ref=e181] [cursor=pointer]:
+                - text: 待审核
+                - generic [ref=e182]: "0"
+              - generic [ref=e183] [cursor=pointer]:
+                - text: 设计中
+                - generic [ref=e184]: "2"
+              - generic [ref=e185] [cursor=pointer]:
+                - text: 生产中
+                - generic [ref=e186]: "1"
+              - generic [ref=e187] [cursor=pointer]:
+                - text: 安装中
+                - generic [ref=e188]: "0"
+          - generic [ref=e189]:
+            - generic [ref=e190] [cursor=pointer]:
+              - generic [ref=e192]:
+                - generic [ref=e193]:
+                  - generic [ref=e194]: GD-DL-01-2604-0013
+                  - generic [ref=e195]: 设计中
+                - generic [ref=e197]:
+                  - generic [ref=e198]:
+                    - img [ref=e200]
+                    - strong [ref=e202]: 大好河山
+                  - generic [ref=e203]:
+                    - img [ref=e205]
+                    - text: "-"
+                - generic [ref=e208]:
+                  - generic [ref=e209]: 门头招牌
+                  - generic [ref=e210]: 软膜灯箱
+                  - generic [ref=e211]: 0.0㎡
+                  - generic [ref=e212]: 广东省-大沥区-01
+                  - generic [ref=e213]: 04-10 16:56
+                  - generic [ref=e214]: 已耗时 6h
+              - generic [ref=e215]:
+                - generic [ref=e216]:
+                  - text: 设计师：
+                  - strong [ref=e217]: 系统管理员
+                - generic [ref=e218]: 已耗时 6h
+              - generic [ref=e219]:
+                - button "详情" [ref=e220]:
+                  - generic [ref=e221]: 详情
+                - button "设计" [ref=e222]:
+                  - generic [ref=e223]: 设计
+                - button "编辑" [ref=e224]:
+                  - generic [ref=e225]: 编辑
+            - generic [ref=e226] [cursor=pointer]:
+              - generic [ref=e228]:
+                - generic [ref=e229]:
+                  - generic [ref=e230]: GD-DL-01-2604-0012
+                  - generic [ref=e231]: 设计中
+                - generic [ref=e233]:
+                  - generic [ref=e234]:
+                    - img [ref=e236]
+                    - strong [ref=e238]: 呜呜呜呜
+                  - generic [ref=e239]:
+                    - img [ref=e241]
+                    - text: "-"
+                - generic [ref=e244]:
+                  - generic [ref=e245]: 门头招牌
+                  - generic [ref=e246]: 0.0㎡
+                  - generic [ref=e247]: 广东省-大沥区-01
+                  - generic [ref=e248]: 04-09 16:09
+                  - generic [ref=e249]: 已耗时 1d
+              - generic [ref=e250]:
+                - generic [ref=e251]:
+                  - text: 设计师：
+                  - strong [ref=e252]: 系统管理员
+                - generic [ref=e253]: 已耗时 1d
+              - generic [ref=e254]:
+                - button "详情" [ref=e255]:
+                  - generic [ref=e256]: 详情
+                - button "设计" [ref=e257]:
+                  - generic [ref=e258]: 设计
+                - button "编辑" [ref=e259]:
+                  - generic [ref=e260]: 编辑
+            - generic [ref=e261] [cursor=pointer]:
+              - generic [ref=e263]:
+                - generic [ref=e264]:
+                  - generic [ref=e265]: GD-DL-01-2604-0011
+                  - generic [ref=e266]: 生产中
+                - generic [ref=e268]:
+                  - generic [ref=e269]:
+                    - img [ref=e271]
+                    - strong [ref=e273]: 再来测试一次
+                  - generic [ref=e274]:
+                    - img [ref=e276]
+                    - text: "-"
+                - generic [ref=e279]:
+                  - generic [ref=e280]: 门头招牌
+                  - generic [ref=e281]: 0.0㎡
+                  - generic [ref=e282]: 广东省-大沥区-01
+                  - generic [ref=e283]: 04-09 10:29
+              - generic [ref=e284]:
+                - generic [ref=e285]:
+                  - text: 生产员：
+                  - strong [ref=e286]: 待分配
+                - generic [ref=e287]: 已耗时 1d
+              - generic [ref=e288]:
+                - button "详情" [ref=e289]:
+                  - generic [ref=e290]: 详情
+                - button "编辑" [ref=e291]:
+                  - generic [ref=e292]: 编辑
+          - generic [ref=e294]:
+            - generic [ref=e295]: 共 3 条
+            - generic [ref=e298] [cursor=pointer]:
+              - generic:
+                - combobox [ref=e300]
+                - generic [ref=e301]: 20条/页
+              - img [ref=e304]
+            - button "上一页" [disabled] [ref=e306]:
+              - generic:
+                - img
+            - list [ref=e307]:
+              - listitem "第 1 页" [ref=e308]: "1"
+            - button "下一页" [disabled] [ref=e309]:
+              - generic:
+                - img
+            - generic [ref=e310]:
+              - generic [ref=e311]: 前往
+              - spinbutton "页" [ref=e314]: "1"
+              - generic [ref=e315]: 页

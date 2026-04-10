@@ -1,0 +1,4 @@
+-dontwarn com.google.android.gms.location.**
+-keepattributes *Annotation*, Signature
+-keep class com.adtrack.tracker.network.** { *; }
+-keep class com.google.gson.** { *; }

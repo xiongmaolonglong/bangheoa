@@ -1,0 +1,14 @@
+{
+  "string": [
+    { "name": "app_name", "value": "户外广告外勤" },
+    { "name": "module_desc", "value": "户外广告测量安装派单系统外勤端" },
+    { "name": "EntryAbility_desc", "value": "外勤作业入口" },
+    { "name": "EntryAbility_label", "value": "户外广告外勤" },
+    { "name": "permission_internet", "value": "用于连接后端服务器" },
+    { "name": "permission_location", "value": "用于测量和安装定位" },
+    { "name": "permission_location_bg", "value": "用于外勤期间后台定位追踪" },
+    { "name": "permission_camera", "value": "用于拍摄现场照片" },
+    { "name": "permission_media", "value": "用于读取和保存现场照片" },
+    { "name": "start_background", "value": "#FFFFFF" }
+  ]
+}

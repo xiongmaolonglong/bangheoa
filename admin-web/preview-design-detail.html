@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>设计方案 - 户外广告派单系统</title>
+<style>
+  :root {
+    --brand-primary: #6366f1;
+    --brand-primary-hover: #4f46e5;
+    --brand-primary-light: rgba(99,102,241,0.08);
+    --brand-primary-border: rgba(99,102,241,0.2);
+    --text-primary: #1e293b;
+    --text-secondary: #64748b;
+    --text-tertiary: #94a3b8;
+    --card-bg: #ffffff;
+    --bg-page: #f1f5f9;
+    --bg-tertiary: #f8fafc;
+    --border: #e2e8f0;
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 12px;
+    --purple: #8b5cf6;
+    --purple-bg: #f5f3ff;
+    --blue: #3b82f6;
+    --blue-bg: #eff6ff;
+    --amber: #f59e0b;
+    --amber-bg: #fffbeb;
+    --green: #10b981;
+    --green-bg: #ecfdf5;
+    --red: #ef4444;
+    --red-bg: #fef2f2;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif; background: var(--bg-page); color: var(--text-primary); line-height:1.5; font-size:14px; }
+
+  .page { max-width:1600px; margin:0 auto; padding:20px; }
+
+  /* ===== 顶部导航 ===== */
+  .top-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .back-btn {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 6px 12px; border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--card-bg);
+    color: var(--text-secondary);
+    font-size: 13px; font-weight: 500;
+    cursor: pointer; transition: all 0.15s;
+    text-decoration: none;
+  }
+  .back-btn:hover { border-color: var(--brand-primary); color: var(--brand-primary); }
+  .order-header {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .order-no { font-family: 'SF Mono', Monaco, monospace; font-weight: 700; font-size: 16px; color: var(--text-primary); }
+  .status-badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 3px 10px; border-radius: 99px;
+    font-size: 12px; font-weight: 600;
+  }
+  .status-badge.designing { background: var(--brand-primary-light); color: var(--brand-primary); }
+  .status-badge.review { background: var(--amber-bg); color: var(--amber); }
+  .status-badge.done { background: var(--green-bg); color: var(--green); }
+  .status-dot { width: 6px; height: 6px; border-radius: 50%; }
+  .status-badge.designing .status-dot { background: var(--brand-primary); }
+  .status-badge.review .status-dot { background: var(--amber); }
+  .status-badge.done .status-dot { background: var(--green); }
+  .top-actions { display: flex; gap: 8px; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 8px 16px; border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--card-bg);
+    color: var(--text-primary);
+    font-size: 13px; font-weight: 500;
+    cursor: pointer; transition: all 0.15s;
+  }
+  .btn:hover { border-color: var(--brand-primary); color: var(--brand-primary); }
+  .btn-primary { background: var(--brand-primary); color: #fff; border-color: var(--brand-primary); }
+  .btn-primary:hover { background: var(--brand-primary-hover); }
+  .btn-success { background: var(--green); color: #fff; border-color: var(--green); }
+  .btn-success:hover { background: #059669; }
+
+  /* ===== 主布局 ===== */
+  .main-layout {
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    gap: 20px;
+    align-items: start;
+  }
+
+  /* ===== 左侧信息面板 ===== */
+  .info-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    position: sticky;
+    top: 20px;
+  }
+  .info-card {
+    background: var(--card-bg);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+  }
+  .info-card-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-tertiary);
+  }
+  .info-card-header svg { width: 16px; height: 16px; color: var(--text-secondary); }
+  .info-card-header h4 { font-size: 13px; font-weight: 600; color: var(--text-primary); }
+  .info-card-body { padding: 14px 16px; }
+
+  .info-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 6px 0;
+    font-size: 13px;
+  }
+  .info-row + .info-row { border-top: 1px solid var(--border-light); }
+  .info-label { color: var(--text-secondary); white-space: nowrap; }
+  .info-value { color: var(--text-primary); font-weight: 500; text-align: right; max-width: 180px; word-break: break-all; }
+  .info-value.mono { font-family: 'SF Mono', Monaco, monospace; font-size: 12px; }
+
+  /* 类型统计 */
+  .type-stats {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+  .type-stat {
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-md);
+    padding: 12px;
+    text-align: center;
+  }
+  .type-stat-value { font-size: 22px; font-weight: 800; color: var(--text-primary); line-height: 1; }
+  .type-stat-label { font-size: 11px; color: var(--text-secondary); margin-top: 4px; }
+
+  /* 备注 */
+  .remark-box {
+    width: 100%;
+    min-height: 80px;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    font-size: 13px;
+    font-family: inherit;
+    resize: vertical;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .remark-box:focus { border-color: var(--brand-primary); }
+
+  /* CDR文件 */
+  .cdr-file {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    background: var(--green-bg);
+    border-radius: var(--radius-md);
+  }
+  .cdr-icon { width: 32px; height: 32px; background: var(--green); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 12px; font-weight: 700; }
+  .cdr-name { flex: 1; font-size: 12px; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  /* ===== 右侧设计区 ===== */
+  .design-area {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  /* 类型分组折叠 */
+  .type-group {
+    background: var(--card-bg);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+  }
+  .type-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px;
+    background: var(--bg-tertiary);
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .type-header:hover { background: #eef2f7; }
+  .type-header-left { display: flex; align-items: center; gap: 10px; }
+  .type-chevron { width: 16px; height: 16px; color: var(--text-secondary); transition: transform 0.2s; }
+  .type-chevron.open { transform: rotate(90deg); }
+  .type-name { font-size: 15px; font-weight: 700; color: var(--text-primary); }
+  .type-header-right { display: flex; align-items: center; gap: 10px; }
+  .type-badge { font-size: 11px; padding: 2px 8px; border-radius: 99px; background: var(--bg-page); color: var(--text-secondary); font-weight: 500; }
+  .type-area { font-size: 11px; color: var(--brand-primary); font-weight: 600; }
+
+  .type-body { padding: 16px; }
+
+  /* 设计资料 */
+  .design-data {
+    margin-bottom: 16px;
+    background: var(--brand-primary-light);
+    border: 1px solid var(--brand-primary-border);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+  }
+  .data-header {
+    padding: 8px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--brand-primary);
+    background: rgba(99,102,241,0.05);
+  }
+  .data-items { padding: 8px; display: flex; flex-direction: column; gap: 4px; }
+  .data-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 6px 10px; border-radius: var(--radius-sm);
+    cursor: pointer; transition: background 0.15s;
+  }
+  .data-item:hover { background: rgba(99,102,241,0.1); }
+  .data-name { flex: 1; font-size: 12px; font-weight: 500; color: var(--text-primary); font-family: 'SF Mono', Monaco, monospace; }
+  .data-face { font-size: 11px; color: var(--text-tertiary); }
+
+  /* 面卡片网格 */
+  .faces-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 12px;
+  }
+  .face-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    transition: all 0.2s;
+  }
+  .face-card:hover { border-color: var(--brand-primary-border); box-shadow: 0 2px 8px rgba(99,102,241,0.08); }
+  .face-card.merged { border-color: var(--brand-primary-border); }
+
+  .face-card-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    background: var(--bg-tertiary);
+    border-bottom: 1px solid var(--border);
+  }
+  .face-card-name { flex: 1; font-size: 13px; font-weight: 600; color: var(--text-primary); }
+  .face-card-size { font-size: 11px; color: var(--text-tertiary); font-family: 'SF Mono', Monaco, monospace; }
+
+  .face-card-body { padding: 12px 14px; }
+
+  .photo-compare {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+  .photo-slot {
+    flex: 1;
+    position: relative;
+  }
+  .photo-slot-label {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    padding: 3px 6px;
+    font-size: 10px;
+    font-weight: 600;
+    text-align: center;
+    z-index: 1;
+  }
+  .photo-slot-label.measure { background: rgba(0,0,0,0.6); color: #fff; }
+  .photo-slot-label.design { background: var(--brand-primary); color: #fff; }
+
+  .photo-img {
+    width: 100%;
+    height: 120px;
+    object-fit: cover;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    background: var(--bg-tertiary);
+  }
+  .photo-placeholder {
+    width: 100%;
+    height: 120px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    border: 2px dashed var(--brand-primary-border);
+    border-radius: var(--radius-sm);
+    color: var(--brand-primary);
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .photo-placeholder:hover { background: var(--brand-primary-light); }
+  .photo-placeholder svg { width: 20px; height: 20px; }
+
+  .face-remark {
+    display: flex;
+    gap: 8px;
+    padding: 8px 10px;
+    background: var(--amber-bg);
+    border: 1px solid rgba(245,158,11,0.15);
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+  }
+  .face-remark-label { color: #d97706; font-weight: 500; white-space: nowrap; }
+  .face-remark-text { color: var(--text-secondary); word-break: break-all; }
+
+  /* 合并组 */
+  .merged-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .merged-photos {
+    display: flex;
+    gap: 8px;
+  }
+  .merged-photos .photo-slot { flex: 1; }
+
+  /* 响应式 */
+  @media (max-width: 1024px) {
+    .main-layout { grid-template-columns: 1fr; }
+    .info-panel { position: static; }
+  }
+  @media (max-width: 600px) {
+    .faces-grid { grid-template-columns: 1fr; }
+    .type-stats { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="page">
+  <!-- 顶部导航 -->
+  <div class="top-bar">
+    <a class="back-btn" href="#">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+      返回列表
+    </a>
+    <div class="order-header">
+      <span class="order-no">GD-DL-02-2604-0006</span>
+      <span class="status-badge designing">
+        <span class="status-dot"></span>
+        设计中
+      </span>
+    </div>
+    <div class="top-actions">
+      <button class="btn btn-success">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+        提交方案
+      </button>
+    </div>
+  </div>
+
+  <!-- 主布局 -->
+  <div class="main-layout">
+    <!-- 左侧信息面板 -->
+    <div class="info-panel">
+      <!-- 订单信息 -->
+      <div class="info-card">
+        <div class="info-card-header">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"/></svg>
+          <h4>订单信息</h4>
+        </div>
+        <div class="info-card-body">
+          <div class="info-row"><span class="info-label">编号</span><span class="info-value mono">GD-DL-02-2604-0006</span></div>
+          <div class="info-row"><span class="info-label">店面</span><span class="info-value">星巴克咖啡店</span></div>
+          <div class="info-row"><span class="info-label">客户</span><span class="info-value">李女士</span></div>
+          <div class="info-row"><span class="info-label">电话</span><span class="info-value mono">13800138002</span></div>
+          <div class="info-row"><span class="info-label">创建时间</span><span class="info-value mono">04-09 14:00</span></div>
+          <div class="info-row"><span class="info-label">设计师</span><span class="info-value">张设计</span></div>
+        </div>
+      </div>
+
+      <!-- 测量信息 -->
+      <div class="info-card">
+        <div class="info-card-header">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          <h4>测量信息</h4>
+        </div>
+        <div class="info-card-body">
+          <div class="info-row"><span class="info-label">地址</span><span class="info-value">广州市越秀区北京路步行街200号</span></div>
+          <div class="info-row"><span class="info-label">测量员</span><span class="info-value">王测量</span></div>
+          <div class="info-row"><span class="info-label">测量时间</span><span class="info-value mono">04-08 10:30</span></div>
+          <div class="info-row"><span class="info-label">备注</span><span class="info-value">注意门头高度限制</span></div>
+        </div>
+      </div>
+
+      <!-- 类型统计 -->
+      <div class="info-card">
+        <div class="info-card-header">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+          <h4>类型统计</h4>
+        </div>
+        <div class="info-card-body">
+          <div class="type-stats">
+            <div class="type-stat">
+              <div class="type-stat-value">3</div>
+              <div class="type-stat-label">灯箱广告</div>
+            </div>
+            <div class="type-stat">
+              <div class="type-stat-value">2</div>
+              <div class="type-stat-label">发光字</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 方案备注 -->
+      <div class="info-card">
+        <div class="info-card-header">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/><circle cx="11" cy="11" r="2"/></svg>
+          <h4>方案备注</h4>
+        </div>
+        <div class="info-card-body">
+          <textarea class="remark-box" placeholder="填写方案备注...">主色调使用品牌标准色，发光字采用暖白光LED</textarea>
+        </div>
+      </div>
+
+      <!-- CDR源文件 -->
+      <div class="info-card">
+        <div class="info-card-header">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          <h4>CDR源文件</h4>
+        </div>
+        <div class="info-card-body">
+          <div class="cdr-file">
+            <div class="cdr-icon">CDR</div>
+            <span class="cdr-name">starbucks_design_v2.cdr</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 右侧设计区 -->
+    <div class="design-area">
+      <!-- 灯箱广告 -->
+      <div class="type-group">
+        <div class="type-header" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none';this.querySelector('.type-chevron').classList.toggle('open')">
+          <div class="type-header-left">
+            <svg class="type-chevron open" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+            <span class="type-name">灯箱广告</span>
+          </div>
+          <div class="type-header-right">
+            <span class="type-badge">3 面</span>
+            <span class="type-area">12.60 m²</span>
+          </div>
+        </div>
+        <div class="type-body">
+          <!-- 设计资料 -->
+          <div class="design-data">
+            <div class="data-header">设计资料（点击复制）</div>
+            <div class="data-items">
+              <div class="data-item">
+                <span class="data-name">GD-DL-02-2604-0006-星巴克咖啡店-灯箱广告-120X80cm</span>
+                <span class="data-face">灯箱-正面</span>
+              </div>
+              <div class="data-item">
+                <span class="data-name">GD-DL-02-2604-0006-星巴克咖啡店-灯箱广告-80X60cm</span>
+                <span class="data-face">灯箱-侧面</span>
+              </div>
+              <div class="data-item">
+                <span class="data-name">GD-DL-02-2604-0006-星巴克咖啡店-灯箱广告-200X100cm</span>
+                <span class="data-face">灯箱-顶面(合并)</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 面卡片 -->
+          <div class="faces-grid">
+            <!-- 单独面 1 -->
+            <div class="face-card">
+              <div class="face-card-header">
+                <span class="face-card-name">灯箱-正面</span>
+                <span class="face-card-size">120×80cm</span>
+              </div>
+              <div class="face-card-body">
+                <div class="photo-compare">
+                  <div class="photo-slot">
+                    <img class="photo-img" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='120'%3E%3Crect fill='%23f1f5f9' width='200' height='120'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' dy='.3em' fill='%2394a3b8' font-size='12'%3E测量图%3C/text%3E%3C/svg%3E" alt="">
+                    <span class="photo-slot-label measure">测量图</span>
+                  </div>
+                  <div class="photo-slot">
+                    <img class="photo-img" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='120'%3E%3Crect fill='%23f5f3ff' width='200' height='120'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' dy='.3em' fill='%238b5cf6' font-size='12'%3E设计图%3C/text%3E%3C/svg%3E" alt="">
+                    <span class="photo-slot-label design">设计图</span>
+                  </div>
+                </div>
+                <div class="face-remark">
+                  <span class="face-remark-label">备注</span>
+                  <span class="face-remark-text">使用亚克力面板，暖白光LED</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- 单独面 2 -->
+            <div class="face-card">
+              <div class="face-card-header">
+                <span class="face-card-name">灯箱-侧面</span>
+                <span class="face-card-size">80×60cm</span>
+              </div>
+              <div class="face-card-body">
+                <div class="photo-compare">
+                  <div class="photo-slot">
+                    <img class="photo-img" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='120'%3E%3Crect fill='%23f1f5f9' width='200' height='120'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' dy='.3em' fill='%2394a3b8' font-size='12'%3E测量图%3C/text%3E%3C/svg%3E" alt="">
+                    <span class="photo-slot-label measure">测量图</span>
+                  </div>
+                  <div class="photo-slot">
+                    <img class="photo-img" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='120'%3E%3Crect fill='%23f5f3ff' width='200' height='120'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' dy='.3em' fill='%238b5cf6' font-size='12'%3E设计图%3C/text%3E%3C/svg%3E" alt="">
+                    <span class="photo-slot-label design">设计图</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 合并组 -->
+            <div class="face-card merged">
+              <div class="face-card-header">
+                <span class="face-card-name">灯箱-顶面 + 灯箱-背面</span>
+                <span class="face-card-size">200×100cm</span>
+              </div>
+              <div class="face-card-body">
+                <div class="photo-compare">
+                  <div class="photo-slot">
+                    <div style="display:flex;gap:4px;height:100%">
+                      <img class="photo-img" style="flex:1" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='120'%3E%3Crect fill='%23f1f5f9' width='100' height='120'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' dy='.3em' fill='%2394a3b8' font-size='10'%3E顶面%3C/text%3E%3C/svg%3E" alt="">
+                      <img class="photo-img" style="flex:1" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='120'%3E%3Crect fill='%23f1f5f9' width='100' height='120'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' dy='.3em' fill='%2394a3b8' font-size='10'%3E背面%3C/text%3E%3C/svg%3E" alt="">
+                    </div>
+                    <span class="photo-slot-label measure">测量图</span>
+                  </div>
+                  <div class="photo-slot">
+                    <img class="photo-img" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='120'%3E%3Crect fill='%23f5f3ff' width='200' height='120'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' dy='.3em' fill='%238b5cf6' font-size='12'%3E合并设计图%3C/text%3E%3C/svg%3E" alt="">
+                    <span class="photo-slot-label design">设计图</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 发光字 -->
+      <div class="type-group">
+        <div class="type-header" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none';this.querySelector('.type-chevron').classList.toggle('open')">
+          <div class="type-header-left">
+            <svg class="type-chevron open" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+            <span class="type-name">发光字</span>
+          </div>
+          <div class="type-header-right">
+            <span class="type-badge">2 面</span>
+            <span class="type-area">5.60 m²</span>
+          </div>
+        </div>
+        <div class="type-body">
+          <!-- 设计资料 -->
+          <div class="design-data">
+            <div class="data-header">设计资料（点击复制）</div>
+            <div class="data-items">
+              <div class="data-item">
+                <span class="data-name">GD-DL-02-2604-0006-星巴克咖啡店-发光字-60X60cm</span>
+                <span class="data-face">发光字-主标</span>
+              </div>
+              <div class="data-item">
+                <span class="data-name">GD-DL-02-2604-0006-星巴克咖啡店-发光字-40X40cm</span>
+                <span class="data-face">发光字-副标</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 面卡片 -->
+          <div class="faces-grid">
+            <div class="face-card">
+              <div class="face-card-header">
+                <span class="face-card-name">发光字-主标</span>
+                <span class="face-card-size">60×60cm</span>
+              </div>
+              <div class="face-card-body">
+                <div class="photo-compare">
+                  <div class="photo-slot">
+                    <img class="photo-img" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='120'%3E%3Crect fill='%23f1f5f9' width='200' height='120'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' dy='.3em' fill='%2394a3b8' font-size='12'%3E测量图%3C/text%3E%3C/svg%3E" alt="">
+                    <span class="photo-slot-label measure">测量图</span>
+                  </div>
+                  <div class="photo-slot">
+                    <div class="photo-placeholder">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                      上传设计图
+                    </div>
+                    <span class="photo-slot-label design">设计图</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="face-card">
+              <div class="face-card-header">
+                <span class="face-card-name">发光字-副标</span>
+                <span class="face-card-size">40×40cm</span>
+              </div>
+              <div class="face-card-body">
+                <div class="photo-compare">
+                  <div class="photo-slot">
+                    <img class="photo-img" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='120'%3E%3Crect fill='%23f1f5f9' width='200' height='120'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' dy='.3em' fill='%2394a3b8' font-size='12'%3E测量图%3C/text%3E%3C/svg%3E" alt="">
+                    <span class="photo-slot-label measure">测量图</span>
+                  </div>
+                  <div class="photo-slot">
+                    <img class="photo-img" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='120'%3E%3Crect fill='%23f5f3ff' width='200' height='120'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' dy='.3em' fill='%238b5cf6' font-size='12'%3E设计图%3C/text%3E%3C/svg%3E" alt="">
+                    <span class="photo-slot-label design">设计图</span>
+                  </div>
+                </div>
+                <div class="face-remark">
+                  <span class="face-remark-label">备注</span>
+                  <span class="face-remark-text">使用不锈钢围边，背面发光</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,184 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - navigation [ref=e4]:
+      - generic [ref=e5] [cursor=pointer]:
+        - img [ref=e6]
+        - generic [ref=e9]: 派单系统
+      - generic [ref=e10]:
+        - generic [ref=e11] [cursor=pointer]:
+          - img [ref=e13]
+          - generic [ref=e15]: 订单
+        - generic [ref=e16] [cursor=pointer]:
+          - img [ref=e18]
+          - generic [ref=e21]: 设计
+        - generic [ref=e22] [cursor=pointer]:
+          - img [ref=e24]
+          - generic [ref=e26]: 生产
+        - generic [ref=e27] [cursor=pointer]:
+          - img [ref=e29]
+          - generic [ref=e31]: 安装
+        - generic [ref=e32] [cursor=pointer]:
+          - img [ref=e34]
+          - generic [ref=e36]: 统计
+        - generic [ref=e37] [cursor=pointer]:
+          - img [ref=e39]
+          - generic [ref=e41]: 客户
+        - generic [ref=e42] [cursor=pointer]:
+          - img [ref=e44]
+          - generic [ref=e46]: 设置
+      - generic [ref=e47]:
+        - button [ref=e48] [cursor=pointer]
+        - button [ref=e50] [cursor=pointer]:
+          - img [ref=e53]
+        - button "a admin" [ref=e58] [cursor=pointer]:
+          - generic [ref=e59]: a
+          - generic [ref=e60]: admin
+          - img [ref=e62]
+    - generic [ref=e64]:
+      - complementary [ref=e65]:
+        - generic [ref=e67]: 生产
+        - menubar [ref=e68]:
+          - menuitem "生产任务" [ref=e69] [cursor=pointer]
+      - generic [ref=e70]:
+        - generic [ref=e74] [cursor=pointer]: 首页
+        - main [ref=e75]:
+          - generic [ref=e76]:
+            - generic [ref=e77]:
+              - generic [ref=e79]:
+                - button "打印工单" [ref=e80] [cursor=pointer]:
+                  - generic [ref=e81]:
+                    - img [ref=e83]
+                    - text: 打印工单
+                - button "返回列表" [ref=e85] [cursor=pointer]:
+                  - generic [ref=e86]: 返回列表
+              - generic [ref=e87]:
+                - generic [ref=e88]:
+                  - generic [ref=e89]: "1"
+                  - generic [ref=e90]: 申请测量
+                - generic [ref=e91]:
+                  - generic [ref=e92]: "2"
+                  - generic [ref=e93]: 审核
+                - generic [ref=e94]:
+                  - generic [ref=e95]: "3"
+                  - generic [ref=e96]: 测量作业
+                - generic [ref=e97]:
+                  - generic [ref=e98]: "4"
+                  - generic [ref=e99]: 测量审核
+                - generic [ref=e100]:
+                  - generic [ref=e101]: "5"
+                  - generic [ref=e102]: 设计
+                - generic [ref=e103]:
+                  - generic [ref=e104]: "6"
+                  - generic [ref=e105]: 设计审核
+                - generic [ref=e106]:
+                  - generic [ref=e107]: "7"
+                  - generic [ref=e108]: 生产
+                - generic [ref=e109]:
+                  - generic [ref=e110]: "8"
+                  - generic [ref=e111]: 核对
+                - generic [ref=e112]:
+                  - generic [ref=e113]: "9"
+                  - generic [ref=e114]: 安装
+                - generic [ref=e115]:
+                  - generic [ref=e116]: "10"
+                  - generic [ref=e117]: 安装审核
+                - generic [ref=e118]:
+                  - generic [ref=e119]: "11"
+                  - generic [ref=e120]: 归档
+            - generic [ref=e121]:
+              - generic [ref=e122]:
+                - generic [ref=e123]: 客户
+                - generic [ref=e124]: "- · -"
+              - generic [ref=e126]:
+                - generic [ref=e127]: 店铺
+                - generic [ref=e128]: "-"
+              - generic [ref=e130]:
+                - generic [ref=e131]: 生产员
+                - generic [ref=e132]: "-"
+              - generic [ref=e134]:
+                - generic [ref=e135]: 创建时间
+                - generic [ref=e136]: "-"
+              - generic [ref=e138]:
+                - generic [ref=e139]: 地区
+                - generic [ref=e140]: "-"
+            - generic [ref=e141]:
+              - generic [ref=e142]:
+                - generic [ref=e143]:
+                  - img [ref=e145]
+                  - text: 设计方案
+                  - generic [ref=e148]: 0 组图
+                - generic [ref=e151]:
+                  - img [ref=e153]
+                  - paragraph [ref=e170]: 暂无设计方案
+              - generic [ref=e171]:
+                - generic [ref=e172]:
+                  - img [ref=e174]
+                  - text: 生产进度
+                - generic [ref=e176]:
+                  - generic [ref=e177]:
+                    - generic [ref=e178]:
+                      - generic [ref=e179]: "0"
+                      - generic [ref=e180]: 总面数
+                    - generic [ref=e181]:
+                      - generic [ref=e182]: "0.00"
+                      - generic [ref=e183]: 总面积 (㎡)
+                    - generic [ref=e184]:
+                      - generic [ref=e185]: "-"
+                      - generic [ref=e186]: 进度
+                    - generic [ref=e187]:
+                      - generic [ref=e188]: "-"
+                      - generic [ref=e189]: 进度
+                  - generic [ref=e192]:
+                    - generic [ref=e193]: 进度
+                    - strong [ref=e194]: 0%
+            - generic [ref=e195]:
+              - generic [ref=e196]:
+                - img [ref=e198]
+                - text: 物料清单
+                - generic [ref=e200]: 0 面 · 0 种类型
+                - generic [ref=e203] [cursor=pointer]:
+                  - generic:
+                    - combobox [ref=e205]
+                    - generic [ref=e206]: 请选择
+                  - img [ref=e209]
+              - generic [ref=e211]:
+                - img [ref=e213]
+                - paragraph [ref=e230]: 暂无物料
+            - generic [ref=e232]:
+              - tablist [ref=e236]:
+                - tab "操作日志" [selected] [ref=e238]
+                - tab "备注" [ref=e239]
+              - tabpanel "操作日志" [ref=e241]:
+                - generic [ref=e243]:
+                  - img [ref=e245]
+                  - paragraph [ref=e262]: 暂无日志
+            - generic [ref=e263]:
+              - heading "生产工单" [level=1] [ref=e265]
+              - generic [ref=e266]:
+                - generic [ref=e267]: 客户：
+                - generic [ref=e268]: 电话：
+                - generic [ref=e269]: 地址：
+                - generic [ref=e270]: 生产员：
+              - table [ref=e271]:
+                - rowgroup [ref=e272]:
+                  - row "序号 名称 尺寸 面积 材质 类型 状态" [ref=e273]:
+                    - columnheader "序号" [ref=e274]
+                    - columnheader "名称" [ref=e275]
+                    - columnheader "尺寸" [ref=e276]
+                    - columnheader "面积" [ref=e277]
+                    - columnheader "材质" [ref=e278]
+                    - columnheader "类型" [ref=e279]
+                    - columnheader "状态" [ref=e280]
+                - rowgroup
+                - rowgroup [ref=e281]:
+                  - row "合计 0.00㎡ 0 面" [ref=e282]:
+                    - cell "合计" [ref=e283]
+                    - cell "0.00㎡" [ref=e284]
+                    - cell "0 面" [ref=e285]
+            - img [ref=e288]
+  - alert [ref=e290]:
+    - img [ref=e292]
+    - paragraph [ref=e294]: 服务器错误
+  - alert [ref=e295]:
+    - img [ref=e297]
+    - paragraph [ref=e299]: 获取详情失败

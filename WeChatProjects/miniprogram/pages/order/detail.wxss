@@ -1,0 +1,278 @@
+.page-container {
+  padding: 20rpx;
+  padding-bottom: calc(140rpx + env(safe-area-inset-bottom));
+  box-sizing: border-box;
+  min-height: 100vh;
+  background-color: #f5f7fa;
+}
+
+/* 状态卡片 */
+.status-card {
+  display: flex;
+  align-items: center;
+  background: linear-gradient(135deg, #409EFF 0%, #66b1ff 100%);
+  border-radius: 12rpx;
+  padding: 30rpx;
+  margin-bottom: 20rpx;
+  color: #fff;
+  width: calc(100% - 60rpx);
+  box-sizing: border-box;
+}
+
+.status-icon {
+  font-size: 60rpx;
+  margin-right: 20rpx;
+  flex-shrink: 0;
+}
+
+.status-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.status-text {
+  display: inline-block;
+  background-color: rgba(255, 255, 255, 0.2);
+  padding: 8rpx 16rpx;
+  border-radius: 4rpx;
+  font-size: 26rpx;
+  margin-bottom: 10rpx;
+}
+
+.status-text.tag-success {
+  background-color: rgba(103, 194, 58, 0.3);
+}
+
+.status-text.tag-danger {
+  background-color: rgba(245, 108, 108, 0.3);
+}
+
+.status-text.tag-warning {
+  background-color: rgba(230, 162, 60, 0.3);
+}
+
+.order-no {
+  display: block;
+  font-size: 28rpx;
+  opacity: 0.9;
+  word-break: break-all;
+}
+
+/* 时间线 */
+.timeline {
+  padding-left: 30rpx;
+}
+
+.timeline-item {
+  position: relative;
+  padding-left: 40rpx;
+  padding-bottom: 30rpx;
+  border-left: 2rpx solid #e4e7ed;
+}
+
+.timeline-item:last-child {
+  border-left-color: transparent;
+  padding-bottom: 0;
+}
+
+.timeline-dot {
+  position: absolute;
+  left: -10rpx;
+  top: 4rpx;
+  width: 18rpx;
+  height: 18rpx;
+  border-radius: 50%;
+  background-color: #e4e7ed;
+}
+
+.timeline-dot.active {
+  background-color: #409EFF;
+}
+
+.timeline-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.timeline-text {
+  font-size: 28rpx;
+  color: #303133;
+}
+
+.timeline-time {
+  font-size: 24rpx;
+  color: #909399;
+  margin-top: 8rpx;
+}
+
+.timeline-remark {
+  font-size: 24rpx;
+  color: #606266;
+  margin-top: 8rpx;
+  padding: 12rpx;
+  background-color: #f5f7fa;
+  border-radius: 4rpx;
+  word-break: break-all;
+}
+
+/* 卡片 */
+.card {
+  background-color: #fff;
+  border-radius: 12rpx;
+  padding: 24rpx;
+  margin-bottom: 20rpx;
+  width: calc(100% - 48rpx);
+  box-sizing: border-box;
+}
+
+.card-title {
+  font-size: 32rpx;
+  font-weight: 500;
+  color: #303133;
+  margin-bottom: 16rpx;
+}
+
+/* 信息列表 */
+.info-list {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.info-item {
+  display: flex;
+  padding: 20rpx 0;
+  border-bottom: 2rpx solid #f5f7fa;
+}
+
+.info-item:last-child {
+  border-bottom: none;
+}
+
+.info-label {
+  color: #909399;
+  font-size: 28rpx;
+  width: 140rpx;
+  flex-shrink: 0;
+}
+
+.info-value {
+  color: #303133;
+  font-size: 28rpx;
+  flex: 1;
+  margin-left: 20rpx;
+  word-break: break-all;
+}
+
+.info-value.phone {
+  color: #409EFF;
+}
+
+.info-value.link {
+  color: #409EFF;
+}
+
+/* 广告项目 */
+.ad-item {
+  padding: 20rpx 0;
+  border-bottom: 2rpx solid #f5f7fa;
+}
+
+.ad-item:last-child {
+  border-bottom: none;
+}
+
+.ad-name {
+  font-size: 28rpx;
+  color: #303133;
+  margin-bottom: 8rpx;
+}
+
+.ad-info {
+  font-size: 24rpx;
+  color: #909399;
+}
+
+.ad-info text {
+  margin-right: 16rpx;
+}
+
+/* 照片网格 */
+.photo-grid {
+  display: flex;
+  flex-wrap: wrap;
+  margin: -10rpx;
+  width: calc(100% + 20rpx);
+}
+
+.photo-item {
+  width: calc(33.33% - 20rpx);
+  padding-bottom: calc(33.33% - 20rpx);
+  height: 0;
+  margin: 10rpx;
+  border-radius: 8rpx;
+  background-color: #f5f7fa;
+  position: relative;
+}
+
+.photo-item image {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 8rpx;
+  object-fit: cover;
+}
+
+/* 备注 */
+.remark-text {
+  font-size: 28rpx;
+  color: #606266;
+  line-height: 1.6;
+  word-break: break-all;
+}
+
+/* 底部操作栏 */
+.bottom-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 20rpx;
+  padding-bottom: calc(20rpx + env(safe-area-inset-bottom));
+  background-color: #fff;
+  box-shadow: 0 -2rpx 12rpx rgba(0, 0, 0, 0.05);
+  display: flex;
+  gap: 20rpx;
+  z-index: 100;
+}
+
+.bottom-bar button {
+  flex: 1;
+  height: 88rpx;
+  line-height: 88rpx;
+  font-size: 30rpx;
+}
+
+/* 加载中 */
+.loading {
+  text-align: center;
+  padding: 40rpx;
+  color: #909399;
+}
+
+/* 平板适配 */
+@media (min-width: 750rpx) {
+  .card {
+    max-width: 700rpx;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .status-card {
+    max-width: 700rpx;
+    margin-left: auto;
+    margin-right: auto;
+  }
+}

@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>安装管理 - 户外广告派单系统</title>
+<style>
+  :root {
+    --brand-primary: #6366f1;
+    --brand-primary-hover: #4f46e5;
+    --brand-primary-light: rgba(99,102,241,0.08);
+    --text-primary: #1e293b;
+    --text-secondary: #64748b;
+    --card-bg: #ffffff;
+    --bg-page: #f1f5f9;
+    --border: #e2e8f0;
+    --border-light: #f1f5f9;
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
+    --radius-md: 10px;
+    --radius-lg: 12px;
+    --green: #10b981;
+    --green-bg: #ecfdf5;
+    --amber: #f59e0b;
+    --amber-bg: #fffbeb;
+    --red: #ef4444;
+    --red-bg: #fef2f2;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif; background: var(--bg-page); color: var(--text-primary); line-height:1.5; font-size:14px; }
+
+  .page { max-width:1400px; margin:0 auto; padding:20px; }
+
+  /* ===== 页面标题 ===== */
+  .page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+  }
+  .page-title {
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--text-primary);
+  }
+  .page-title span {
+    font-size: 14px;
+    font-weight: 400;
+    color: var(--text-secondary);
+    margin-left: 8px;
+  }
+  .page-actions { display: flex; gap: 8px; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 8px 16px; border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--card-bg);
+    color: var(--text-primary);
+    font-size: 13px; font-weight: 500;
+    cursor: pointer; transition: all 0.15s;
+  }
+  .btn:hover { border-color: var(--brand-primary); color: var(--brand-primary); }
+  .btn-primary { background: var(--brand-primary); color: #fff; border-color: var(--brand-primary); }
+  .btn-primary:hover { background: var(--brand-primary-hover); }
+
+  /* ===== 统计卡片 ===== */
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .stat-card {
+    background: var(--card-bg);
+    border-radius: var(--radius-lg);
+    padding: 16px 20px;
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-sm);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .stat-card:hover {
+    border-color: var(--brand-primary);
+    box-shadow: 0 2px 8px rgba(99,102,241,0.12);
+    transform: translateY(-1px);
+  }
+  .stat-card.active {
+    border-color: var(--brand-primary);
+    background: var(--brand-primary-light);
+  }
+  .stat-icon {
+    width: 42px; height: 42px;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 20px; flex-shrink: 0;
+  }
+  .stat-icon.pending { background: #6366f1; }
+  .stat-icon.review { background: #f59e0b; }
+  .stat-icon.archived { background: #10b981; }
+  .stat-icon.total { background: #64748b; }
+  .stat-info { flex: 1; }
+  .stat-value { font-size: 24px; font-weight: 800; color: var(--text-primary); }
+  .stat-label { font-size: 12px; color: var(--text-secondary); font-weight: 500; }
+
+  /* ===== 筛选栏 ===== */
+  .filter-bar {
+    background: var(--card-bg);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-sm);
+    padding: 14px 20px;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .search-input {
+    flex: 1;
+    max-width: 300px;
+    padding: 8px 12px 8px 34px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 13px;
+    background: var(--card-bg) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 15-5.2-5.2'/%3E%3C/svg%3E") no-repeat 10px center;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .search-input:focus { border-color: var(--brand-primary); }
+  .filter-chips { display: flex; gap: 6px; }
+  .chip {
+    padding: 6px 14px;
+    border-radius: 99px;
+    border: 1px solid var(--border);
+    background: var(--card-bg);
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.15s;
+    user-select: none;
+  }
+  .chip:hover { border-color: var(--brand-primary); color: var(--brand-primary); }
+  .chip.active {
+    background: var(--brand-primary);
+    border-color: var(--brand-primary);
+    color: #fff;
+  }
+  .filter-chips .chip .chip-count {
+    display: inline-block;
+    background: rgba(0,0,0,0.08);
+    padding: 0 5px;
+    border-radius: 99px;
+    font-size: 10px;
+    margin-left: 4px;
+  }
+  .chip.active .chip-count { background: rgba(255,255,255,0.3); }
+
+  /* ===== 任务卡片列表 ===== */
+  .task-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .task-card {
+    background: var(--card-bg);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-sm);
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    transition: all 0.2s;
+    cursor: pointer;
+  }
+  .task-card:hover {
+    border-color: var(--brand-primary);
+    box-shadow: 0 2px 8px rgba(99,102,241,0.12);
+    transform: translateX(4px);
+  }
+  .task-status {
+    width: 4px;
+    height: 100%;
+    min-height: 56px;
+    border-radius: 2px;
+    flex-shrink: 0;
+    align-self: stretch;
+  }
+  .task-status.pending { background: var(--brand-primary); }
+  .task-status.review { background: var(--amber); }
+  .task-status.archived { background: var(--green); }
+
+  .task-info { flex: 1; min-width: 0; }
+  .task-top {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 6px;
+  }
+  .task-order-no {
+    font-family: 'SF Mono', Monaco, monospace;
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--text-primary);
+  }
+  .task-status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 10px;
+    border-radius: 99px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .task-status-badge.pending { background: var(--brand-primary-light); color: var(--brand-primary); }
+  .task-status-badge.review { background: var(--amber-bg); color: var(--amber); }
+  .task-status-badge.archived { background: var(--green-bg); color: var(--green); }
+  .task-status-dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
+  .task-status-badge.pending .task-status-dot { background: var(--brand-primary); }
+  .task-status-badge.review .task-status-dot { background: var(--amber); }
+  .task-status-badge.archived .task-status-dot { background: var(--green); }
+
+  .task-meta {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    font-size: 13px;
+    color: var(--text-secondary);
+    flex-wrap: wrap;
+  }
+  .task-meta-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .task-meta-item svg { width: 14px; height: 14px; flex-shrink: 0; opacity: 0.6; }
+  .task-meta-item strong { color: var(--text-primary); font-weight: 600; }
+
+  .task-actions {
+    display: flex;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+  .task-btn {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 6px 12px; border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--card-bg);
+    color: var(--text-secondary);
+    font-size: 12px; font-weight: 500;
+    cursor: pointer; transition: all 0.15s;
+    text-decoration: none;
+  }
+  .task-btn:hover { border-color: var(--brand-primary); color: var(--brand-primary); }
+  .task-btn.primary { background: var(--brand-primary); color: #fff; border-color: var(--brand-primary); }
+  .task-btn.primary:hover { background: var(--brand-primary-hover); }
+  .task-btn.success { background: var(--green); color: #fff; border-color: var(--green); }
+
+  .task-time {
+    font-size: 11px;
+    color: var(--text-secondary);
+    margin-top: 4px;
+  }
+
+  /* ===== 分页 ===== */
+  .pagination-wrapper {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 4px;
+    margin-top: 20px;
+    padding: 16px 0;
+  }
+  .page-btn {
+    width: 36px; height: 36px;
+    display: flex; align-items: center; justify-content: center;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--card-bg);
+    color: var(--text-secondary);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .page-btn:hover { border-color: var(--brand-primary); color: var(--brand-primary); }
+  .page-btn.active { background: var(--brand-primary); color: #fff; border-color: var(--brand-primary); }
+  .page-btn:disabled { opacity: 0.4; cursor: default; }
+  .page-info { font-size: 12px; color: var(--text-secondary); margin: 0 8px; }
+
+  /* ===== 空状态 ===== */
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--text-secondary);
+  }
+  .empty-state svg { width: 64px; height: 64px; opacity: 0.3; margin-bottom: 12px; }
+  .empty-state p { font-size: 14px; }
+
+  /* 响应式 */
+  @media (max-width: 900px) {
+    .stats-row { grid-template-columns: repeat(2, 1fr); }
+    .task-card { flex-wrap: wrap; }
+    .task-actions { width: 100%; justify-content: flex-end; }
+  }
+  @media (max-width: 600px) {
+    .stats-row { grid-template-columns: 1fr 1fr; }
+    .filter-bar { flex-direction: column; align-items: stretch; }
+    .search-input { max-width: 100%; }
+    .filter-chips { overflow-x: auto; }
+    .task-meta { flex-direction: column; gap: 4px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="page">
+  <!-- 页面标题 -->
+  <div class="page-header">
+    <div class="page-title">
+      安装管理
+      <span>安装任务与审核</span>
+    </div>
+    <div class="page-actions">
+      <button class="btn">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 109-9 9.75 9.75 0 00-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+        刷新
+      </button>
+    </div>
+  </div>
+
+  <!-- 统计卡片 -->
+  <div class="stats-row">
+    <div class="stat-card active" onclick="filterStatus(this, '')">
+      <div class="stat-icon total">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"/></svg>
+      </div>
+      <div class="stat-info">
+        <div class="stat-value">48</div>
+        <div class="stat-label">全部任务</div>
+      </div>
+    </div>
+    <div class="stat-card" onclick="filterStatus(this, 'installing')">
+      <div class="stat-icon pending">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>
+      </div>
+      <div class="stat-info">
+        <div class="stat-value">12</div>
+        <div class="stat-label">待安装</div>
+      </div>
+    </div>
+    <div class="stat-card" onclick="filterStatus(this, 'install_review')">
+      <div class="stat-icon review">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+      </div>
+      <div class="stat-info">
+        <div class="stat-value">5</div>
+        <div class="stat-label">待审核</div>
+      </div>
+    </div>
+    <div class="stat-card" onclick="filterStatus(this, 'archived')">
+      <div class="stat-icon archived">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+      </div>
+      <div class="stat-info">
+        <div class="stat-value">31</div>
+        <div class="stat-label">已归档</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 筛选栏 -->
+  <div class="filter-bar">
+    <input type="text" class="search-input" placeholder="搜索订单号、客户姓名或电话...">
+    <div class="filter-chips">
+      <span class="chip active" onclick="filterChip(this)">全部 <span class="chip-count">48</span></span>
+      <span class="chip" onclick="filterChip(this)">待安装 <span class="chip-count">12</span></span>
+      <span class="chip" onclick="filterChip(this)">待审核 <span class="chip-count">5</span></span>
+      <span class="chip" onclick="filterChip(this)">已归档 <span class="chip-count">31</span></span>
+    </div>
+  </div>
+
+  <!-- 任务列表 -->
+  <div class="task-list">
+    <!-- 待审核 - 高优先级 -->
+    <div class="task-card">
+      <div class="task-status review"></div>
+      <div class="task-info">
+        <div class="task-top">
+          <span class="task-order-no">GD-DL-01-2604-0003</span>
+          <span class="task-status-badge review">
+            <span class="task-status-dot"></span>
+            待审核
+          </span>
+        </div>
+        <div class="task-meta">
+          <span class="task-meta-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            <strong>李老板</strong> · 13900139000
+          </span>
+          <span class="task-meta-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            广州市天河区体育东路120号
+          </span>
+          <span class="task-meta-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"/></svg>
+            门头招牌 · 灯箱
+          </span>
+        </div>
+        <div class="task-time">安装报告已提交 · 04-10 16:30</div>
+      </div>
+      <div class="task-actions">
+        <button class="task-btn" onclick="event.stopPropagation();">详情</button>
+        <button class="task-btn success" onclick="event.stopPropagation();">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+          审核通过
+        </button>
+      </div>
+    </div>
+
+    <div class="task-card">
+      <div class="task-status review"></div>
+      <div class="task-info">
+        <div class="task-top">
+          <span class="task-order-no">GD-DL-02-2604-0007</span>
+          <span class="task-status-badge review">
+            <span class="task-status-dot"></span>
+            待审核
+          </span>
+        </div>
+        <div class="task-meta">
+          <span class="task-meta-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            <strong>王总</strong> · 13800138001
+          </span>
+          <span class="task-meta-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            广州市越秀区中山五路68号
+          </span>
+          <span class="task-meta-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"/></svg>
+            发光字 · 背景墙
+          </span>
+        </div>
+        <div class="task-time">安装报告已提交 · 04-10 14:00</div>
+      </div>
+      <div class="task-actions">
+        <button class="task-btn" onclick="event.stopPropagation();">详情</button>
+        <button class="task-btn success" onclick="event.stopPropagation();">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+          审核通过
+        </button>
+      </div>
+    </div>
+
+    <!-- 待安装 -->
+    <div class="task-card">
+      <div class="task-status pending"></div>
+      <div class="task-info">
+        <div class="task-top">
+          <span class="task-order-no">GD-DL-01-2604-0001</span>
+          <span class="task-status-badge pending">
+            <span class="task-status-dot"></span>
+            待安装
+          </span>
+        </div>
+        <div class="task-meta">
+          <span class="task-meta-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            <strong>张三</strong> · 13800138000
+          </span>
+          <span class="task-meta-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            广州市天河区天河路888号商铺
+          </span>
+          <span class="task-meta-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"/></svg>
+            门头招牌 · 灯箱 · 发光字
+          </span>
+        </div>
+        <div class="task-time">生产完成，等待安装 · 04-09 16:00</div>
+      </div>
+      <div class="task-actions">
+        <button class="task-btn" onclick="event.stopPropagation();">详情</button>
+        <button class="task-btn primary" onclick="event.stopPropagation();">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          填写报告
+        </button>
+      </div>
+    </div>
+
+    <div class="task-card">
+      <div class="task-status pending"></div>
+      <div class="task-info">
+        <div class="task-top">
+          <span class="task-order-no">GD-DL-03-2604-0005</span>
+          <span class="task-status-badge pending">
+            <span class="task-status-dot"></span>
+            待安装
+          </span>
+        </div>
+        <div class="task-meta">
+          <span class="task-meta-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            <strong>赵小姐</strong> · 13600136000
+          </span>
+          <span class="task-meta-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            广州市海珠区新港中路397号
+          </span>
+          <span class="task-meta-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"/></svg>
+            门头招牌
+          </span>
+        </div>
+        <div class="task-time">物料核对完成 · 04-10 09:00</div>
+      </div>
+      <div class="task-actions">
+        <button class="task-btn" onclick="event.stopPropagation();">详情</button>
+        <button class="task-btn primary" onclick="event.stopPropagation();">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          填写报告
+        </button>
+      </div>
+    </div>
+
+    <div class="task-card">
+      <div class="task-status pending"></div>
+      <div class="task-info">
+        <div class="task-top">
+          <span class="task-order-no">GD-DL-01-2603-0028</span>
+          <span class="task-status-badge pending">
+            <span class="task-status-dot"></span>
+            待安装
+          </span>
+        </div>
+        <div class="task-meta">
+          <span class="task-meta-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            <strong>陈先生</strong> · 13700137000
+          </span>
+          <span class="task-meta-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            广州市白云区机场路150号
+          </span>
+          <span class="task-meta-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"/></svg>
+            灯箱广告
+          </span>
+        </div>
+        <div class="task-time">生产完成，等待安装 · 04-08 11:30</div>
+      </div>
+      <div class="task-actions">
+        <button class="task-btn" onclick="event.stopPropagation();">详情</button>
+        <button class="task-btn primary" onclick="event.stopPropagation();">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          填写报告
+        </button>
+      </div>
+    </div>
+
+    <!-- 已归档 -->
+    <div class="task-card" style="opacity:0.75;">
+      <div class="task-status archived"></div>
+      <div class="task-info">
+        <div class="task-top">
+          <span class="task-order-no">GD-DL-01-2603-0015</span>
+          <span class="task-status-badge archived">
+            <span class="task-status-dot"></span>
+            已归档
+          </span>
+        </div>
+        <div class="task-meta">
+          <span class="task-meta-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            <strong>周女士</strong> · 13500135000
+          </span>
+          <span class="task-meta-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            广州市荔湾区上下九路88号
+          </span>
+          <span class="task-meta-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"/></svg>
+            门头招牌 · 发光字
+          </span>
+        </div>
+        <div class="task-time">已归档 · 客户满意 · 04-07 18:00</div>
+      </div>
+      <div class="task-actions">
+        <button class="task-btn" onclick="event.stopPropagation();">查看详情</button>
+      </div>
+    </div>
+
+    <div class="task-card" style="opacity:0.75;">
+      <div class="task-status archived"></div>
+      <div class="task-info">
+        <div class="task-top">
+          <span class="task-order-no">GD-DL-02-2603-0010</span>
+          <span class="task-status-badge archived">
+            <span class="task-status-dot"></span>
+            已归档
+          </span>
+        </div>
+        <div class="task-meta">
+          <span class="task-meta-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            <strong>刘总</strong> · 13300133000
+          </span>
+          <span class="task-meta-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            广州市番禺区市桥大北路100号
+          </span>
+          <span class="task-meta-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"/></svg>
+            背景墙
+          </span>
+        </div>
+        <div class="task-time">已归档 · 客户满意 · 04-06 15:20</div>
+      </div>
+      <div class="task-actions">
+        <button class="task-btn" onclick="event.stopPropagation();">查看详情</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 分页 -->
+  <div class="pagination-wrapper">
+    <button class="page-btn" disabled>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+    </button>
+    <button class="page-btn active">1</button>
+    <button class="page-btn">2</button>
+    <button class="page-btn">3</button>
+    <span class="page-info">...</span>
+    <button class="page-btn">8</button>
+    <button class="page-btn">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+    </button>
+    <span class="page-info">共 48 条</span>
+  </div>
+</div>
+
+<script>
+function filterCard(el, status) {
+  document.querySelectorAll('.stat-card').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+}
+
+function filterChip(el) {
+  document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+}
+</script>
+
+</body>
+</html>

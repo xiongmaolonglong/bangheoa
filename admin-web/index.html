@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>户外广告派单系统</title>
+    <style id="sidebar-popper-fix">
+      /* 侧边栏子菜单弹出层样式 - 覆盖 Element Plus 的 CSS 变量 */
+      .el-popper.is-pure,
+      .el-popper.is-light,
+      .el-menu--popup-container,
+      .el-menu--popup {
+        --el-bg-color: #1e293b !important;
+        --el-bg-color-overlay: #1e293b !important;
+        --el-fill-color-blank: #1e293b !important;
+        --el-menu-bg-color: #1e293b !important;
+        --el-text-color-primary: rgba(255, 255, 255, 0.9) !important;
+        --el-text-color-regular: rgba(255, 255, 255, 0.65) !important;
+        background: #1e293b !important;
+        border: none !important;
+      }
+      .el-popper.is-light > .el-popper__arrow:before {
+        background: #1e293b !important;
+        border-color: transparent !important;
+      }
+      .el-menu--popup .el-menu-item {
+        background-color: transparent !important;
+        color: rgba(255, 255, 255, 0.65) !important;
+      }
+      .el-menu--popup .el-menu-item:hover {
+        background-color: rgba(255, 255, 255, 0.08) !important;
+        color: rgba(255, 255, 255, 0.9) !important;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

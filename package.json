@@ -1,0 +1,16 @@
+{
+  "name": "outdoor-ad-system",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently -n \"后端,前端\" -c \"blue,green\" \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd admin-web && npm run dev",
+    "start": "cd backend && npm start",
+    "build": "cd admin-web && npm run build",
+    "install:all": "cd backend && npm install && cd ../admin-web && npm install"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

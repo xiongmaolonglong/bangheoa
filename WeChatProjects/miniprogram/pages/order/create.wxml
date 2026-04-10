@@ -1,0 +1,91 @@
+<view class="page-container" style="padding-bottom: {{submitBarHeight}}px;">
+  <form bindsubmit="handleSubmit">
+    <!-- 店铺信息 -->
+    <view class="card">
+      <view class="form-item required">
+        <text class="form-label">店铺名称</text>
+        <input class="form-input" placeholder="请输入店铺名称" value="{{formData.shop_name}}" bindinput="onInput" data-field="shop_name" />
+      </view>
+      <view class="form-item required">
+        <text class="form-label">店铺电话</text>
+        <input class="form-input" type="number" placeholder="请输入店铺电话" value="{{formData.shop_phone}}" bindinput="onInput" data-field="shop_phone" />
+      </view>
+    </view>
+
+    <!-- 元素选择 -->
+    <view class="card">
+      <view class="form-item required">
+        <text class="form-label">元素</text>
+        <view class="element-options">
+          <view class="option {{formData.element === '和成' ? 'active' : ''}}" bindtap="selectElement" data-value="和成">
+            <text>和成</text>
+          </view>
+          <view class="option {{formData.element === '青果' ? 'active' : ''}}" bindtap="selectElement" data-value="青果">
+            <text>青果</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 业务员信息 -->
+    <view class="card">
+      <view class="form-item required">
+        <text class="form-label">业务员姓名</text>
+        <input class="form-input" placeholder="请输入业务员姓名" value="{{formData.salesman_name}}" bindinput="onInput" data-field="salesman_name" />
+      </view>
+      <view class="form-item required">
+        <text class="form-label">业务员电话</text>
+        <input class="form-input" type="number" placeholder="请输入业务员电话" value="{{formData.salesman_phone}}" bindinput="onInput" data-field="salesman_phone" />
+      </view>
+    </view>
+
+    <!-- 位置信息 -->
+    <view class="card">
+      <view class="form-item required">
+        <text class="form-label">定位</text>
+        <view class="location-picker" bindtap="chooseLocation">
+          <text wx:if="{{formData.latitude}}" class="location-text">已定位</text>
+          <text wx:else class="location-placeholder">点击选择位置</text>
+          <text class="location-icon">📍</text>
+        </view>
+      </view>
+      <view class="form-item required">
+        <text class="form-label">详细地址</text>
+        <textarea class="form-textarea" placeholder="请输入详细地址" value="{{formData.address}}" bindinput="onInput" data-field="address" auto-height />
+      </view>
+    </view>
+
+    <!-- 拍照 -->
+    <view class="card">
+      <view class="form-item">
+        <text class="form-label">现场照片</text>
+        <view class="photo-section">
+          <view class="photo-list">
+            <view class="photo-item" wx:for="{{photos}}" wx:key="*this">
+              <image class="photo-img" src="{{item}}" mode="aspectFill" />
+              <view class="photo-remove" bindtap="removePhoto" data-index="{{index}}">×</view>
+            </view>
+            <view class="photo-add" bindtap="takePhoto">
+              <text class="photo-add-icon">📷</text>
+              <text class="photo-add-text">拍照/相册</text>
+            </view>
+          </view>
+          <text class="photo-tip">最多上传9张照片</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 备注 -->
+    <view class="card">
+      <view class="form-item">
+        <text class="form-label">备注</text>
+        <textarea class="form-textarea" placeholder="请填写您的需求（选填）" value="{{formData.remark}}" bindinput="onInput" data-field="remark" auto-height />
+      </view>
+    </view>
+  </form>
+
+  <!-- 提交按钮 -->
+  <view class="submit-bar" style="padding-bottom: calc(20rpx + env(safe-area-inset-bottom));">
+    <button class="btn-submit" form-type="submit" loading="{{submitting}}" bindtap="handleSubmit">提交申请</button>
+  </view>
+</view>

@@ -1,0 +1,107 @@
+<h2>方案 D：流程式布局</h2>
+<p class="subtitle">按订单流转阶段横向排列，像看板一样推进</p>
+
+<div class="mockup">
+  <div class="mockup-header">预览：流程看板布局</div>
+  <div class="mockup-body" style="padding:0; position:relative; height:500px; font-size:12px;">
+    <!-- 顶部栏 -->
+    <div style="height:50px; background:#1d39c4; color:white; display:flex; align-items:center; padding:0 20px; font-size:14px;">
+      <span style="font-weight:bold; margin-right:40px;">户外广告派单系统</span>
+      <div style="margin-left:auto; display:flex; gap:16px; align-items:center;">
+        <span>通知</span>
+        <span>管理员</span>
+      </div>
+    </div>
+    <!-- 流程阶段导航 -->
+    <div style="height:60px; background:white; border-bottom:1px solid #e8e8e8; display:flex; align-items:center; padding:0 12px; gap:4px; overflow-x:auto;">
+      <div style="text-align:center; padding:8px 16px; background:#e6f7ff; border-radius:8px; min-width:90px;">
+        <div style="font-weight:bold; color:#1890ff;">待审核</div>
+        <div style="font-size:18px; color:#1890ff;">5</div>
+      </div>
+      <div style="color:#bbb;">→</div>
+      <div style="text-align:center; padding:8px 16px; background:#f0f0f0; border-radius:8px; min-width:90px;">
+        <div style="font-weight:bold; color:#666;">测量中</div>
+        <div style="font-size:18px; color:#666;">3</div>
+      </div>
+      <div style="color:#bbb;">→</div>
+      <div style="text-align:center; padding:8px 16px; background:#f0f0f0; border-radius:8px; min-width:90px;">
+        <div style="font-weight:bold; color:#666;">设计中</div>
+        <div style="font-size:18px; color:#666;">2</div>
+      </div>
+      <div style="color:#bbb;">→</div>
+      <div style="text-align:center; padding:8px 16px; background:#f0f0f0; border-radius:8px; min-width:90px;">
+        <div style="font-weight:bold; color:#666;">生产中</div>
+        <div style="font-size:18px; color:#666;">1</div>
+      </div>
+      <div style="color:#bbb;">→</div>
+      <div style="text-align:center; padding:8px 16px; background:#f0f0f0; border-radius:8px; min-width:90px;">
+        <div style="font-weight:bold; color:#666;">安装中</div>
+        <div style="font-size:18px; color:#666;">4</div>
+      </div>
+      <div style="color:#bbb;">→</div>
+      <div style="text-align:center; padding:8px 16px; background:#f0f0f0; border-radius:8px; min-width:90px;">
+        <div style="font-weight:bold; color:#666;">已归档</div>
+        <div style="font-size:18px; color:#666;">128</div>
+      </div>
+    </div>
+    <!-- 主内容区 -->
+    <div style="background:#f0f2f5; padding:20px;">
+      <div style="display:flex; gap:16px; height:360px;">
+        <!-- 待审核列 -->
+        <div style="flex:1; background:white; border-radius:8px; padding:12px;">
+          <div style="font-weight:bold; margin-bottom:12px; color:#1890ff;">待审核 (5)</div>
+          <div style="background:#fafafa; border-radius:6px; padding:12px; margin-bottom:8px; border-left:3px solid #faad14;">
+            <div style="font-weight:bold;">GD-DL-01</div>
+            <div style="color:#999; margin-top:4px;">客户: 某某公司</div>
+            <div style="color:#999; margin-top:4px;">2026-04-09</div>
+          </div>
+          <div style="background:#fafafa; border-radius:6px; padding:12px; margin-bottom:8px; border-left:3px solid #faad14;">
+            <div style="font-weight:bold;">GD-DL-02</div>
+            <div style="color:#999; margin-top:4px;">客户: 测试客户</div>
+            <div style="color:#999; margin-top:4px;">2026-04-10</div>
+          </div>
+          <div style="background:#fafafa; border-radius:6px; padding:12px; border-left:3px solid #faad14;">
+            <div style="font-weight:bold;">GD-DL-03</div>
+            <div style="color:#999; margin-top:4px;">客户: 另一客户</div>
+            <div style="color:#999; margin-top:4px;">2026-04-10</div>
+          </div>
+        </div>
+        <!-- 测量中列 -->
+        <div style="flex:1; background:white; border-radius:8px; padding:12px;">
+          <div style="font-weight:bold; margin-bottom:12px; color:#1890ff;">测量中 (3)</div>
+          <div style="background:#fafafa; border-radius:6px; padding:12px; margin-bottom:8px; border-left:3px solid #52c41a;">
+            <div style="font-weight:bold;">GD-DL-04</div>
+            <div style="color:#999; margin-top:4px;">测量员: 张三</div>
+          </div>
+        </div>
+        <!-- 设计中列 -->
+        <div style="flex:1; background:white; border-radius:8px; padding:12px;">
+          <div style="font-weight:bold; margin-bottom:12px; color:#1890ff;">设计中 (2)</div>
+          <div style="background:#fafafa; border-radius:6px; padding:12px; margin-bottom:8px; border-left:3px solid #1890ff;">
+            <div style="font-weight:bold;">GD-DL-05</div>
+            <div style="color:#999; margin-top:4px;">设计师: 李四</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="pros-cons">
+  <div class="pros">
+    <h4>优点</h4>
+    <ul>
+      <li>直观展示订单流转全貌</li>
+      <li>各阶段待办一目了然</li>
+      <li>适合审核员/主管全局掌控</li>
+    </ul>
+  </div>
+  <div class="cons">
+    <h4>缺点</h4>
+    <ul>
+      <li>不适合详情页/表单页</li>
+      <li>需要传统列表+看板两种模式切换</li>
+      <li>开发工作量较大</li>
+    </ul>
+  </div>
+</div>

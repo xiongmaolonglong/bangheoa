@@ -1,0 +1,108 @@
+<view class="page-container">
+  <!-- 加载中 -->
+  <view class="loading" wx:if="{{loading}}">
+    <text>加载中...</text>
+  </view>
+
+  <block wx:if="{{!loading && order}}">
+    <!-- 状态卡片 -->
+    <view class="status-card">
+      <view class="status-icon">
+        <text wx:if="{{order.status === 'archived'}}">✅</text>
+        <text wx:elif="{{order.status === 'rejected'}}">❌</text>
+        <text wx:else>📋</text>
+      </view>
+      <view class="status-info">
+        <text class="status-text tag-{{order.statusType}}">{{order.statusText}}</text>
+        <text class="order-no">{{order.order_no}}</text>
+      </view>
+    </view>
+
+    <!-- 进度跟踪 -->
+    <view class="card">
+      <view class="card-title">进度跟踪</view>
+      <view class="timeline">
+        <view class="timeline-item" wx:for="{{logs}}" wx:key="id">
+          <view class="timeline-dot {{index === 0 ? 'active' : ''}}"></view>
+          <view class="timeline-content">
+            <text class="timeline-text">{{item.action_text || item.action}}</text>
+            <text class="timeline-time">{{item.created_at}}</text>
+            <text class="timeline-remark" wx:if="{{item.remark}}">{{item.remark}}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 基本信息 -->
+    <view class="card">
+      <view class="card-title">基本信息</view>
+      <view class="info-list">
+        <view class="info-item">
+          <text class="info-label">客户名称</text>
+          <text class="info-value">{{order.customer_name || '暂无'}}</text>
+        </view>
+        <view class="info-item">
+          <text class="info-label">联系电话</text>
+          <text class="info-value phone" bindtap="callPhone" data-phone="{{order.customer_phone}}">{{order.customer_phone || '暂无'}}</text>
+        </view>
+        <view class="info-item">
+          <text class="info-label">安装地址</text>
+          <text class="info-value">{{order.address || '暂无'}}</text>
+        </view>
+        <view class="info-item" bindtap="openMap">
+          <text class="info-label">位置定位</text>
+          <text class="info-value link">{{order.latitude ? '点击查看地图' : '暂无定位'}}</text>
+        </view>
+        <view class="info-item">
+          <text class="info-label">广告类型</text>
+          <text class="info-value">{{order.ad_type_name || '暂无'}}</text>
+        </view>
+        <view class="info-item">
+          <text class="info-label">申请时间</text>
+          <text class="info-value">{{order.created_at}}</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 广告项目 -->
+    <view class="card" wx:if="{{order.adItems && order.adItems.length > 0}}">
+      <view class="card-title">广告项目 ({{order.adItems.length}}项)</view>
+      <view class="ad-item" wx:for="{{order.adItems}}" wx:key="id">
+        <view class="ad-name">{{item.name || '项目' + (index + 1)}}</view>
+        <view class="ad-info">
+          <text wx:if="{{item.width && item.height}}">{{item.width}}×{{item.height}}{{item.unit || 'cm'}}</text>
+          <text wx:if="{{item.material}}">{{item.material}}</text>
+          <text wx:if="{{item.quantity}}">×{{item.quantity}}</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 照片 -->
+    <view class="card" wx:if="{{order.photos && order.photos.length > 0}}">
+      <view class="card-title">现场照片</view>
+      <view class="photo-grid">
+        <image
+          class="photo-item"
+          wx:for="{{order.photos}}"
+          wx:key="*this"
+          src="{{item}}"
+          mode="aspectFill"
+          bindtap="previewImage"
+          data-url="{{item}}"
+          data-urls="{{order.photos}}"
+        />
+      </view>
+    </view>
+
+    <!-- 备注 -->
+    <view class="card" wx:if="{{order.remark}}">
+      <view class="card-title">备注</view>
+      <text class="remark-text">{{order.remark}}</text>
+    </view>
+
+    <!-- 底部操作 -->
+    <view class="bottom-bar" wx:if="{{order.status === 'pending_review'}}">
+      <button class="btn-danger" bindtap="cancelOrder">取消申请</button>
+    </view>
+  </block>
+</view>

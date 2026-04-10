@@ -1,0 +1,33 @@
+<h2>管理系统页面布局方案</h2>
+<p class="subtitle">核心问题是：如何组织12个页面模块的导航和内容区？选择你最舒服的方式</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>左侧导航 + 顶部工具栏</h3>
+      <p>左侧固定侧边栏放全部菜单，顶部面包屑+操作按钮，中间主内容区。当前项目已有这个雏形。</p>
+    </div>
+  </div>
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>顶部导航 + 标签页</h3>
+      <p>顶部一级导航按业务阶段分组（订单/设计/生产/安装），点击后在标签页中打开，可多开并排。</p>
+    </div>
+  </div>
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>首页仪表盘 + 模块卡片</h3>
+      <p>登录后进入一个仪表盘，显示各模块的统计卡片和待办数量，点击卡片进入对应模块。</p>
+    </div>
+  </div>
+  <div class="option" data-choice="d" onclick="toggleSelect(this)">
+    <div class="letter">D</div>
+    <div class="content">
+      <h3>流程式布局</h3>
+      <p>按订单流转阶段（测量→设计→生产→安装）分步骤展示，像工作流一样从左到右推进。</p>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,979 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>安装详情 - 户外广告派单系统</title>
+<style>
+  :root {
+    --brand-primary: #6366f1;
+    --brand-primary-hover: #4f46e5;
+    --brand-primary-light: rgba(99,102,241,0.08);
+    --text-primary: #1e293b;
+    --text-secondary: #64748b;
+    --card-bg: #ffffff;
+    --bg-page: #f1f5f9;
+    --border: #e2e8f0;
+    --border-light: #f1f5f9;
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
+    --radius-md: 10px;
+    --radius-lg: 12px;
+    --green: #10b981;
+    --green-bg: #ecfdf5;
+    --blue: #3b82f6;
+    --blue-bg: #eff6ff;
+    --amber: #f59e0b;
+    --amber-bg: #fffbeb;
+    --red: #ef4444;
+    --red-bg: #fef2f2;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif; background: var(--bg-page); color: var(--text-primary); line-height:1.5; font-size:14px; }
+
+  .page { max-width:1400px; margin:0 auto; padding:20px; }
+
+  /* ===== 流程步骤条 ===== */
+  .flow-bar {
+    background: var(--card-bg);
+    border-radius: var(--radius-lg);
+    padding: 20px 24px;
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-sm);
+    margin-bottom: 16px;
+  }
+  .flow-bar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+  }
+  .flow-bar-header .order-no {
+    font-size: 18px;
+    font-weight: 700;
+    font-family: 'SF Mono', Monaco, monospace;
+    color: var(--text-primary);
+  }
+  .flow-actions { display:flex; gap:8px; }
+
+  .flow-steps {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: relative;
+    padding: 0 40px;
+  }
+  .flow-steps::before {
+    content: '';
+    position: absolute;
+    top: 16px;
+    left: 40px;
+    right: 40px;
+    height: 2px;
+    background: var(--border);
+    z-index: 0;
+  }
+  .flow-steps::after {
+    content: '';
+    position: absolute;
+    top: 16px;
+    left: 40px;
+    width: calc((100% - 80px) * 0.78);
+    height: 2px;
+    background: var(--brand-primary);
+    z-index: 1;
+  }
+  .flow-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    position: relative;
+    z-index: 2;
+    flex: 0 0 auto;
+  }
+  .step-dot {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 600;
+    background: var(--card-bg);
+    border: 2px solid var(--border);
+    color: var(--text-secondary);
+    transition: all 0.2s;
+  }
+  .step-dot.done {
+    background: var(--brand-primary);
+    border-color: var(--brand-primary);
+    color: #fff;
+  }
+  .step-dot.current {
+    background: var(--brand-primary);
+    border-color: var(--brand-primary);
+    color: #fff;
+    box-shadow: 0 0 0 4px rgba(99,102,241,0.2);
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 4px rgba(99,102,241,0.2); }
+    50% { box-shadow: 0 0 0 8px rgba(99,102,241,0.1); }
+  }
+  .step-label {
+    font-size: 11px;
+    color: var(--text-secondary);
+    white-space: nowrap;
+  }
+  .step-dot.done + .step-label,
+  .step-dot.current + .step-label {
+    color: var(--brand-primary);
+    font-weight: 600;
+  }
+
+  /* ===== 订单概要卡片 ===== */
+  .summary-card {
+    background: var(--card-bg);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-sm);
+    padding: 16px 20px;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 0;
+  }
+  .summary-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+  .summary-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .summary-value {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .summary-divider {
+    width: 1px;
+    height: 32px;
+    background: var(--border);
+    flex-shrink: 0;
+    margin: 0 12px;
+  }
+
+  /* ===== 卡片通用 ===== */
+  .card {
+    background: var(--card-bg);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+    margin-bottom: 16px;
+  }
+  .card-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 14px 20px;
+    background: #fafbfc;
+    border-bottom: 1px solid var(--border);
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text-primary);
+  }
+  .card-header .icon {
+    width: 20px; height: 20px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+  }
+  .card-header .badge {
+    margin-left: auto;
+    font-size: 11px;
+    font-weight: 500;
+    background: var(--brand-primary-light);
+    color: var(--brand-primary);
+    padding: 2px 8px;
+    border-radius: 99px;
+  }
+  .card-body { padding: 16px 20px; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 6px 14px; border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--card-bg);
+    color: var(--text-primary);
+    font-size: 12px; font-weight: 500;
+    cursor: pointer; transition: all 0.15s;
+  }
+  .btn:hover { border-color: var(--brand-primary); color: var(--brand-primary); }
+  .btn-primary { background: var(--brand-primary); color: #fff; border-color: var(--brand-primary); }
+  .btn-primary:hover { background: var(--brand-primary-hover); }
+  .btn-success { background: var(--green); color: #fff; border-color: var(--green); }
+  .btn-danger { background: var(--red); color: #fff; border-color: var(--red); }
+  .btn-warning { background: var(--amber); color: #fff; border-color: var(--amber); }
+  .select-sm {
+    padding: 4px 8px; border: 1px solid var(--border); border-radius: 6px;
+    font-size: 12px; background: var(--card-bg); color: var(--text-primary); cursor: pointer;
+  }
+
+  /* ===== 设计方案 ===== */
+  .design-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 12px;
+  }
+  .design-item {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .design-item:hover {
+    border-color: var(--brand-primary);
+    box-shadow: 0 2px 8px rgba(99,102,241,0.12);
+    transform: translateY(-2px);
+  }
+  .design-thumb {
+    width: 100%;
+    height: 120px;
+    background: #f5f7fa;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-secondary);
+    font-size: 12px;
+  }
+  .design-thumb .placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    opacity: 0.5;
+  }
+  .design-thumb .placeholder svg { width:32px; height:32px; stroke: var(--text-secondary); }
+  .design-info { padding: 8px 10px; font-size: 12px; }
+  .design-name { font-weight: 600; color: var(--text-primary); }
+  .design-size { color: var(--text-secondary); font-family: monospace; font-size: 11px; }
+  .design-tags { display:flex; gap:4px; flex-wrap:wrap; margin-top:4px; }
+  .design-tags .tag {
+    font-size: 10px; padding: 1px 6px;
+    background: var(--bg-page); border-radius: 4px;
+    color: var(--text-secondary);
+  }
+
+  /* ===== 物料清单 - 分组 ===== */
+  .material-toolbar {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 20px; border-bottom: 1px solid var(--border);
+    background: #fafbfc;
+  }
+  .ad-type-group { border-bottom: 1px solid var(--border); }
+  .ad-type-group:last-child { border-bottom: none; }
+  .ad-type-header {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 20px; background: #fafbfc;
+    cursor: pointer; user-select: none; transition: background 0.15s;
+  }
+  .ad-type-header:hover { background: #f0f2f5; }
+  .ad-type-icon {
+    width: 32px; height: 32px; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; color: #fff; flex-shrink: 0;
+  }
+  .ad-type-icon.type-1 { background: #6366f1; }
+  .ad-type-icon.type-2 { background: #f59e0b; }
+  .ad-type-icon.type-3 { background: #10b981; }
+  .ad-type-name { font-size: 14px; font-weight: 700; color: var(--text-primary); }
+  .ad-type-meta { font-size: 12px; color: var(--text-secondary); }
+  .ad-type-meta .count { color: var(--brand-primary); font-weight: 600; }
+  .ad-type-collapse { margin-left:auto; font-size:10px; color:var(--text-secondary); transition: transform 0.2s; }
+  .ad-type-collapse.rotated { transform: rotate(90deg); }
+  .ad-type-body { border-top: 1px solid var(--border-light); overflow: hidden; transition: max-height 0.3s ease; }
+  .ad-type-body.collapsed { max-height: 0; }
+
+  .material-table { width:100%; border-collapse:collapse; }
+  .material-table th {
+    text-align: left; padding: 10px 16px; font-size: 11px; font-weight: 600;
+    color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;
+    background: #fafbfc; border-bottom: 1px solid var(--border); white-space: nowrap;
+  }
+  .material-table td {
+    padding: 10px 16px; border-bottom: 1px solid var(--border-light);
+    font-size: 13px; vertical-align: middle;
+  }
+  .material-table tbody tr:hover { background: var(--brand-primary-light); }
+  .material-table tbody tr:last-child td { border-bottom: none; }
+
+  .face-name { font-weight:600; color: var(--text-primary); cursor: pointer; }
+  .face-name:hover { color: var(--brand-primary); }
+  .face-size { font-family: monospace; color: var(--text-secondary); font-size:12px; }
+  .face-area { font-weight:600; color: var(--brand-primary); font-size:13px; }
+
+  .status-tag {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 3px 10px; border-radius: 99px;
+    font-size: 11px; font-weight: 600;
+  }
+  .status-tag.installed { background: var(--green-bg); color: var(--green); }
+  .status-tag.pending { background: var(--bg-page); color: var(--text-secondary); }
+  .status-dot { width:6px; height:6px; border-radius:50%; display:inline-block; }
+  .status-dot.installed { background: var(--green); }
+  .status-dot.pending { background: var(--text-secondary); }
+
+  .thumb-list { display:flex; gap:4px; }
+  .thumb-img {
+    width:40px; height:40px; border-radius:6px; overflow:hidden; cursor:pointer;
+    background: var(--bg-page);
+  }
+  .thumb-img:hover { box-shadow: var(--shadow-sm); }
+
+  /* 展开行 */
+  .expand-row { display:none; }
+  .expand-row.open { display: table-row; }
+  .expand-content {
+    padding: 16px 20px; background: var(--bg-page);
+  }
+  .expand-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+  }
+  .expand-section h4 {
+    font-size: 12px; font-weight: 600; color: var(--text-secondary); margin-bottom: 8px;
+  }
+  .expand-photos { display:flex; gap:8px; flex-wrap:wrap; }
+  .expand-photo {
+    width:80px; height:80px; border-radius:var(--radius-md);
+    background: var(--card-bg); border:1px solid var(--border);
+    display:flex; align-items:center; justify-content:center;
+    font-size:11px; color:var(--text-secondary); cursor:pointer;
+  }
+  .expand-photo:hover { border-color: var(--brand-primary); }
+
+  /* ===== 安装报告 ===== */
+  .report-card { }
+  .report-header-meta {
+    display: flex; gap: 24px; margin-bottom: 20px; flex-wrap: wrap;
+  }
+  .report-meta-item {
+    display: flex; flex-direction: column; gap: 2px;
+  }
+  .report-meta-label { font-size: 11px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; }
+  .report-meta-value { font-size: 13px; font-weight: 600; color: var(--text-primary); }
+
+  .satisfaction-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 14px; border-radius: 99px;
+    font-size: 13px; font-weight: 600;
+  }
+  .satisfaction-badge.satisfied { background: var(--green-bg); color: var(--green); }
+  .satisfaction-badge.basic { background: var(--amber-bg); color: var(--amber); }
+  .satisfaction-badge.unsatisfied { background: var(--red-bg); color: var(--red); }
+
+  .signature-box {
+    width: 160px; height: 80px;
+    border: 1px dashed var(--border);
+    border-radius: var(--radius-md);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--text-secondary); font-size: 11px;
+    background: #fafbfc;
+  }
+
+  .photo-section { margin-top: 24px; }
+  .photo-section-title {
+    font-size: 13px; font-weight: 700; color: var(--text-primary);
+    margin-bottom: 12px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .photo-section-title .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+  }
+  .photo-section-title .dot.before { background: var(--amber); }
+  .photo-section-title .dot.after { background: var(--green); }
+  .photo-section-title .dot.overall { background: var(--brand-primary); }
+
+  .photo-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 10px;
+  }
+  .photo-item {
+    height: 120px;
+    border-radius: var(--radius-md);
+    background: var(--bg-page);
+    border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; color: var(--text-secondary);
+    cursor: pointer; transition: all 0.2s;
+  }
+  .photo-item:hover {
+    border-color: var(--brand-primary);
+    box-shadow: 0 2px 8px rgba(99,102,241,0.12);
+    transform: translateY(-2px);
+  }
+
+  .issue-box {
+    margin-top: 16px;
+    padding: 14px 18px;
+    background: var(--red-bg);
+    border: 1px solid #fecaca;
+    border-radius: var(--radius-md);
+    color: #991b1b;
+    font-size: 13px;
+  }
+  .issue-box strong { font-size: 13px; }
+
+  /* ===== 底部标签页 ===== */
+  .bottom-tabs {
+    background: var(--card-bg);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+  }
+  .tab-header { display:flex; border-bottom:1px solid var(--border); }
+  .tab-item {
+    padding: 14px 24px; font-size: 13px; font-weight: 600;
+    color: var(--text-secondary); cursor: pointer;
+    border-bottom: 2px solid transparent; transition: all 0.15s;
+  }
+  .tab-item:hover { color: var(--text-primary); }
+  .tab-item.active { color: var(--brand-primary); border-bottom-color: var(--brand-primary); }
+  .tab-content { padding: 16px 20px; }
+
+  .timeline { position:relative; padding-left:24px; }
+  .timeline::before {
+    content:''; position:absolute; left:7px; top:8px; bottom:8px;
+    width:2px; background:var(--border);
+  }
+  .timeline-item { position:relative; padding-bottom:16px; }
+  .timeline-item:last-child { padding-bottom:0; }
+  .timeline-dot {
+    position:absolute; left:-20px; top:4px;
+    width:12px; height:12px; border-radius:50%;
+    background:var(--border); border:2px solid var(--card-bg);
+  }
+  .timeline-item:first-child .timeline-dot { background:var(--brand-primary); }
+  .timeline-time { font-size:11px; color:var(--text-secondary); margin-bottom:2px; }
+  .timeline-body { display:flex; align-items:center; gap:8px; font-size:13px; }
+  .timeline-user { font-weight:600; color:var(--text-primary); }
+  .timeline-action { color:var(--green); }
+  .timeline-remark { color:var(--text-secondary); font-size:12px; }
+
+  /* 图片预览模态 */
+  .modal-overlay {
+    display:none; position:fixed; top:0;left:0;right:0;bottom:0;
+    background:rgba(0,0,0,0.8); z-index:1000;
+    align-items:center; justify-content:center; cursor:pointer;
+  }
+  .modal-overlay.open { display:flex; }
+  .modal-content {
+    max-width:80vw; max-height:80vh; background:var(--card-bg);
+    border-radius:var(--radius-lg); overflow:hidden; cursor:default;
+  }
+  .modal-placeholder {
+    width:600px; height:400px;
+    display:flex; align-items:center; justify-content:center;
+    color:var(--text-secondary); font-size:14px;
+  }
+
+  /* 响应式 */
+  @media (max-width: 1100px) {
+    .summary-card { flex-wrap: wrap; }
+    .summary-divider { display: none; }
+    .summary-item { min-width: calc(50% - 8px); margin-bottom: 8px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="page">
+  <!-- ===== 流程步骤条 ===== -->
+  <div class="flow-bar">
+    <div class="flow-bar-header">
+      <span class="order-no">GD-DL-01-2604-0001</span>
+      <div class="flow-actions">
+        <button class="btn btn-primary">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          填写安装报告
+        </button>
+        <button class="btn btn-success">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          审核通过，归档订单
+        </button>
+        <button class="btn btn-danger">驳回</button>
+        <button class="btn">返回列表</button>
+      </div>
+    </div>
+    <div class="flow-steps">
+      <div class="flow-step"><div class="step-dot done">✓</div><span class="step-label">申请测量</span></div>
+      <div class="flow-step"><div class="step-dot done">✓</div><span class="step-label">审核</span></div>
+      <div class="flow-step"><div class="step-dot done">✓</div><span class="step-label">测量作业</span></div>
+      <div class="flow-step"><div class="step-dot done">✓</div><span class="step-label">测量审核</span></div>
+      <div class="flow-step"><div class="step-dot done">✓</div><span class="step-label">设计</span></div>
+      <div class="flow-step"><div class="step-dot done">✓</div><span class="step-label">设计审核</span></div>
+      <div class="flow-step"><div class="step-dot done">✓</div><span class="step-label">生产</span></div>
+      <div class="flow-step"><div class="step-dot done">✓</div><span class="step-label">核对</span></div>
+      <div class="flow-step"><div class="step-dot current">9</div><span class="step-label">安装</span></div>
+      <div class="flow-step"><div class="step-dot">10</div><span class="step-label">安装审核</span></div>
+      <div class="flow-step"><div class="step-dot">11</div><span class="step-label">归档</span></div>
+    </div>
+  </div>
+
+  <!-- ===== 订单概要卡片 ===== -->
+  <div class="summary-card">
+    <div class="summary-item">
+      <span class="summary-label">客户</span>
+      <span class="summary-value">张三 · 13800138000</span>
+    </div>
+    <div class="summary-divider"></div>
+    <div class="summary-item">
+      <span class="summary-label">店铺</span>
+      <span class="summary-value">广州市天河区天河路888号商铺</span>
+    </div>
+    <div class="summary-divider"></div>
+    <div class="summary-item">
+      <span class="summary-label">安装员</span>
+      <span class="summary-value">王安装</span>
+    </div>
+    <div class="summary-divider"></div>
+    <div class="summary-item">
+      <span class="summary-label">安装日期</span>
+      <span class="summary-value">2026-04-10</span>
+    </div>
+    <div class="summary-divider"></div>
+    <div class="summary-item">
+      <span class="summary-label">满意度</span>
+      <span class="summary-value" style="color:var(--green);">满意</span>
+    </div>
+    <div class="summary-divider"></div>
+    <div class="summary-item">
+      <span class="summary-label">地区</span>
+      <span class="summary-value">广东省 · 大沥区 · 第1组</span>
+    </div>
+  </div>
+
+  <!-- ===== 设计方案 ===== -->
+  <div class="card">
+    <div class="card-header">
+      <span class="icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></span>
+      设计方案（安装参考）
+      <span class="badge">3 组图</span>
+      <button class="btn" style="margin-left:auto; font-size:11px; padding:4px 10px;">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+        下载CDR
+      </button>
+    </div>
+    <div class="card-body">
+      <div class="design-grid">
+        <div class="design-item" onclick="openModal()">
+          <div class="design-thumb"><div class="placeholder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>设计图 1</div></div>
+          <div class="design-info">
+            <div class="design-name">正面门头</div>
+            <div class="design-size">120×45cm</div>
+            <div class="design-tags"><span class="tag">正面</span><span class="tag">侧面A</span></div>
+          </div>
+        </div>
+        <div class="design-item" onclick="openModal()">
+          <div class="design-thumb"><div class="placeholder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>设计图 2</div></div>
+          <div class="design-info">
+            <div class="design-name">侧面灯箱</div>
+            <div class="design-size">80×60cm</div>
+            <div class="design-tags"><span class="tag">侧面B</span></div>
+          </div>
+        </div>
+        <div class="design-item" onclick="openModal()">
+          <div class="design-thumb"><div class="placeholder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>设计图 3</div></div>
+          <div class="design-info">
+            <div class="design-name">背景墙</div>
+            <div class="design-size">200×120cm</div>
+            <div class="design-tags"><span class="tag">背面</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 物料清单 ===== -->
+  <div class="card">
+    <div class="card-header">
+      <span class="icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg></span>
+      安装物料清单
+      <span class="badge">6 面</span>
+    </div>
+
+    <!-- 分组1: 门头招牌 -->
+    <div class="ad-type-group">
+      <div class="ad-type-header" onclick="toggleGroup(this)">
+        <div class="ad-type-icon type-1">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="10" rx="2"/></svg>
+        </div>
+        <div>
+          <div class="ad-type-name">门头招牌</div>
+          <div class="ad-type-meta"><span class="count">2</span> 个测量面 · 铝塑板</div>
+        </div>
+        <span class="ad-type-collapse rotated">▶</span>
+      </div>
+      <div class="ad-type-body">
+        <table class="material-table">
+          <thead><tr><th style="width:36px;"><input type="checkbox"></th><th>面名称</th><th>尺寸</th><th>面积</th><th>安装前</th><th>安装图</th><th>状态</th><th>操作</th></tr></thead>
+          <tbody>
+            <tr onclick="toggleExpand('e1')">
+              <td><input type="checkbox"></td>
+              <td><span class="face-name">正面</span></td>
+              <td><span class="face-size">120×45cm</span></td>
+              <td><span class="face-area">5.40㎡</span></td>
+              <td><div class="thumb-list"><div class="thumb-img" onclick="event.stopPropagation();openModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></div></div></td>
+              <td><div class="thumb-list"><div class="thumb-img" onclick="event.stopPropagation();openModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></div></div></td>
+              <td><span class="status-tag installed"><span class="status-dot installed"></span>已安装</span></td>
+              <td><button class="btn" style="padding:3px 8px;font-size:11px;" onclick="event.stopPropagation();toggleExpand('e1')">展开</button></td>
+            </tr>
+            <tr class="expand-row" id="e1"><td colspan="8"><div class="expand-content">
+              <div class="expand-grid">
+                <div class="expand-section"><h4>安装前照片</h4><div class="expand-photos"><div class="expand-photo" onclick="openModal()">照片 1</div><div class="expand-photo" onclick="openModal()">照片 2</div></div></div>
+                <div class="expand-section"><h4>安装后照片</h4><div class="expand-photos"><div class="expand-photo" onclick="openModal()">照片 1</div><div class="expand-photo" onclick="openModal()">照片 2</div><div class="expand-photo" onclick="openModal()">照片 3</div></div></div>
+              </div>
+            </div></td></tr>
+            <tr onclick="toggleExpand('e2')">
+              <td><input type="checkbox"></td>
+              <td><span class="face-name">侧面A</span></td>
+              <td><span class="face-size">80×60cm</span></td>
+              <td><span class="face-area">4.80㎡</span></td>
+              <td><div class="thumb-list"><div class="thumb-img" onclick="event.stopPropagation();openModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></div></div></td>
+              <td><div class="thumb-list"><div class="thumb-img" onclick="event.stopPropagation();openModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></div></div></td>
+              <td><span class="status-tag installed"><span class="status-dot installed"></span>已安装</span></td>
+              <td><button class="btn" style="padding:3px 8px;font-size:11px;" onclick="event.stopPropagation();toggleExpand('e2')">展开</button></td>
+            </tr>
+            <tr class="expand-row" id="e2"><td colspan="8"><div class="expand-content">
+              <div class="expand-grid">
+                <div class="expand-section"><h4>安装前照片</h4><div class="expand-photos"><div class="expand-photo" onclick="openModal()">照片 1</div></div></div>
+                <div class="expand-section"><h4>安装后照片</h4><div class="expand-photos"><div class="expand-photo" onclick="openModal()">照片 1</div><div class="expand-photo" onclick="openModal()">照片 2</div></div></div>
+              </div>
+            </div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 分组2: 灯箱广告 -->
+    <div class="ad-type-group">
+      <div class="ad-type-header" onclick="toggleGroup(this)">
+        <div class="ad-type-icon type-2">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+        </div>
+        <div>
+          <div class="ad-type-name">灯箱广告</div>
+          <div class="ad-type-meta"><span class="count">2</span> 个测量面 · 写真布</div>
+        </div>
+        <span class="ad-type-collapse rotated">▶</span>
+      </div>
+      <div class="ad-type-body">
+        <table class="material-table">
+          <thead><tr><th style="width:36px;"><input type="checkbox"></th><th>面名称</th><th>尺寸</th><th>面积</th><th>安装前</th><th>安装图</th><th>状态</th><th>操作</th></tr></thead>
+          <tbody>
+            <tr onclick="toggleExpand('e3')">
+              <td><input type="checkbox"></td>
+              <td><span class="face-name">侧面B</span></td>
+              <td><span class="face-size">80×60cm</span></td>
+              <td><span class="face-area">4.80㎡</span></td>
+              <td><div class="thumb-list"><div class="thumb-img" onclick="event.stopPropagation();openModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></div></div></td>
+              <td><div class="thumb-list"><div class="thumb-img" onclick="event.stopPropagation();openModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></div></div></td>
+              <td><span class="status-tag installed"><span class="status-dot installed"></span>已安装</span></td>
+              <td><button class="btn" style="padding:3px 8px;font-size:11px;" onclick="event.stopPropagation();toggleExpand('e3')">展开</button></td>
+            </tr>
+            <tr class="expand-row" id="e3"><td colspan="8"><div class="expand-content">
+              <div class="expand-grid">
+                <div class="expand-section"><h4>安装前照片</h4><div class="expand-photos"><div class="expand-photo" onclick="openModal()">照片 1</div></div></div>
+                <div class="expand-section"><h4>安装后照片</h4><div class="expand-photos"><div class="expand-photo" onclick="openModal()">照片 1</div></div></div>
+              </div>
+            </div></td></tr>
+            <tr onclick="toggleExpand('e4')">
+              <td><input type="checkbox"></td>
+              <td><span class="face-name">背面</span></td>
+              <td><span class="face-size">200×120cm</span></td>
+              <td><span class="face-area">2.40㎡</span></td>
+              <td><div class="thumb-list"><div class="thumb-img" onclick="event.stopPropagation();openModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></div></div></td>
+              <td><div class="thumb-list"><div class="thumb-img" onclick="event.stopPropagation();openModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></div></div></td>
+              <td><span class="status-tag installed"><span class="status-dot installed"></span>已安装</span></td>
+              <td><button class="btn" style="padding:3px 8px;font-size:11px;" onclick="event.stopPropagation();toggleExpand('e4')">展开</button></td>
+            </tr>
+            <tr class="expand-row" id="e4"><td colspan="8"><div class="expand-content">
+              <div class="expand-grid">
+                <div class="expand-section"><h4>安装前照片</h4><div class="expand-photos"><div class="expand-photo" onclick="openModal()">照片 1</div><div class="expand-photo" onclick="openModal()">照片 2</div></div></div>
+                <div class="expand-section"><h4>安装后照片</h4><div class="expand-photos"><div class="expand-photo" onclick="openModal()">照片 1</div><div class="expand-photo" onclick="openModal()">照片 2</div><div class="expand-photo" onclick="openModal()">照片 3</div></div></div>
+              </div>
+            </div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 分组3: 发光字 -->
+    <div class="ad-type-group">
+      <div class="ad-type-header" onclick="toggleGroup(this)">
+        <div class="ad-type-icon type-3">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        </div>
+        <div>
+          <div class="ad-type-name">发光字</div>
+          <div class="ad-type-meta"><span class="count">2</span> 个测量面 · 亚克力</div>
+        </div>
+        <span class="ad-type-collapse rotated">▶</span>
+      </div>
+      <div class="ad-type-body">
+        <table class="material-table">
+          <thead><tr><th style="width:36px;"><input type="checkbox"></th><th>面名称</th><th>尺寸</th><th>面积</th><th>安装前</th><th>安装图</th><th>状态</th><th>操作</th></tr></thead>
+          <tbody>
+            <tr onclick="toggleExpand('e5')">
+              <td><input type="checkbox"></td>
+              <td><span class="face-name">顶面</span></td>
+              <td><span class="face-size">50×30cm</span></td>
+              <td><span class="face-area">0.60㎡</span></td>
+              <td><div class="thumb-list"><div class="thumb-img"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></div></div></td>
+              <td><div class="thumb-list"><div class="thumb-img"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></div></div></td>
+              <td><span class="status-tag pending"><span class="status-dot pending"></span>待安装</span></td>
+              <td><button class="btn" style="padding:3px 8px;font-size:11px;" onclick="event.stopPropagation();toggleExpand('e5')">展开</button></td>
+            </tr>
+            <tr class="expand-row" id="e5"><td colspan="8"><div class="expand-content">
+              <div class="expand-grid">
+                <div class="expand-section"><h4>安装前照片</h4><div class="expand-photos"><div class="expand-photo" onclick="openModal()">照片 1</div></div></div>
+                <div class="expand-section"><h4>安装后照片</h4><div class="expand-photos"><div class="expand-photo" style="opacity:0.4;">暂无照片</div></div></div>
+              </div>
+            </div></td></tr>
+            <tr onclick="toggleExpand('e6')">
+              <td><input type="checkbox"></td>
+              <td><span class="face-name">地面</span></td>
+              <td><span class="face-size">50×30cm</span></td>
+              <td><span class="face-area">0.50㎡</span></td>
+              <td><div class="thumb-list"><div class="thumb-img"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></div></div></td>
+              <td><div class="thumb-list"><div class="thumb-img"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></div></div></td>
+              <td><span class="status-tag pending"><span class="status-dot pending"></span>待安装</span></td>
+              <td><button class="btn" style="padding:3px 8px;font-size:11px;" onclick="event.stopPropagation();toggleExpand('e6')">展开</button></td>
+            </tr>
+            <tr class="expand-row" id="e6"><td colspan="8"><div class="expand-content">
+              <div class="expand-grid">
+                <div class="expand-section"><h4>安装前照片</h4><div class="expand-photos"><div class="expand-photo" onclick="openModal()">照片 1</div></div></div>
+                <div class="expand-section"><h4>安装后照片</h4><div class="expand-photos"><div class="expand-photo" style="opacity:0.4;">暂无照片</div></div></div>
+              </div>
+            </div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 安装报告 ===== -->
+  <div class="card report-card">
+    <div class="card-header">
+      <span class="icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></span>
+      安装报告
+      <span class="badge" style="background:var(--green-bg);color:var(--green);">已提交</span>
+    </div>
+    <div class="card-body">
+      <div class="report-header-meta">
+        <div class="report-meta-item">
+          <span class="report-meta-label">安装日期</span>
+          <span class="report-meta-value">2026-04-10</span>
+        </div>
+        <div class="report-meta-item">
+          <span class="report-meta-label">安装人员</span>
+          <span class="report-meta-value">王安装</span>
+        </div>
+        <div class="report-meta-item">
+          <span class="report-meta-label">客户满意度</span>
+          <span class="satisfaction-badge satisfied">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            满意
+          </span>
+        </div>
+        <div class="report-meta-item">
+          <span class="report-meta-label">客户签字</span>
+          <div class="signature-box">客户签名图片</div>
+        </div>
+      </div>
+
+      <!-- 安装前照片 -->
+      <div class="photo-section">
+        <div class="photo-section-title">
+          <span class="dot before"></span>
+          安装前照片
+        </div>
+        <div class="photo-grid">
+          <div class="photo-item" onclick="openModal()">安装前 1</div>
+          <div class="photo-item" onclick="openModal()">安装前 2</div>
+          <div class="photo-item" onclick="openModal()">安装前 3</div>
+          <div class="photo-item" onclick="openModal()">安装前 4</div>
+        </div>
+      </div>
+
+      <!-- 安装后照片 -->
+      <div class="photo-section">
+        <div class="photo-section-title">
+          <span class="dot after"></span>
+          安装后照片
+        </div>
+        <div class="photo-grid">
+          <div class="photo-item" onclick="openModal()">安装后 1</div>
+          <div class="photo-item" onclick="openModal()">安装后 2</div>
+          <div class="photo-item" onclick="openModal()">安装后 3</div>
+          <div class="photo-item" onclick="openModal()">安装后 4</div>
+          <div class="photo-item" onclick="openModal()">安装后 5</div>
+        </div>
+      </div>
+
+      <!-- 整体效果 -->
+      <div class="photo-section">
+        <div class="photo-section-title">
+          <span class="dot overall"></span>
+          整体效果
+        </div>
+        <div class="photo-grid">
+          <div class="photo-item" onclick="openModal()">整体效果 1</div>
+          <div class="photo-item" onclick="openModal()">整体效果 2</div>
+        </div>
+      </div>
+
+      <!-- 遗留问题 -->
+      <div class="issue-box">
+        <strong>遗留问题：</strong>
+        顶面和地面发光字因天气原因暂未安装，预计下周补装。
+      </div>
+
+      <!-- 备注 -->
+      <div style="margin-top:16px;">
+        <strong style="font-size:13px;">备注：</strong>
+        <p style="margin-top:4px; color:var(--text-secondary); font-size:13px;">
+          整体安装顺利，客户对门头招牌效果非常满意。灯箱部分建议下次调整亮度。
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 底部标签页 ===== -->
+  <div class="bottom-tabs">
+    <div class="tab-header">
+      <div class="tab-item active" onclick="switchTab(this, 'logs-tab')">操作日志 <span style="font-weight:400;color:var(--text-secondary);font-size:12px;">12 条</span></div>
+      <div class="tab-item" onclick="switchTab(this, 'remark-tab')">备注</div>
+    </div>
+    <div class="tab-content" id="logs-tab">
+      <div class="timeline">
+        <div class="timeline-item">
+          <div class="timeline-dot"></div>
+          <div class="timeline-time">04-10 17:30</div>
+          <div class="timeline-body">
+            <span class="timeline-user">王安装</span>
+            <span class="timeline-action">提交安装报告</span>
+            <span class="timeline-remark">客户已签字确认</span>
+          </div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-dot"></div>
+          <div class="timeline-time">04-10 16:00</div>
+          <div class="timeline-body">
+            <span class="timeline-user">王安装</span>
+            <span class="timeline-action">完成安装 - 侧面B</span>
+          </div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-dot"></div>
+          <div class="timeline-time">04-10 14:30</div>
+          <div class="timeline-body">
+            <span class="timeline-user">王安装</span>
+            <span class="timeline-action">完成安装 - 背面</span>
+          </div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-dot"></div>
+          <div class="timeline-time">04-10 11:00</div>
+          <div class="timeline-body">
+            <span class="timeline-user">王安装</span>
+            <span class="timeline-action">开始安装</span>
+          </div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-dot"></div>
+          <div class="timeline-time">04-10 09:00</div>
+          <div class="timeline-body">
+            <span class="timeline-user">系统</span>
+            <span class="timeline-action">核对通过</span>
+            <span class="timeline-remark">物料核对完成，进入安装阶段</span>
+          </div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-dot"></div>
+          <div class="timeline-time">04-09 16:00</div>
+          <div class="timeline-body">
+            <span class="timeline-user">系统</span>
+            <span class="timeline-action">生产完成</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="tab-content" id="remark-tab" style="display:none;">
+      <textarea class="remark-textarea" style="width:100%;padding:12px;border:1px solid var(--border);border-radius:var(--radius-md);font-size:13px;font-family:inherit;resize:vertical;min-height:80px;" placeholder="填写备注说明..."></textarea>
+      <div style="margin-top:12px; display:flex; justify-content:flex-end; gap:8px;">
+        <button class="btn">取消</button>
+        <button class="btn btn-primary">保存备注</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 图片预览模态 -->
+<div class="modal-overlay" id="modal" onclick="closeModal(event)">
+  <div class="modal-content">
+    <div class="modal-placeholder">
+      <div style="text-align:center;">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="opacity:0.3;"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+        <p style="margin-top:8px;">此处显示设计图 / 安装照片大图预览</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function toggleGroup(header) {
+  const body = header.nextElementSibling;
+  const arrow = header.querySelector('.ad-type-collapse');
+  body.classList.toggle('collapsed');
+  arrow.classList.toggle('rotated');
+}
+
+function toggleExpand(id) {
+  const row = document.getElementById(id);
+  if (!row) return;
+  row.classList.toggle('open');
+}
+
+function switchTab(el, tabId) {
+  document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(t => t.style.display = 'none');
+  el.classList.add('active');
+  document.getElementById(tabId).style.display = 'block';
+}
+
+function openModal() {
+  document.getElementById('modal').classList.add('open');
+}
+
+function closeModal(e) {
+  if (e.target === e.currentTarget) {
+    document.getElementById('modal').classList.remove('open');
+  }
+}
+</script>
+
+</body>
+</html>

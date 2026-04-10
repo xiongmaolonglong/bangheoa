@@ -1,0 +1,156 @@
+- generic [ref=e3]:
+  - navigation [ref=e4]:
+    - generic [ref=e5] [cursor=pointer]:
+      - img [ref=e6]
+      - generic [ref=e9]: 派单系统
+    - generic [ref=e10]:
+      - generic [ref=e11] [cursor=pointer]:
+        - img [ref=e13]
+        - generic [ref=e15]: 订单
+      - generic [ref=e16] [cursor=pointer]:
+        - img [ref=e18]
+        - generic [ref=e21]: 设计
+      - generic [ref=e22] [cursor=pointer]:
+        - img [ref=e24]
+        - generic [ref=e26]: 生产
+      - generic [ref=e27] [cursor=pointer]:
+        - img [ref=e29]
+        - generic [ref=e31]: 安装
+      - generic [ref=e32] [cursor=pointer]:
+        - img [ref=e34]
+        - generic [ref=e36]: 统计
+      - generic [ref=e37] [cursor=pointer]:
+        - img [ref=e39]
+        - generic [ref=e41]: 客户
+      - generic [ref=e42] [cursor=pointer]:
+        - img [ref=e44]
+        - generic [ref=e47]: 地图
+      - generic [ref=e48] [cursor=pointer]:
+        - img [ref=e50]
+        - generic [ref=e52]: 设置
+    - generic [ref=e53]:
+      - button [ref=e54] [cursor=pointer]
+      - button [ref=e56] [cursor=pointer]:
+        - img [ref=e59]
+      - button "a admin" [ref=e64] [cursor=pointer]:
+        - generic [ref=e65]: a
+        - generic [ref=e66]: admin
+        - img [ref=e68]
+  - generic [ref=e70]:
+    - complementary [ref=e71]:
+      - generic [ref=e73]: 订单
+      - menubar [ref=e74]:
+        - menuitem "全部订单" [ref=e75] [cursor=pointer]
+        - menuitem "待审核" [ref=e76] [cursor=pointer]
+        - menuitem "归档管理" [ref=e77] [cursor=pointer]
+    - generic [ref=e78]:
+      - generic [ref=e82] [cursor=pointer]: 首页
+      - main [ref=e83]:
+        - generic [ref=e84]:
+          - generic [ref=e85]:
+            - generic [ref=e86]: 审核管理 待审核订单与任务处理
+            - generic [ref=e87]:
+              - button "导出" [ref=e88] [cursor=pointer]:
+                - generic [ref=e89]:
+                  - img [ref=e91]
+                  - text: 导出
+              - button "刷新" [disabled]:
+                - generic:
+                  - img
+                - generic:
+                  - generic:
+                    - img
+                  - text: 刷新
+          - generic [ref=e93]:
+            - generic [ref=e94] [cursor=pointer]:
+              - img [ref=e97]
+              - generic [ref=e99]:
+                - generic [ref=e100]: "0"
+                - generic [ref=e101]: 全部待审
+            - generic [ref=e102] [cursor=pointer]:
+              - img [ref=e105]
+              - generic [ref=e109]:
+                - generic [ref=e110]: "0"
+                - generic [ref=e111]: 申请审核
+            - generic [ref=e112] [cursor=pointer]:
+              - img [ref=e115]
+              - generic [ref=e117]:
+                - generic [ref=e118]: "0"
+                - generic [ref=e119]: 设计审核
+            - generic [ref=e120] [cursor=pointer]:
+              - img [ref=e123]
+              - generic [ref=e125]:
+                - generic [ref=e126]: "0"
+                - generic [ref=e127]: 安装审核
+          - generic [ref=e128]:
+            - generic [ref=e129]:
+              - img [ref=e132]
+              - generic [ref=e134]:
+                - generic [ref=e135]: "0"
+                - generic [ref=e136]: 今日已审
+            - generic [ref=e137]:
+              - img [ref=e140]
+              - generic [ref=e142]:
+                - generic [ref=e143]: 0%
+                - generic [ref=e144]: 通过率
+            - generic [ref=e145]:
+              - img [ref=e148]
+              - generic [ref=e152]:
+                - generic [ref=e153]: "-"
+                - generic [ref=e154]: 平均耗时
+            - generic [ref=e155]:
+              - img [ref=e158]
+              - generic [ref=e161]:
+                - generic [ref=e162]: "-"
+                - generic [ref=e163]: 最久等待
+          - generic [ref=e164]:
+            - generic [ref=e165]: 审核
+            - generic [ref=e166]:
+              - generic [ref=e168]: 申请审核
+              - generic [ref=e169]: "0"
+            - generic [ref=e170]: →
+            - generic [ref=e171]:
+              - generic [ref=e173]: 设计审核
+              - generic [ref=e174]: "0"
+            - generic [ref=e175]: →
+            - generic [ref=e176]:
+              - generic [ref=e178]: 安装审核
+              - generic [ref=e179]: "0"
+          - generic [ref=e180]:
+            - textbox "搜索订单号/客户..." [ref=e181]
+            - generic [ref=e182]:
+              - generic [ref=e183] [cursor=pointer]:
+                - text: 全部
+                - generic [ref=e184]: "0"
+              - generic [ref=e185] [cursor=pointer]:
+                - text: 申请审核
+                - generic [ref=e186]: "0"
+              - generic [ref=e187] [cursor=pointer]:
+                - text: 设计审核
+                - generic [ref=e188]: "0"
+              - generic [ref=e189] [cursor=pointer]:
+                - text: 安装审核
+                - generic [ref=e190]: "0"
+              - generic [ref=e191] [cursor=pointer]:
+                - text: 超时
+                - generic [ref=e192]: "0"
+          - img [ref=e194]
+          - generic [ref=e197]:
+            - generic [ref=e198]: 共 0 条
+            - generic [ref=e201] [cursor=pointer]:
+              - generic:
+                - combobox [ref=e203]
+                - generic [ref=e204]: 20条/页
+              - img [ref=e207]
+            - button "上一页" [disabled] [ref=e209]:
+              - generic:
+                - img
+            - list [ref=e210]:
+              - listitem "第 1 页" [ref=e211]: "1"
+            - button "下一页" [disabled] [ref=e212]:
+              - generic:
+                - img
+            - generic [ref=e213]:
+              - generic [ref=e214]: 前往
+              - spinbutton "页" [ref=e217]: "1"
+              - generic [ref=e218]: 页

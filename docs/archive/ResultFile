@@ -1,0 +1,11 @@
+当前目录 `backend/` 包含：
+
+- `src/` - 源代码
+- `migrations/` - 数据库迁移
+- `scripts/` - 脚本文件
+- `tests/` - 测试文件
+- `uploads/` - 上传文件
+- `.env` - 环境配置
+- `package.json` - 项目配置
+
+需要查看具体哪个目录或文件？

@@ -1,0 +1,107 @@
+<h2>方案 A：左侧导航 + 顶部工具栏</h2>
+<p class="subtitle">这是你当前项目已有的雏形，我来细化具体布局</p>
+
+<div class="mockup">
+  <div class="mockup-header">预览：整体布局</div>
+  <div class="mockup-body" style="padding:0; position:relative; height:500px; font-size:12px;">
+    <!-- 顶部栏 -->
+    <div style="height:50px; background:#1d39c4; color:white; display:flex; align-items:center; padding:0 20px; font-size:14px;">
+      <span style="font-weight:bold; margin-right:40px;">户外广告派单系统</span>
+      <span style="opacity:0.8; font-size:12px;">首页</span>
+      <span style="margin-left:8px; opacity:0.6;">/</span>
+      <span style="margin-left:8px;">订单管理</span>
+      <div style="margin-left:auto; display:flex; gap:16px; align-items:center;">
+        <span>通知</span>
+        <span>管理员</span>
+      </div>
+    </div>
+    <div style="display:flex; height:450px;">
+      <!-- 左侧导航 -->
+      <div style="width:200px; background:#001529; color:rgba(255,255,255,0.65); padding:10px 0; font-size:13px;">
+        <div style="padding:8px 20px; color:white; background:#1890ff; border-right:3px solid white;">订单管理</div>
+        <div style="padding:8px 20px;">审核派单</div>
+        <div style="padding:8px 20px;">测量管理</div>
+        <div style="padding:8px 20px;">设计管理</div>
+        <div style="padding:8px 20px;">生产管理</div>
+        <div style="padding:8px 20px;">安装管理</div>
+        <div style="padding:8px 20px;">归档</div>
+        <div style="padding:8px 20px; margin-top:20px; color:white; font-weight:bold;">设置</div>
+        <div style="padding:8px 20px;">用户管理</div>
+        <div style="padding:8px 20px;">地区管理</div>
+        <div style="padding:8px 20px;">表单配置</div>
+      </div>
+      <!-- 主内容区 -->
+      <div style="flex:1; background:#f0f2f5; padding:20px; overflow:hidden;">
+        <!-- 工具栏 -->
+        <div style="background:white; padding:16px; border-radius:4px; margin-bottom:16px; display:flex; justify-content:space-between; align-items:center;">
+          <div style="display:flex; gap:8px;">
+            <div style="width:120px; height:32px; background:#f5f5f5; border-radius:4px;"></div>
+            <div style="width:120px; height:32px; background:#f5f5f5; border-radius:4px;"></div>
+            <div style="width:80px; height:32px; background:#1890ff; border-radius:4px; color:white; display:flex; align-items:center; justify-content:center; padding:0 12px;">+ 新建</div>
+          </div>
+          <div style="display:flex; gap:8px;">
+            <div style="width:60px; height:32px; background:#52c41a; border-radius:4px;"></div>
+            <div style="width:60px; height:32px; background:#faad14; border-radius:4px;"></div>
+          </div>
+        </div>
+        <!-- 数据表格 -->
+        <div style="background:white; padding:16px; border-radius:4px;">
+          <div style="height:40px; background:#fafafa; border-bottom:1px solid #e8e8e8; display:flex; align-items:center; padding:0 12px; margin:0 -16px; font-weight:bold; font-size:12px;">
+            <span style="width:80px;">编号</span>
+            <span style="width:100px;">客户</span>
+            <span style="width:80px;">状态</span>
+            <span style="width:80px;">进度</span>
+            <span style="flex:1;">操作</span>
+          </div>
+          <div style="padding:12px;">
+            <div style="height:40px; display:flex; align-items:center; border-bottom:1px solid #f0f0f0; font-size:12px;">
+              <span style="width:80px;">GD-01</span>
+              <span style="width:100px;">某客户</span>
+              <span style="width:80px; color:#faad14;">设计中</span>
+              <span style="width:80px;">40%</span>
+              <span style="flex:1; color:#1890ff;">查看 编辑</span>
+            </div>
+            <div style="height:40px; display:flex; align-items:center; border-bottom:1px solid #f0f0f0; font-size:12px;">
+              <span style="width:80px;">GD-02</span>
+              <span style="width:100px;">某客户</span>
+              <span style="width:80px; color:#52c41a;">测量中</span>
+              <span style="width:80px;">20%</span>
+              <span style="flex:1; color:#1890ff;">查看 编辑</span>
+            </div>
+            <div style="height:40px; display:flex; align-items:center; font-size:12px;">
+              <span style="width:80px;">GD-03</span>
+              <span style="width:100px;">某客户</span>
+              <span style="width:80px; color:#1890ff;">待审核</span>
+              <span style="width:80px;">10%</span>
+              <span style="flex:1; color:#1890ff;">审核 驳回</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top:20px;">
+  <h3>左侧导航菜单结构</h3>
+  <p class="subtitle">按业务阶段分组，设置类放在底部</p>
+</div>
+
+<div class="pros-cons">
+  <div class="pros">
+    <h4>优点</h4>
+    <ul>
+      <li>符合当前项目结构，增量改造即可</li>
+      <li>菜单分组清晰，按流程阶段排列</li>
+      <li>顶部面包屑明确当前位置</li>
+      <li>工具栏与表格分离，操作区清晰</li>
+    </ul>
+  </div>
+  <div class="cons">
+    <h4>缺点</h4>
+    <ul>
+      <li>菜单项多时需要折叠或搜索</li>
+      <li>无法多页面并行操作</li>
+    </ul>
+  </div>
+</div>

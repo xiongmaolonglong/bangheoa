@@ -1,0 +1,5 @@
+{
+  "src": [
+    { "family": "default", "name": "main_pages.json", "data": "$profile:main_pages" }
+  ]
+}

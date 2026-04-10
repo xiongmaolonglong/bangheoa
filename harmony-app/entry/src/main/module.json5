@@ -1,0 +1,75 @@
+{
+  "app": {
+    "bundleName": "com.outdoorad.fieldwork",
+    "vendor": "outdoorad",
+    "versionCode": 1000000,
+    "versionName": "1.0.0",
+    "icon": "$media:app_icon",
+    "label": "$string:app_name",
+    "minAPIVersion": 12,
+    "targetAPIVersion": 13,
+    "apiReleaseType": "Release",
+    "debug": false,
+    "keepAlive": true
+  },
+  "module": {
+    "name": "entry",
+    "type": "entry",
+    "description": "$string:module_desc",
+    "mainElement": "EntryAbility",
+    "deviceTypes": ["phone", "tablet"],
+    "deliveryWithInstall": true,
+    "installationFree": false,
+    "pages": "$profile:main_pages",
+    "abilities": [
+      {
+        "name": "EntryAbility",
+        "srcEntry": "./ets/entryability/EntryAbility.ets",
+        "description": "$string:EntryAbility_desc",
+        "icon": "$media:app_icon",
+        "label": "$string:EntryAbility_label",
+        "startWindowIcon": "$media:app_icon",
+        "startWindowBackground": "$color:start_background",
+        "exported": true,
+        "skills": [
+          {
+            "entities": ["entity.system.home"],
+            "actions": ["action.system.home"]
+          }
+        ]
+      }
+    ],
+    "requestPermissions": [
+      {
+        "name": "ohos.permission.INTERNET",
+        "reason": "$string:permission_internet",
+        "usedScene": { "abilities": ["EntryAbility"], "when": "always" }
+      },
+      {
+        "name": "ohos.permission.LOCATION",
+        "reason": "$string:permission_location",
+        "usedScene": { "abilities": ["EntryAbility"], "when": "always" }
+      },
+      {
+        "name": "ohos.permission.LOCATION_IN_BACKGROUND",
+        "reason": "$string:permission_location_bg",
+        "usedScene": { "abilities": ["EntryAbility"], "when": "always" }
+      },
+      {
+        "name": "ohos.permission.CAMERA",
+        "reason": "$string:permission_camera",
+        "usedScene": { "abilities": ["EntryAbility"], "when": "inuse" }
+      },
+      {
+        "name": "ohos.permission.READ_MEDIA",
+        "reason": "$string:permission_media",
+        "usedScene": { "abilities": ["EntryAbility"], "when": "inuse" }
+      },
+      {
+        "name": "ohos.permission.WRITE_MEDIA",
+        "reason": "$string:permission_media",
+        "usedScene": { "abilities": ["EntryAbility"], "when": "inuse" }
+      }
+    ]
+  }
+}

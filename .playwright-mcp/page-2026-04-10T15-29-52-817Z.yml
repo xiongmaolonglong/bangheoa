@@ -1,0 +1,126 @@
+- generic [ref=e3]:
+  - navigation [ref=e4]:
+    - generic [ref=e5] [cursor=pointer]:
+      - img [ref=e6]
+      - generic [ref=e9]: 派单系统
+    - generic [ref=e10]:
+      - generic [ref=e11] [cursor=pointer]:
+        - img [ref=e13]
+        - generic [ref=e15]: 订单
+      - generic [ref=e16] [cursor=pointer]:
+        - img [ref=e18]
+        - generic [ref=e21]: 设计
+      - generic [ref=e22] [cursor=pointer]:
+        - img [ref=e24]
+        - generic [ref=e26]: 生产
+      - generic [ref=e27] [cursor=pointer]:
+        - img [ref=e29]
+        - generic [ref=e31]: 安装
+      - generic [ref=e32] [cursor=pointer]:
+        - img [ref=e34]
+        - generic [ref=e36]: 统计
+      - generic [ref=e37] [cursor=pointer]:
+        - img [ref=e39]
+        - generic [ref=e41]: 客户
+      - generic [ref=e42] [cursor=pointer]:
+        - img [ref=e44]
+        - generic [ref=e47]: 地图
+      - generic [ref=e48] [cursor=pointer]:
+        - img [ref=e50]
+        - generic [ref=e52]: 设置
+    - generic [ref=e53]:
+      - button [ref=e54] [cursor=pointer]
+      - button [ref=e56] [cursor=pointer]:
+        - img [ref=e59]
+      - button "a admin" [ref=e64] [cursor=pointer]:
+        - generic [ref=e65]: a
+        - generic [ref=e66]: admin
+        - img [ref=e68]
+  - generic [ref=e70]:
+    - complementary [ref=e71]:
+      - generic [ref=e73]: 订单
+      - menubar [ref=e74]:
+        - menuitem "全部订单" [ref=e75] [cursor=pointer]
+        - menuitem "待审核" [ref=e76] [cursor=pointer]
+        - menuitem "归档管理" [ref=e77] [cursor=pointer]
+    - generic [ref=e78]:
+      - generic [ref=e82] [cursor=pointer]: 首页
+      - main [ref=e83]:
+        - generic [ref=e84]:
+          - generic [ref=e85]:
+            - generic [ref=e86] [cursor=pointer]:
+              - img [ref=e89]
+              - generic [ref=e91]:
+                - generic [ref=e92]: "0"
+                - generic [ref=e93]: 全部
+            - generic [ref=e94] [cursor=pointer]:
+              - img [ref=e97]
+              - generic [ref=e99]:
+                - generic [ref=e100]: "0"
+                - generic [ref=e101]: 申请
+            - generic [ref=e102] [cursor=pointer]:
+              - img [ref=e105]
+              - generic [ref=e108]:
+                - generic [ref=e109]: "0"
+                - generic [ref=e110]: 设计
+            - generic [ref=e111] [cursor=pointer]:
+              - img [ref=e114]
+              - generic [ref=e116]:
+                - generic [ref=e117]: "0"
+                - generic [ref=e118]: 安装
+          - generic [ref=e119]:
+            - generic [ref=e120]:
+              - generic [ref=e121]: 快速筛选：
+              - generic [ref=e197] [cursor=pointer]: 全部
+              - generic [ref=e199] [cursor=pointer]: 紧急 (0)
+              - generic [ref=e201] [cursor=pointer]: 一般 (0)
+            - generic [ref=e122]:
+              - generic [ref=e124]:
+                - img [ref=e127]
+                - textbox "搜索订单编号/客户" [ref=e129]
+              - button "搜索" [ref=e130] [cursor=pointer]:
+                - generic [ref=e131]: 搜索
+              - button "重置" [ref=e132] [cursor=pointer]:
+                - generic [ref=e133]: 重置
+          - generic [ref=e134]:
+            - generic [ref=e136]:
+              - table [ref=e138]:
+                - rowgroup [ref=e148]:
+                  - row "选择所有行 订单编号 店铺/客户 审核阶段 待审内容 等待时间 处理人 操作" [ref=e149]:
+                    - columnheader "选择所有行" [ref=e150]:
+                      - generic "选择所有行" [ref=e152]:
+                        - generic [ref=e153] [cursor=pointer]:
+                          - checkbox "选择所有行" [disabled]
+                    - columnheader "订单编号" [ref=e155]:
+                      - generic [ref=e156]: 订单编号
+                    - columnheader "店铺/客户" [ref=e157]:
+                      - generic [ref=e158]: 店铺/客户
+                    - columnheader "审核阶段" [ref=e159]:
+                      - generic [ref=e160]: 审核阶段
+                    - columnheader "待审内容" [ref=e161]:
+                      - generic [ref=e162]: 待审内容
+                    - columnheader "等待时间" [ref=e163]:
+                      - generic [ref=e164]: 等待时间
+                    - columnheader "处理人" [ref=e165]:
+                      - generic [ref=e166]: 处理人
+                    - columnheader "操作" [ref=e167]:
+                      - generic [ref=e168]: 操作
+              - generic [ref=e172]:
+                - table:
+                  - rowgroup
+                - generic [ref=e174]: 暂无数据
+            - generic [ref=e180]:
+              - generic [ref=e181]: 共 0 条
+              - generic [ref=e184] [cursor=pointer]:
+                - generic:
+                  - combobox [ref=e186]
+                  - generic [ref=e187]: 20条/页
+                - img [ref=e190]
+              - button "上一页" [disabled] [ref=e192]:
+                - generic:
+                  - img
+              - list [ref=e193]:
+                - listitem "第 1 页" [ref=e194]: "1"
+              - button "下一页" [disabled] [ref=e195]:
+                - generic:
+                  - img

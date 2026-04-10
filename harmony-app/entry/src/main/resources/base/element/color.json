@@ -1,0 +1,20 @@
+{
+  "color": [
+    { "name": "start_background", "value": "#FFFFFF" },
+    { "name": "primary", "value": "#409EFF" },
+    { "name": "primary_dark", "value": "#337ECC" },
+    { "name": "success", "value": "#67C23A" },
+    { "name": "warning", "value": "#E6A23C" },
+    { "name": "danger", "value": "#F56C6C" },
+    { "name": "info", "value": "#909399" },
+    { "name": "text_primary", "value": "#303133" },
+    { "name": "text_regular", "value": "#606266" },
+    { "name": "text_secondary", "value": "#909399" },
+    { "name": "border_color", "value": "#DCDFE6" },
+    { "name": "bg_color", "value": "#F5F7FA" },
+    { "name": "card_bg", "value": "#FFFFFF" },
+    { "name": "tab_bar_bg", "value": "#FFFFFF" },
+    { "name": "tab_inactive", "value": "#909399" },
+    { "name": "tab_active", "value": "#409EFF" }
+  ]
+}

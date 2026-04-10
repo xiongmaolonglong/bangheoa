@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">AdTrack</string>
+    <string name="login_title">外勤定位</string>
+    <string name="login_hint_phone">手机号</string>
+    <string name="login_hint_password">密码</string>
+    <string name="login_btn">登录</string>
+    <string name="login_error">登录失败</string>
+
+    <string name="main_title">外勤定位追踪</string>
+    <string name="start_tracking">开始追踪</string>
+    <string name="stop_tracking">停止追踪</string>
+    <string name="not_tracking">未在追踪</string>
+    <string name="tracking_status">追踪中 · 已上报 %d 条</string>
+    <string name="tracking_info">上次上报：%s\n精度：%d 米\n电量：%d%%</string>
+    <string name="logout">退出登录</string>
+
+    <string name="notification_channel">定位追踪服务</string>
+    <string name="notification_title">外勤定位追踪中</string>
+    <string name="notification_text">正在持续上报您的位置信息</string>
+</resources>

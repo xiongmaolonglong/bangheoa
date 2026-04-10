@@ -1,0 +1,136 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e65]:
+    - navigation [ref=e66]:
+      - generic [ref=e67] [cursor=pointer]:
+        - img [ref=e68]
+        - generic [ref=e71]: 派单系统
+      - generic [ref=e72]:
+        - generic [ref=e73] [cursor=pointer]:
+          - img [ref=e75]
+          - generic [ref=e77]: 订单
+        - generic [ref=e78] [cursor=pointer]:
+          - img [ref=e80]
+          - generic [ref=e83]: 设计
+        - generic [ref=e84] [cursor=pointer]:
+          - img [ref=e86]
+          - generic [ref=e88]: 生产
+        - generic [ref=e89] [cursor=pointer]:
+          - img [ref=e91]
+          - generic [ref=e93]: 安装
+        - generic [ref=e94] [cursor=pointer]:
+          - img [ref=e96]
+          - generic [ref=e98]: 统计
+        - generic [ref=e99] [cursor=pointer]:
+          - img [ref=e101]
+          - generic [ref=e103]: 客户
+        - generic [ref=e104] [cursor=pointer]:
+          - img [ref=e106]
+          - generic [ref=e108]: 设置
+      - generic [ref=e109]:
+        - button [ref=e110] [cursor=pointer]
+        - button [ref=e112] [cursor=pointer]:
+          - img [ref=e115]
+        - button "a admin" [ref=e120] [cursor=pointer]:
+          - generic [ref=e121]: a
+          - generic [ref=e122]: admin
+          - img [ref=e124]
+    - generic [ref=e127]:
+      - generic [ref=e131] [cursor=pointer]: 首页
+      - main [ref=e132]:
+        - generic [ref=e133]:
+          - generic [ref=e134]:
+            - generic [ref=e135] [cursor=pointer]:
+              - img [ref=e138]
+              - generic [ref=e140]: 创建订单
+            - generic [ref=e141] [cursor=pointer]:
+              - img [ref=e144]
+              - generic [ref=e146]: 审核中心
+            - generic [ref=e147] [cursor=pointer]:
+              - img [ref=e150]
+              - generic [ref=e153]: 设计任务
+            - generic [ref=e154] [cursor=pointer]:
+              - img [ref=e157]
+              - generic [ref=e161]: 生产管理
+            - generic [ref=e162] [cursor=pointer]:
+              - img [ref=e165]
+              - generic [ref=e167]: 安装任务
+            - generic [ref=e168] [cursor=pointer]:
+              - img [ref=e171]
+              - generic [ref=e173]: 数据统计
+          - generic [ref=e174]:
+            - generic [ref=e175] [cursor=pointer]:
+              - generic [ref=e176]:
+                - generic [ref=e177]:
+                  - generic [ref=e178]: "0"
+                  - generic [ref=e179]: 待审核
+                - img [ref=e182]
+              - generic [ref=e188]: 100%
+            - generic [ref=e189] [cursor=pointer]:
+              - generic [ref=e190]:
+                - generic [ref=e191]:
+                  - generic [ref=e192]: "2"
+                  - generic [ref=e193]: 设计中
+                - img [ref=e196]
+              - generic [ref=e201]: 100%
+            - generic [ref=e202] [cursor=pointer]:
+              - generic [ref=e203]:
+                - generic [ref=e204]:
+                  - generic [ref=e205]: "1"
+                  - generic [ref=e206]: 生产中
+                - img [ref=e209]
+              - generic [ref=e213]: 100%
+            - generic [ref=e214] [cursor=pointer]:
+              - generic [ref=e215]:
+                - generic [ref=e216]:
+                  - generic [ref=e217]: "0"
+                  - generic [ref=e218]: 安装中
+                - img [ref=e221]
+              - generic [ref=e225]: 100%
+          - generic [ref=e226]:
+            - generic [ref=e227]:
+              - heading "效率指标" [level=3] [ref=e228]
+              - generic [ref=e229]:
+                - generic [ref=e230]:
+                  - strong [ref=e231]: "0"
+                  - text: 今日完成
+                - generic [ref=e232]:
+                  - strong [ref=e233]: "0"
+                  - text: 本周完成
+            - generic [ref=e234]:
+              - generic [ref=e235]:
+                - generic [ref=e236]: 设计
+                - generic [ref=e239]: 3小时
+              - generic [ref=e240]:
+                - generic [ref=e241]: 生产
+                - generic [ref=e243]: "-"
+              - generic [ref=e244]:
+                - generic [ref=e245]: 安装
+                - generic [ref=e247]: "-"
+          - generic [ref=e248]:
+            - generic [ref=e249]:
+              - generic [ref=e250]:
+                - heading "我的待办" [level=3] [ref=e251]
+                - button "查看全部" [ref=e252] [cursor=pointer]:
+                  - generic [ref=e253]: 查看全部
+              - generic [ref=e255]:
+                - img [ref=e257]
+                - paragraph [ref=e274]: 暂无待办任务
+            - generic [ref=e275]:
+              - generic [ref=e277]:
+                - heading "订单趋势" [level=3] [ref=e278]
+                - radiogroup "radio-group" [ref=e279]:
+                  - generic [ref=e280]:
+                    - radio "本周" [ref=e281]
+                    - generic [ref=e282] [cursor=pointer]: 本周
+                  - generic [ref=e283]:
+                    - radio "本月" [checked] [ref=e284]
+                    - generic [ref=e285] [cursor=pointer]: 本月
+              - heading "状态分布" [level=3] [ref=e291]
+          - generic [ref=e296]:
+            - heading "区域分布" [level=3] [ref=e298]
+            - generic [ref=e300]:
+              - generic [ref=e301]: 广东省 · 大沥区 · 大沥一组
+              - generic [ref=e304]: 3 单
+  - alert [ref=e305]:
+    - img [ref=e307]
+    - paragraph [ref=e309]: 登录成功

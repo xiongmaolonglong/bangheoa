@@ -1,0 +1,250 @@
+/* 使用 flexbox 布局，自动适配各种屏幕 */
+.page-container {
+  padding: 20rpx;
+  padding-bottom: calc(140rpx + env(safe-area-inset-bottom));
+  background-color: #f5f7fa;
+  min-height: 100vh;
+  box-sizing: border-box;
+}
+
+.card {
+  background-color: #fff;
+  border-radius: 12rpx;
+  padding: 24rpx;
+  margin-bottom: 20rpx;
+  width: calc(100% - 48rpx);
+  box-sizing: border-box;
+}
+
+.form-item {
+  margin-bottom: 24rpx;
+  width: 100%;
+}
+
+.form-item:last-child {
+  margin-bottom: 0;
+}
+
+.form-item.required .form-label::before {
+  content: '*';
+  color: #F56C6C;
+  margin-right: 8rpx;
+}
+
+.form-label {
+  display: block;
+  font-size: 28rpx;
+  color: #303133;
+  margin-bottom: 12rpx;
+  font-weight: 500;
+}
+
+.form-input {
+  width: 100%;
+  height: 80rpx;
+  background-color: #f5f7fa;
+  border-radius: 8rpx;
+  padding: 0 20rpx;
+  font-size: 28rpx;
+  box-sizing: border-box;
+}
+
+.form-textarea {
+  width: 100%;
+  min-height: 120rpx;
+  background-color: #f5f7fa;
+  border-radius: 8rpx;
+  padding: 20rpx;
+  font-size: 28rpx;
+  box-sizing: border-box;
+}
+
+/* 元素选择 */
+.element-options {
+  display: flex;
+  flex-direction: row;
+  gap: 30rpx;
+  width: 100%;
+}
+
+.option {
+  flex: 1;
+  height: 80rpx;
+  background-color: #f5f7fa;
+  border-radius: 8rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 30rpx;
+  color: #606266;
+  border: 2rpx solid transparent;
+  box-sizing: border-box;
+}
+
+.option.active {
+  background-color: #ecf5ff;
+  color: #409EFF;
+  border-color: #409EFF;
+}
+
+/* 位置选择 */
+.location-picker {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 80rpx;
+  background-color: #f5f7fa;
+  border-radius: 8rpx;
+  padding: 0 20rpx;
+  width: calc(100% - 40rpx);
+  box-sizing: border-box;
+}
+
+.location-text {
+  color: #409EFF;
+  font-size: 28rpx;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.location-placeholder {
+  color: #C0C4CC;
+  font-size: 28rpx;
+  flex: 1;
+}
+
+.location-icon {
+  font-size: 32rpx;
+  flex-shrink: 0;
+  margin-left: 10rpx;
+}
+
+/* 拍照区域 */
+.photo-section {
+  margin-top: 12rpx;
+  width: 100%;
+}
+
+.photo-list {
+  display: flex;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+.photo-item {
+  position: relative;
+  width: calc(33.33% - 20rpx);
+  padding-bottom: calc(33.33% - 20rpx);
+  height: 0;
+  margin: 10rpx;
+}
+
+.photo-img {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 8rpx;
+  object-fit: cover;
+}
+
+.photo-remove {
+  position: absolute;
+  top: -10rpx;
+  right: -10rpx;
+  width: 40rpx;
+  height: 40rpx;
+  background-color: #F56C6C;
+  color: #fff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28rpx;
+  z-index: 1;
+}
+
+.photo-add {
+  width: calc(33.33% - 20rpx);
+  padding-bottom: calc(33.33% - 20rpx);
+  height: 0;
+  margin: 10rpx;
+  background-color: #f5f7fa;
+  border-radius: 8rpx;
+  border: 2rpx dashed #DCDFE6;
+  box-sizing: border-box;
+  position: relative;
+}
+
+.photo-add-icon {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -60%);
+  font-size: 48rpx;
+}
+
+.photo-add-text {
+  position: absolute;
+  top: 60%;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 24rpx;
+  color: #909399;
+  white-space: nowrap;
+}
+
+.photo-tip {
+  display: block;
+  font-size: 24rpx;
+  color: #909399;
+  margin-top: 12rpx;
+}
+
+/* 提交按钮 */
+.submit-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 20rpx;
+  background-color: #fff;
+  box-shadow: 0 -2rpx 12rpx rgba(0, 0, 0, 0.05);
+  z-index: 100;
+}
+
+.btn-submit {
+  width: 100%;
+  height: 88rpx;
+  line-height: 88rpx;
+  background-color: #409EFF;
+  color: #fff;
+  font-size: 32rpx;
+  border-radius: 8rpx;
+  border: none;
+}
+
+.btn-submit:active {
+  background-color: #66b1ff;
+}
+
+/* 平板适配 */
+@media (min-width: 750rpx) {
+  .card {
+    max-width: 700rpx;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .form-input,
+  .form-textarea {
+    font-size: 32rpx;
+  }
+
+  .form-label {
+    font-size: 32rpx;
+  }
+}
