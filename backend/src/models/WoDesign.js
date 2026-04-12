@@ -8,6 +8,7 @@ module.exports = sequelize.define('WoDesign', {
   effect_images: { type: DataTypes.JSON },
   source_files: { type: DataTypes.JSON },
   material_list: { type: DataTypes.JSON },
+  face_mapping: { type: DataTypes.JSON },
   internal_notes: { type: DataTypes.TEXT },
   status: { type: DataTypes.ENUM('designing', 'reviewing', 'approved', 'rejected', 'confirmed'), defaultValue: 'designing' },
   reviewer_id: { type: DataTypes.INTEGER },
