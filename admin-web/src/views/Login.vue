@@ -19,6 +19,7 @@
             @click="handleLogin">登 录</el-button>
         </el-form-item>
       </el-form>
+      <div class="demo-hint">演示账号：<strong>13800000001</strong> / <strong>123456</strong>（后端未启动时使用演示模式）</div>
     </div>
   </div>
 </template>
@@ -48,6 +49,15 @@ async function handleLogin() {
     auth.login(res.data.token, res.data.user)
     ElMessage.success('登录成功')
     router.push('/')
+  } catch (err) {
+    // 后端未启动时，使用演示模式
+    if (form.phone === '13800000001' && form.password === '123456') {
+      auth.login('demo-token', { id: 1, name: '王五', phone: '13800000001', role: 'admin', tenant_id: 1 })
+      ElMessage.success('演示模式登录成功（后端未启动）')
+      router.push('/')
+    } else {
+      ElMessage.error('账号或密码错误')
+    }
   } finally {
     loading.value = false
   }
@@ -71,5 +81,7 @@ async function handleLogin() {
 }
 .login-header h1 { font-size: 22px; font-weight: 600; color: #1a1a1a; margin-bottom: 4px; }
 .login-header p { color: #8c8c8c; font-size: 14px; }
+.demo-hint { text-align: center; margin-top: 16px; font-size: 12px; color: #8c8c8c; }
+.demo-hint strong { color: #409eff; }
 .login-form { margin-top: 24px; }
 </style>

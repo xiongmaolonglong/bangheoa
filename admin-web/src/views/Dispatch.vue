@@ -41,7 +41,7 @@
   </div>
 </template>
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import api from '../api'
 const list = ref([])
 const showDialog = ref(false)

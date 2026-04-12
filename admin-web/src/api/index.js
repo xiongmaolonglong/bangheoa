@@ -18,13 +18,7 @@ api.interceptors.request.use(config => {
 api.interceptors.response.use(
   res => res.data,
   err => {
-    if (err.response?.status === 401) {
-      const auth = useAuthStore()
-      auth.logout()
-      router.push('/login')
-    }
-    const msg = err.response?.data?.error || err.message || '请求失败'
-    ElMessage.error(msg)
+    // 静默失败，各页面自行处理 Demo 数据或错误
     return Promise.reject(err)
   }
 )

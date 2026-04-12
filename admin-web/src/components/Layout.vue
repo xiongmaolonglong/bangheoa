@@ -102,7 +102,7 @@ onMounted(async () => {
   try {
     const res = await api.get('/notifications/unread-count')
     unreadCount.value = res.data?.count || 0
-  } catch {}
+  } catch { /* 静默失败 */ }
 })
 
 function handleCommand(cmd) {
