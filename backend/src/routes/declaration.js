@@ -12,12 +12,12 @@ const {
 } = require('../controllers/declarationController');
 
 // Client routes
-router.post('/declarations', requireClient, createDeclaration);
-router.get('/declarations', requireClient, getDeclarations);
-router.get('/declarations/:id', requireClient, getDeclarationById);
+router.post('/', requireClient, createDeclaration);
+router.get('/', requireClient, getDeclarations);
+router.get('/:id', requireClient, getDeclarationById);
 
 // Approval actions
-router.post('/declarations/:id/approve', requireClient, approveDeclaration);
-router.post('/declarations/:id/reject', requireClient, rejectDeclaration);
+router.post('/:id/approve', requireClient, approveDeclaration);
+router.post('/:id/reject', requireClient, rejectDeclaration);
 
 module.exports = router;

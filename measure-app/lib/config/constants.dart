@@ -1,5 +1,5 @@
 class AppConstants {
-  static const String baseUrl = 'http://localhost:3000';
+  static const String baseUrl = 'http://localhost:3010';
   static const String appName = '测量施工助手';
   static const String appVersion = '1.0.0';
 

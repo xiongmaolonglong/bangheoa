@@ -18,59 +18,63 @@ const archiveRoutes = require('./archive');
 const aftersaleRoutes = require('./aftersale');
 const adminRoutes = require('./admin');
 const notificationRoutes = require('./notification');
+const wechatRoutes = require('./wechat');
 
 // Health check
 router.use('/health', (req, res) => res.json({ status: 'ok' }));
 
-// Auth routes
+// Auth routes -> /api/v1/auth/*
 router.use('/auth', authRoutes);
 
-// Address dictionary routes
+// Address dictionary routes -> /api/v1/addresses/*
 router.use('/addresses', addressRoutes);
 
-// Tenant management routes
-router.use('/v1/tenant', tenantRoutes);
+// Tenant management routes -> /api/v1/tenants/*
+router.use('/tenants', tenantRoutes);
 
-// Client (甲方) management routes
-router.use('/v1', clientRoutes);
+// Client (甲方) management routes -> /api/v1/clients/*
+router.use('/clients', clientRoutes);
 
-// Work Order routes
-router.use('/v1/work-orders', workOrderRoutes);
+// Work Order routes -> /api/v1/work-orders/*
+router.use('/work-orders', workOrderRoutes);
 
-// Assignment & Measurement routes
-router.use('/v1', assignmentRoutes);
+// Assignment & Measurement routes -> /api/v1/*
+router.use('/', assignmentRoutes);
 
-// Design routes
-router.use('/v1/designs', designRoutes);
+// Design routes -> /api/v1/designs/*
+router.use('/designs', designRoutes);
 
-// Declaration routes (client)
+// Declaration routes (client) -> /api/v1/declarations/*
 router.use('/declarations', declarationRoutes);
 
-// Tenant declaration routes (advertiser)
+// Tenant declaration routes -> /api/v1/tenant/declarations/*
 router.use('/tenant/declarations', tenantDeclarationRoutes);
 
-// File upload routes
-router.use('/v1/files', fileRoutes);
+// File upload routes -> /api/v1/files/*
+router.use('/files', fileRoutes);
 
-// Production routes
-router.use('/v1/production', productionRoutes);
+// Production routes -> /api/v1/production/*
+router.use('/production', productionRoutes);
 
-// Construction routes
-router.use('/v1/construction', constructionRoutes);
+// Construction routes -> /api/v1/construction/*
+router.use('/construction', constructionRoutes);
 
-// Finance routes
-router.use('/v1/finance', financeRoutes);
+// Finance routes -> /api/v1/finance/*
+router.use('/finance', financeRoutes);
 
-// Archive routes
-router.use('/v1/archives', archiveRoutes);
+// Archive routes -> /api/v1/archives/*
+router.use('/archives', archiveRoutes);
 
-// Aftersale routes
-router.use('/v1/aftersales', aftersaleRoutes);
+// Aftersale routes -> /api/v1/aftersales/*
+router.use('/aftersales', aftersaleRoutes);
 
-// Notification routes
-router.use('/v1/notifications', notificationRoutes);
+// Notification routes -> /api/v1/notifications/*
+router.use('/notifications', notificationRoutes);
 
-// Super Admin routes
-router.use('/v1/admin', adminRoutes);
+// WeChat routes -> /api/v1/wechat/*
+router.use('/wechat', wechatRoutes);
+
+// Super Admin routes -> /api/v1/admin/*
+router.use('/admin', adminRoutes);
 
 module.exports = router;

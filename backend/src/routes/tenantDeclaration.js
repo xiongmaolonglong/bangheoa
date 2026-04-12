@@ -10,7 +10,7 @@ const {
 
 // Tenant routes - 广告商查看申报
 router.use(requireTenant, injectTenant);
-router.get('/declarations', getTenantDeclarations);
-router.get('/declarations/:id', getTenantDeclarationById);
+router.get('/', getTenantDeclarations);
+router.get('/:id', getTenantDeclarationById);
 
 module.exports = router;

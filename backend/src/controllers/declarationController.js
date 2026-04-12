@@ -12,6 +12,7 @@ const {
   TenantUser,
 } = require('../models');
 const { generateWorkOrderNo } = require('../services/workOrderNoService');
+const wechatService = require('../services/wechatService');
 
 /**
  * POST /api/v1/declarations
@@ -156,9 +157,11 @@ async function getDeclarations(req, res) {
           model: WorkOrder,
           as: 'work_order',
           attributes: ['id', 'work_order_no', 'status', 'current_stage', 'created_at'],
+          include: [
+            { model: WoApproval, as: 'approval', attributes: ['id', 'status', 'comment', 'approved_at'], required: false },
+          ],
         },
-        { model: ClientUser, as: 'creator', attributes: ['id', 'real_name'] },
-        { model: WoApproval, as: 'approval', attributes: ['id', 'status', 'comment', 'approved_at'] },
+        { model: ClientUser, as: 'creator', attributes: ['id', 'name'] },
       ],
       order: [['created_at', 'DESC']],
       limit: limitNum,
@@ -174,6 +177,7 @@ async function getDeclarations(req, res) {
       total_pages: Math.ceil(count / limitNum),
     });
   } catch (err) {
+    console.error('getDeclarations error:', err);
     return error(res, '获取申报列表失败', 500);
   }
 }
@@ -190,9 +194,11 @@ async function getDeclarationById(req, res) {
           model: WorkOrder,
           as: 'work_order',
           attributes: ['id', 'work_order_no', 'status', 'current_stage', 'created_at'],
+          include: [
+            { model: WoApproval, as: 'approval', attributes: ['id', 'status', 'comment', 'approved_at'], required: false },
+          ],
         },
-        { model: ClientUser, as: 'creator', attributes: ['id', 'real_name'] },
-        { model: WoApproval, as: 'approval', attributes: ['id', 'status', 'comment', 'approved_at'] },
+        { model: ClientUser, as: 'creator', attributes: ['id', 'name'] },
       ],
     });
 
@@ -231,10 +237,10 @@ async function getTenantDeclarations(req, res) {
           attributes: ['id', 'work_order_no', 'title', 'status', 'current_stage', 'created_at'],
           include: [
             { model: Client, as: 'client', attributes: ['id', 'name'] },
+            { model: WoApproval, as: 'approval', attributes: ['id', 'status'], required: false },
           ],
         },
-        { model: ClientUser, as: 'creator', attributes: ['id', 'real_name'] },
-        { model: WoApproval, as: 'approval', attributes: ['id', 'status'] },
+        { model: ClientUser, as: 'creator', attributes: ['id', 'name'] },
       ],
       order: [['created_at', 'DESC']],
       limit: limitNum,
@@ -270,10 +276,10 @@ async function getTenantDeclarationById(req, res) {
           attributes: ['id', 'work_order_no', 'title', 'description', 'status', 'current_stage', 'created_at'],
           include: [
             { model: Client, as: 'client', attributes: ['id', 'name', 'contact_name', 'contact_phone'] },
+            { model: WoApproval, as: 'approval', attributes: ['id', 'status', 'comment', 'approved_at'], required: false },
           ],
         },
-        { model: ClientUser, as: 'creator', attributes: ['id', 'real_name'] },
-        { model: WoApproval, as: 'approval', attributes: ['id', 'status', 'comment', 'approved_at'] },
+        { model: ClientUser, as: 'creator', attributes: ['id', 'name'] },
       ],
     });
 
@@ -366,6 +372,19 @@ async function approveDeclaration(req, res) {
         type: 'work_order_assigned',
         work_order_id: declaration.work_order_id,
       }, { transaction: t });
+
+      // 发送微信订阅消息
+      if (tu.wechat_openid) {
+        try {
+          await wechatService.notifyWorkOrderChange(
+            tu.wechat_openid,
+            declaration.work_order.toJSON(),
+            'assigned',
+          );
+        } catch (wechatErr) {
+          console.error('[WeChat] 发送订阅消息失败:', wechatErr.message);
+        }
+      }
     }
 
     await t.commit();
@@ -439,6 +458,7 @@ async function rejectDeclaration(req, res) {
     }, { transaction: t });
 
     // Notify the submitter (client user who created the work order)
+    const submitter = await ClientUser.findByPk(declaration.work_order.client_user_id, { transaction: t });
     await Notification.create({
       user_id: declaration.work_order.client_user_id,
       user_type: 'client',
@@ -447,6 +467,26 @@ async function rejectDeclaration(req, res) {
       type: 'declaration_rejected',
       work_order_id: declaration.work_order_id,
     }, { transaction: t });
+
+    // 发送微信订阅消息
+    if (submitter && submitter.wechat_openid) {
+      try {
+        await wechatService.sendSubscriptionMessage(
+          submitter.wechat_openid,
+          process.env.WECHAT_TEMPLATE_REJECTED || '',
+          {
+            thing1: { value: declaration.work_order.work_order_no || '' },
+            thing2: { value: declaration.work_order.title || '' },
+            phrase3: { value: '已驳回' },
+            thing4: { value: comment || '请修改后重新提交' },
+            date5: { value: new Date().toLocaleDateString('zh-CN') },
+          },
+          '/pages/declare-detail/declare-detail',
+        );
+      } catch (wechatErr) {
+        console.error('[WeChat] 发送订阅消息失败:', wechatErr.message);
+      }
+    }
 
     await t.commit();
 

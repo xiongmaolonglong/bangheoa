@@ -1,6 +1,6 @@
 App({
   globalData: {
-    baseUrl: 'http://localhost:3000',
+    baseUrl: 'http://localhost:3010',
     userInfo: null,
     token: null
   },

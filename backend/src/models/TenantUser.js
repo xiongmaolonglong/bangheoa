@@ -7,6 +7,7 @@ module.exports = sequelize.define('TenantUser', {
   tenant_id: { type: DataTypes.INTEGER, allowNull: false },
   name: { type: DataTypes.STRING(50), allowNull: false },
   phone: { type: DataTypes.STRING(20), unique: true },
+  wechat_openid: { type: DataTypes.STRING(100), unique: true },
   email: { type: DataTypes.STRING(100) },
   password_hash: { type: DataTypes.STRING(255), allowNull: false },
   role: { type: DataTypes.ENUM('admin', 'dispatcher', 'measurer', 'designer', 'producer', 'constructor', 'finance'), defaultValue: 'admin' },

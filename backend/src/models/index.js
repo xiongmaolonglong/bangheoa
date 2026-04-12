@@ -54,10 +54,10 @@ ClientRegion.belongsTo(Client, { foreignKey: 'client_id' });
 // Work Order associations
 // WorkOrder -> Tenant, Client, ClientUser, TenantUser
 Tenant.hasMany(WorkOrder, { foreignKey: 'tenant_id', as: 'work_orders' });
-WorkOrder.belongsTo(Tenant, { foreignKey: 'tenant_id' });
+WorkOrder.belongsTo(Tenant, { foreignKey: 'tenant_id', as: 'tenant' });
 
 Client.hasMany(WorkOrder, { foreignKey: 'client_id', as: 'work_orders' });
-WorkOrder.belongsTo(Client, { foreignKey: 'client_id' });
+WorkOrder.belongsTo(Client, { foreignKey: 'client_id', as: 'client' });
 
 ClientUser.hasMany(WorkOrder, { foreignKey: 'client_user_id', as: 'created_orders' });
 WorkOrder.belongsTo(ClientUser, { foreignKey: 'client_user_id', as: 'creator' });
@@ -70,7 +70,7 @@ WorkOrder.hasMany(WorkOrderLog, { foreignKey: 'work_order_id', as: 'logs' });
 WorkOrderLog.belongsTo(WorkOrder, { foreignKey: 'work_order_id' });
 
 WorkOrder.hasOne(WoDeclaration, { foreignKey: 'work_order_id', as: 'declaration' });
-WoDeclaration.belongsTo(WorkOrder, { foreignKey: 'work_order_id' });
+WoDeclaration.belongsTo(WorkOrder, { foreignKey: 'work_order_id', as: 'work_order' });
 
 WorkOrder.hasOne(WoApproval, { foreignKey: 'work_order_id', as: 'approval' });
 WoApproval.belongsTo(WorkOrder, { foreignKey: 'work_order_id' });
