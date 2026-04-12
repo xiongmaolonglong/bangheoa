@@ -7,6 +7,8 @@ const tenantRoutes = require('./tenant');
 const clientRoutes = require('./client');
 const workOrderRoutes = require('./workOrder');
 const assignmentRoutes = require('./assignment');
+const declarationRoutes = require('./declaration');
+const tenantDeclarationRoutes = require('./tenantDeclaration');
 
 // Health check
 router.use('/health', (req, res) => res.json({ status: 'ok' }));
@@ -28,5 +30,11 @@ router.use('/v1/work-orders', workOrderRoutes);
 
 // Assignment & Measurement routes
 router.use('/v1', assignmentRoutes);
+
+// Declaration routes (client)
+router.use('/declarations', declarationRoutes);
+
+// Tenant declaration routes (advertiser)
+router.use('/tenant/declarations', tenantDeclarationRoutes);
 
 module.exports = router;
