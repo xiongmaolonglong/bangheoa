@@ -93,4 +93,37 @@ function requireClient(req, res, next) {
   next();
 }
 
-module.exports = { requireAuth, requireTenant, requireClient };
+/**
+ * 超级管理员权限
+ * 要求 user_type='tenant' 且 role='admin'，或专门的 'super_admin' 角色
+ */
+function requireAdmin(req, res, next) {
+  const header = req.headers.authorization;
+  if (!header || !header.startsWith('Bearer ')) {
+    return res.status(401).json({ error: '未登录或登录已过期' });
+  }
+
+  const token = header.slice(7);
+  const payload = verifyToken(token);
+  if (!payload) {
+    return res.status(401).json({ error: '未登录或登录已过期' });
+  }
+
+  const isAdmin = payload.role === 'super_admin'
+    || (payload.user_type === 'tenant' && payload.role === 'admin');
+
+  if (!isAdmin) {
+    return res.status(403).json({ error: '需要管理员权限' });
+  }
+
+  req.user = {
+    user_id: payload.user_id,
+    user_type: payload.user_type,
+    tenant_id: payload.tenant_id,
+    role: payload.role,
+  };
+
+  next();
+}
+
+module.exports = { requireAuth, requireTenant, requireClient, requireAdmin };

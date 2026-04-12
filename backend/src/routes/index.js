@@ -16,6 +16,7 @@ const constructionRoutes = require('./construction');
 const financeRoutes = require('./finance');
 const archiveRoutes = require('./archive');
 const aftersaleRoutes = require('./aftersale');
+const adminRoutes = require('./admin');
 const notificationRoutes = require('./notification');
 
 // Health check
@@ -68,5 +69,8 @@ router.use('/v1/aftersales', aftersaleRoutes);
 
 // Notification routes
 router.use('/v1/notifications', notificationRoutes);
+
+// Super Admin routes
+router.use('/v1/admin', adminRoutes);
 
 module.exports = router;
