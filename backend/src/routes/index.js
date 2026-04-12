@@ -11,6 +11,11 @@ const declarationRoutes = require('./declaration');
 const tenantDeclarationRoutes = require('./tenantDeclaration');
 const designRoutes = require('./design');
 const fileRoutes = require('./file');
+const productionRoutes = require('./production');
+const constructionRoutes = require('./construction');
+const financeRoutes = require('./finance');
+const archiveRoutes = require('./archive');
+const aftersaleRoutes = require('./aftersale');
 
 // Health check
 router.use('/health', (req, res) => res.json({ status: 'ok' }));
@@ -44,5 +49,20 @@ router.use('/tenant/declarations', tenantDeclarationRoutes);
 
 // File upload routes
 router.use('/v1/files', fileRoutes);
+
+// Production routes
+router.use('/v1/production', productionRoutes);
+
+// Construction routes
+router.use('/v1/construction', constructionRoutes);
+
+// Finance routes
+router.use('/v1/finance', financeRoutes);
+
+// Archive routes
+router.use('/v1/archives', archiveRoutes);
+
+// Aftersale routes
+router.use('/v1/aftersales', aftersaleRoutes);
 
 module.exports = router;
