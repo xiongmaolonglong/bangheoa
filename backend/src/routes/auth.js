@@ -1,0 +1,14 @@
+const express = require('express');
+const router = express.Router();
+const authController = require('../controllers/authController');
+const { requireAuth } = require('../middleware/auth');
+
+// 不需要认证
+router.post('/tenant/login', authController.tenantLogin);
+router.post('/client/login', authController.clientLogin);
+
+// 需要认证
+router.post('/change-password', requireAuth, authController.changePassword);
+router.get('/me', requireAuth, authController.getCurrentUser);
+
+module.exports = router;
