@@ -16,6 +16,7 @@ const constructionRoutes = require('./construction');
 const financeRoutes = require('./finance');
 const archiveRoutes = require('./archive');
 const aftersaleRoutes = require('./aftersale');
+const notificationRoutes = require('./notification');
 
 // Health check
 router.use('/health', (req, res) => res.json({ status: 'ok' }));
@@ -64,5 +65,8 @@ router.use('/v1/archives', archiveRoutes);
 
 // Aftersale routes
 router.use('/v1/aftersales', aftersaleRoutes);
+
+// Notification routes
+router.use('/v1/notifications', notificationRoutes);
 
 module.exports = router;
