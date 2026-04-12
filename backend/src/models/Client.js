@@ -7,6 +7,8 @@ module.exports = sequelize.define('Client', {
   name: { type: DataTypes.STRING(100), allowNull: false },
   contact_name: { type: DataTypes.STRING(50) },
   contact_phone: { type: DataTypes.STRING(20) },
+  email: { type: DataTypes.STRING(100) },
   address: { type: DataTypes.STRING(200) },
   status: { type: DataTypes.ENUM('active', 'inactive'), defaultValue: 'active' },
+  approval_enabled: { type: DataTypes.BOOLEAN, defaultValue: false },
 }, { tableName: 'clients' });
