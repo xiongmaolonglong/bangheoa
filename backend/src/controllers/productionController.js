@@ -187,7 +187,7 @@ async function getTask(req, res) {
  */
 async function updateStatus(req, res) {
   const { id } = req.params;
-  const { status, notes } = req.body;
+  const { status, notes, quality_result, quality_inspector, quality_date, quality_notes } = req.body;
 
   const validStatuses = ['scheduled', 'producing', 'completed', 'shipped', 'quality_checked', 'qualified', 'warehoused'];
   if (!status || !validStatuses.includes(status)) {
@@ -210,7 +210,12 @@ async function updateStatus(req, res) {
   const updateData = { status };
   if (status === 'completed') updateData.produced_at = new Date().toISOString().slice(0, 10);
   if (status === 'shipped') updateData.shipped_at = new Date().toISOString().slice(0, 10);
-  if (notes) updateData.quality_notes = notes;
+  // 质检字段
+  if (quality_result) updateData.quality_result = quality_result;
+  if (quality_inspector) updateData.quality_inspector = quality_inspector;
+  if (quality_date) updateData.quality_date = quality_date;
+  if (quality_notes) updateData.quality_notes = quality_notes;
+  else if (notes) updateData.quality_notes = notes;
 
   const production = await WoProduction.findByPk(id);
   await production.update(updateData);
