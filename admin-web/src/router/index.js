@@ -97,6 +97,12 @@ const routes = [
         meta: { title: '售后管理' }
       },
       {
+        path: 'aftersale/:id',
+        name: 'AftersaleDetail',
+        component: () => import('../views/AftersaleDetail.vue'),
+        meta: { title: '售后详情' }
+      },
+      {
         path: 'organization',
         name: 'Organization',
         component: () => import('../views/Organization.vue'),
