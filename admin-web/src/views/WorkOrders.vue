@@ -1074,7 +1074,8 @@ async function createWorkOrder() {
     })
     loadWorkOrders()
   } catch (e) {
-    const msg = e.response?.data?.error || e.response?.data?.message || '创建失败'
+    const msg = e.response?.data?.message || e.response?.data?.error || e.message || '创建失败'
+    console.error('创建工单失败:', e.response?.data, e)
     ElMessage.error(msg)
   } finally {
     creating.value = false
