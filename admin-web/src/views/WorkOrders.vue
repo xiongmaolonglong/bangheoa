@@ -311,8 +311,8 @@
             <!-- image -->
             <el-upload v-else-if="field.field_type === 'image'"
               action="/api/v1/files" list-type="picture-card"
-              :file-list="getUploadFileList(field.field_key)"
-              :on-success="(res) => onFileSuccess(res, field.field_key)"
+              :file-list="uploadFileLists[field.field_key] || []"
+              :on-success="(res, file) => onFileSuccess(res, file, field.field_key)"
               :on-error="onFileError"
               :headers="proxyUploadHeaders"
               name="file">
@@ -382,12 +382,13 @@
             </el-select>
             <el-upload
               v-else-if="field.field_type === 'image'"
-              action="/api/v1/files/upload"
+              action="/api/v1/files"
               list-type="picture-card"
-              :file-list="proxyForm[field.field_key] || []"
-              :on-success="(res) => proxyFileSuccess(res, field.field_key)"
+              :file-list="proxyUploadFileLists[field.field_key] || []"
+              :on-success="(res, file) => proxyFileSuccess(res, file, field.field_key)"
+              :on-error="onFileError"
               :headers="proxyUploadHeaders"
-            >
+              name="file">
               <el-icon><Plus /></el-icon>
             </el-upload>
             <el-input v-else v-model="proxyForm[field.field_key]" :placeholder="field.placeholder || '请输入'" />
@@ -583,7 +584,7 @@ async function loadCreateFormConfig() {
   }
 }
 
-function onFileSuccess(res, fieldKey) {
+function onFileSuccess(res, file, fieldKey) {
   const url = res.url || res.data?.url
   if (!url) {
     ElMessage.error('上传成功但未返回文件地址')
@@ -593,11 +594,11 @@ function onFileSuccess(res, fieldKey) {
   if (!createForm[fieldKey].includes(url)) {
     createForm[fieldKey].push(url)
   }
-  // 手动推入 el-upload 组件的文件列表
-  nextTick(() => {
-    const uploadEl = document.querySelector(`[data-field="${fieldKey}"] .el-upload-list__item`)
-    // 触发表单重新渲染
-  })
+  // 同步到 el-upload 的文件列表
+  if (!uploadFileLists.value[fieldKey]) uploadFileLists.value[fieldKey] = []
+  if (!uploadFileLists.value[fieldKey].find(f => f.url === url)) {
+    uploadFileLists.value[fieldKey].push({ name: file.name || url.split('/').pop(), url })
+  }
 }
 
 function onFileError(err) {
@@ -607,21 +608,6 @@ function onFileError(err) {
 
 // 为每个 image 字段维护稳定的 fileList 引用
 const uploadFileLists = ref({})
-
-function getUploadFileList(fieldKey) {
-  if (!uploadFileLists.value[fieldKey]) {
-    uploadFileLists.value[fieldKey] = []
-  }
-  const urls = createForm[fieldKey] || []
-  const list = uploadFileLists.value[fieldKey]
-  // 同步 URL 到 fileList
-  urls.forEach((url, i) => {
-    if (!list.find(f => f.url === url)) {
-      list.push({ name: `file-${i}`, url })
-    }
-  })
-  return list
-}
 
 const filters = reactive({ keyword: '', stage: '', status: '', client_id: '', project_category: '', assigned_to: '' })
 const dateRange = ref(null)
@@ -662,6 +648,9 @@ const proxySubmitting = ref(false)
 const proxyUploadHeaders = computed(() => ({
   Authorization: `Bearer ${auth.token}`
 }))
+
+// 为代录测量的 image 字段维护稳定的 fileList 引用
+const proxyUploadFileLists = ref({})
 
 // ===== KANBAN 配置 =====
 const KANBAN_COLUMNS = [
@@ -1154,9 +1143,20 @@ async function loadProxyConfig() {
   }
 }
 
-function proxyFileSuccess(res, fieldKey) {
+function proxyFileSuccess(res, file, fieldKey) {
+  const url = res.url || res.data?.url
+  if (!url) {
+    ElMessage.error('上传成功但未返回文件地址')
+    return
+  }
   if (!proxyForm[fieldKey]) proxyForm[fieldKey] = []
-  proxyForm[fieldKey].push(res.data?.url || res.data)
+  if (!proxyForm[fieldKey].includes(url)) {
+    proxyForm[fieldKey].push(url)
+  }
+  if (!proxyUploadFileLists.value[fieldKey]) proxyUploadFileLists.value[fieldKey] = []
+  if (!proxyUploadFileLists.value[fieldKey].find(f => f.url === url)) {
+    proxyUploadFileLists.value[fieldKey].push({ name: file.name || url.split('/').pop(), url })
+  }
 }
 
 async function submitProxy() {
