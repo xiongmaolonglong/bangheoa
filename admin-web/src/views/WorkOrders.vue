@@ -655,11 +655,15 @@ const proxyUploadFileLists = ref({})
 // ===== KANBAN 配置 =====
 const KANBAN_COLUMNS = [
   { key: 'declaration', label: '申报接收' },
+  { key: 'approval', label: '待审批' },
   { key: 'assignment', label: '待派单' },
   { key: 'measurement', label: '测量中' },
   { key: 'design', label: '设计中' },
   { key: 'production', label: '生产中' },
-  { key: 'construction', label: '待施工' }
+  { key: 'construction', label: '施工中' },
+  { key: 'finance', label: '待财务' },
+  { key: 'archive', label: '已归档' },
+  { key: 'aftersale', label: '售后' }
 ]
 
 const stageMap = {
