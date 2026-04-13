@@ -6,6 +6,10 @@ const {
   WoApproval,
   WoAssignment,
   WoMeasurement,
+  WoDesign,
+  WoConstruction,
+  WoFinance,
+  WoAftersale,
   Client,
   ClientUser,
   TenantUser,
@@ -31,6 +35,14 @@ function flattenWorkOrder(wo) {
     assigned_to: obj.assignment?.assignee?.name || null,
     is_timeout: obj.deadline && obj.deadline < today ? true : false,
     measurement: (obj.measurements?.[0]) || null,
+    design_count: obj.designs?.length || 0,
+    construction_count: obj.constructions?.length || 0,
+    aftersale_count: obj.aftersales?.length || 0,
+    finance_summary: obj.finances?.[0] ? {
+      quote_amount: obj.finances[0].quote_amount,
+      budget_used: obj.finances[0].budget_used,
+      status: obj.finances[0].status,
+    } : null,
   };
 }
 
@@ -201,6 +213,10 @@ async function getWorkOrder(req, res) {
       { model: WoApproval, as: 'approval', required: false },
       { model: WoAssignment, as: 'assignment', required: false },
       { model: WoMeasurement, as: 'measurements', required: false },
+      { model: WoDesign, as: 'designs', required: false, attributes: ['id', 'status', 'created_at'] },
+      { model: WoConstruction, as: 'constructions', required: false, attributes: ['id', 'status', 'created_at'] },
+      { model: WoFinance, as: 'finances', required: false, attributes: ['id', 'quote_amount', 'budget_used', 'status'] },
+      { model: WoAftersale, as: 'aftersales', required: false, attributes: ['id', 'status', 'created_at'] },
     ],
     order: [
       [{ model: WoMeasurement, as: 'measurements' }, 'created_at', 'DESC'],

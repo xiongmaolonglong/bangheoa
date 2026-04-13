@@ -16,8 +16,9 @@
 
     <!-- Progress Steps -->
     <el-card class="mb-20">
-      <el-steps :active="currentStepIndex" finish-status="success" align-center>
-        <el-step v-for="s in stages" :key="s.key" :title="s.label" />
+      <el-steps :active="currentStepIndex" finish-status="success" align-center class="clickable-steps">
+        <el-step v-for="s in stages" :key="s.key" :title="s.label"
+          @click="handleStageClick(s.key)" style="cursor:pointer" />
       </el-steps>
     </el-card>
 
@@ -106,12 +107,23 @@
           </div>
         </el-card>
 
-        <el-card>
-          <template #header><span class="section-title">甲方信息</span></template>
+        <el-card class="mb-20">
+          <template #header><span class="section-title">关联数据</span></template>
           <el-descriptions :column="1">
-            <el-descriptions-item label="企业名称">{{ detail.client_name }}</el-descriptions-item>
-            <el-descriptions-item label="联系人">{{ detail.contact_name }}</el-descriptions-item>
-            <el-descriptions-item label="电话">{{ detail.contact_phone }}</el-descriptions-item>
+            <el-descriptions-item label="设计稿">{{ detail.design_count || 0 }} 份</el-descriptions-item>
+            <el-descriptions-item label="施工记录">{{ detail.construction_count || 0 }} 次</el-descriptions-item>
+            <el-descriptions-item label="售后工单">{{ detail.aftersale_count || 0 }} 个</el-descriptions-item>
+            <el-descriptions-item label="报价" v-if="detail.finance_summary">
+              {{ formatMoney(detail.finance_summary.quote_amount) }}
+              <el-tag size="small" :type="detail.finance_summary.status === 'paid' ? 'success' : 'warning'">
+                {{ financeStatus(detail.finance_summary.status) }}
+              </el-tag>
+            </el-descriptions-item>
+            <el-descriptions-item label="甲方" v-if="detail.client_name">
+              <el-button type="primary" text size="small" @click="$router.push(`/clients/${detail.client_id || ''}`)">
+                {{ detail.client_name }}
+              </el-button>
+            </el-descriptions-item>
           </el-descriptions>
         </el-card>
       </div>
@@ -170,6 +182,7 @@ import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '../api'
+import { formatMoney } from '../utils/format'
 
 const route = useRoute()
 const router = useRouter()
@@ -247,7 +260,7 @@ const roleMap = { admin: '管理员', dispatcher: '调度员', measurer: '测量
 
 async function loadTenantUsers() {
   try {
-    const res = await api.get('/tenant/users')
+    const res = await api.get('/tenants/users')
     const payload = res.data || {}
     const users = Array.isArray(payload) ? payload : (payload.list || [])
     userOptions.value = users.filter(u => u.status === 'active').map(u => ({
@@ -311,6 +324,25 @@ const stageIcon = computed(() => {
   return icons[detail.value.current_stage] || '📋'
 })
 
+const stageRouteMap = {
+  declaration: '/declarations',
+  measurement: `/work-orders/${id}/measure-review`,
+  design: '/designs',
+  production: '/production',
+  construction: '/construction',
+  finance: '/finance',
+  archive: '/archive',
+  aftersale: '/aftersale',
+}
+
+function handleStageClick(stage) {
+  const route = stageRouteMap[stage]
+  if (route) router.push(route)
+}
+
+const FINANCE_STATUS = { quoted: '报价中', paid: '已结清', invoiced: '已开票', settlement_complete: '结算完成' }
+function financeStatus(s) { return FINANCE_STATUS[s] || s }
+
 function handlePrint() {
   window.print()
 }
@@ -361,4 +393,6 @@ onMounted(async () => {
 .face-label { color: var(--color-text-tertiary); }
 .face-area { color: var(--color-primary); font-weight: var(--font-weight-medium); }
 .action-buttons { display: flex; flex-direction: column; gap: var(--space-2); margin-top: var(--space-4); }
+.clickable-steps :deep(.el-step__title) { cursor: pointer; }
+.clickable-steps :deep(.el-step__head) { cursor: pointer; }
 </style>
