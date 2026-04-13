@@ -85,6 +85,12 @@ const routes = [
         meta: { title: '归档管理' }
       },
       {
+        path: 'archive/:workOrderId',
+        name: 'ArchiveDetail',
+        component: () => import('../views/ArchiveDetail.vue'),
+        meta: { title: '归档详情' }
+      },
+      {
         path: 'aftersale',
         name: 'Aftersale',
         component: () => import('../views/Aftersale.vue'),
