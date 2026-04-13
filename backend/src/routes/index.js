@@ -68,6 +68,20 @@ router.use('/archives', archiveRoutes);
 // Aftersale routes -> /api/v1/aftersales/*
 router.use('/aftersales', aftersaleRoutes);
 
+const clientOrgRoutes = require('./clientOrg');
+const formConfigRoutes = require('./formConfig');
+
+// 表单配置 routes -> /api/v1/tenant/form-config/*
+router.use('/tenant/form-config', formConfigRoutes);
+
+// 甲方用户组织架构 routes -> /api/v1/client-organization/*
+router.use('/client-organization', clientOrgRoutes);
+
+const tenantSettingsRoutes = require('./tenantSettings');
+
+// 租户系统配置 routes -> /api/v1/tenant/settings
+router.use('/tenant/settings', tenantSettingsRoutes);
+
 // Notification routes -> /api/v1/notifications/*
 router.use('/notifications', notificationRoutes);
 

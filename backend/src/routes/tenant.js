@@ -4,7 +4,6 @@ const { requireTenant } = require('../middleware/auth');
 const { injectTenant } = require('../middleware/tenant');
 const { validate } = require('../middleware/validate');
 const controller = require('../controllers/tenantController');
-const settingsController = require('../controllers/tenantSettingsController');
 
 // 所有路由都需要 tenant 认证 + 租户隔离
 router.use(requireTenant, injectTenant);
@@ -12,11 +11,6 @@ router.use(requireTenant, injectTenant);
 // ========== 租户信息 ==========
 router.get('/info', controller.getTenantInfo);
 router.put('/info', controller.updateTenantInfo);
-
-// ========== 系统配置 ==========
-router.get('/settings', settingsController.getSettings);
-router.put('/settings', settingsController.updateSettings);
-router.patch('/settings/:key', settingsController.updateSettingKey);
 
 // ========== 部门管理 ==========
 router.get('/departments', controller.listDepartments);
