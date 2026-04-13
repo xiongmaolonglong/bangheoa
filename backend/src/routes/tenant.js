@@ -4,6 +4,7 @@ const { requireTenant } = require('../middleware/auth');
 const { injectTenant } = require('../middleware/tenant');
 const { validate } = require('../middleware/validate');
 const controller = require('../controllers/tenantController');
+const settingsController = require('../controllers/tenantSettingsController');
 
 // 所有路由都需要 tenant 认证 + 租户隔离
 router.use(requireTenant, injectTenant);
@@ -11,6 +12,11 @@ router.use(requireTenant, injectTenant);
 // ========== 租户信息 ==========
 router.get('/info', controller.getTenantInfo);
 router.put('/info', controller.updateTenantInfo);
+
+// ========== 系统配置 ==========
+router.get('/settings', settingsController.getSettings);
+router.put('/settings', settingsController.updateSettings);
+router.patch('/settings/:key', settingsController.updateSettingKey);
 
 // ========== 部门管理 ==========
 router.get('/departments', controller.listDepartments);
@@ -37,13 +43,11 @@ router.post(
   controller.createUser,
 );
 router.get('/users/:id', controller.getUser);
-router.put('/users/:id', controller.updateUser);
 router.delete('/users/:id', controller.deleteUser);
-router.put(
-  '/users/:id/status',
-  validate({ status: { required: true, enum: ['active', 'disabled'] } }),
-  controller.updateUserStatus,
-);
+router.put('/users/:id', controller.updateUser);
+
+// 子路由（必须在 :id 之前）
+router.put('/users/:id/status', controller.updateUserStatus);
 
 // ========== 统计 ==========
 router.get('/stats', controller.getStats);

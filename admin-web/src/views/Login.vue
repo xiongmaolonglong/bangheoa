@@ -1,33 +1,74 @@
 <template>
   <div class="login-page">
+    <div class="login-bg">
+      <div class="login-bg-pattern"></div>
+    </div>
     <div class="login-card">
       <div class="login-header">
-        <div class="logo-icon">A</div>
+        <div class="logo-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="3" width="20" height="14" rx="2"/>
+            <line x1="8" y1="21" x2="16" y2="21"/>
+            <line x1="12" y1="17" x2="12" y2="21"/>
+          </svg>
+        </div>
         <h1>广告工程管理系统</h1>
         <p>广告商后台</p>
       </div>
       <el-form :model="form" :rules="rules" ref="formRef" class="login-form">
         <el-form-item prop="phone">
-          <el-input v-model="form.phone" placeholder="手机号" size="large" prefix-icon="User" />
+          <el-input v-model="form.phone" placeholder="手机号" size="large" clearable>
+            <template #prefix>
+              <el-icon><Phone /></el-icon>
+            </template>
+          </el-input>
         </el-form-item>
         <el-form-item prop="password">
           <el-input v-model="form.password" type="password" placeholder="密码" size="large"
-            prefix-icon="Lock" show-password @keyup.enter="handleLogin" />
+            show-password @keyup.enter="handleLogin">
+            <template #prefix>
+              <el-icon><Lock /></el-icon>
+            </template>
+          </el-input>
+        </el-form-item>
+        <el-form-item>
+          <div class="login-options">
+            <el-checkbox v-model="rememberMe">记住手机号</el-checkbox>
+            <el-button type="text" size="small" class="forgot-link" @click="showForgotDialog = true">忘记密码？</el-button>
+          </div>
         </el-form-item>
         <el-form-item>
           <el-button type="primary" size="large" style="width:100%" :loading="loading"
             @click="handleLogin">登 录</el-button>
         </el-form-item>
       </el-form>
-      <div class="demo-hint">演示账号：<strong>13800000001</strong> / <strong>123456</strong>（后端未启动时使用演示模式）</div>
+      <div class="demo-hint">演示账号：<strong>13800000001</strong> / <strong>123456</strong></div>
     </div>
+
+    <!-- 忘记密码对话框 -->
+    <el-dialog v-model="showForgotDialog" title="重置密码" width="400px">
+      <el-form :model="forgotForm" label-width="80px">
+        <el-form-item label="手机号">
+          <el-input v-model="forgotForm.phone" placeholder="请输入注册手机号" />
+        </el-form-item>
+        <el-form-item label="新密码">
+          <el-input v-model="forgotForm.new_password" type="password" placeholder="至少6位" show-password />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="showForgotDialog = false">取消</el-button>
+        <el-button type="primary" @click="handleForgot" :loading="forgotLoading">确认重置</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../store/auth'
+import { ElMessage } from 'element-plus'
+import { Phone, Lock } from '@element-plus/icons-vue'
 import api from '../api'
 
 const router = useRouter()
@@ -36,14 +77,52 @@ const formRef = ref()
 const loading = ref(false)
 
 const form = reactive({ phone: '', password: '' })
+const rememberMe = ref(false)
 const rules = {
   phone: [{ required: true, message: '请输入手机号', trigger: 'blur' }],
   password: [{ required: true, message: '请输入密码', trigger: 'blur' }]
 }
 
+// 忘记密码
+const showForgotDialog = ref(false)
+const forgotForm = reactive({ phone: '', new_password: '' })
+const forgotLoading = ref(false)
+
+async function handleForgot() {
+  if (!forgotForm.phone || !forgotForm.new_password) return ElMessage.warning('请填写完整信息')
+  if (forgotForm.new_password.length < 6) return ElMessage.warning('密码至少6位')
+  forgotLoading.value = true
+  try {
+    await api.post('/auth/forgot-password', forgotForm)
+    ElMessage.success('密码已重置，请使用新密码登录')
+    showForgotDialog.value = false
+    form.phone = forgotForm.phone
+    form.password = ''
+  } catch (e) {
+    ElMessage.error(e.response?.data?.message || '重置失败，请确认手机号是否正确')
+  } finally {
+    forgotLoading.value = false
+  }
+}
+
+// 记住手机号
+onMounted(() => {
+  const saved = localStorage.getItem('remembered_phone')
+  if (saved) {
+    form.phone = saved
+    rememberMe.value = true
+  }
+})
+
 async function handleLogin() {
   await formRef.value.validate()
   loading.value = true
+  // 记住/清除手机号
+  if (rememberMe.value) {
+    localStorage.setItem('remembered_phone', form.phone)
+  } else {
+    localStorage.removeItem('remembered_phone')
+  }
   try {
     const res = await api.post('/auth/tenant/login', form)
     auth.login(res.data.token, res.data.user)
@@ -66,22 +145,115 @@ async function handleLogin() {
 
 <style scoped>
 .login-page {
-  min-height: 100vh; display: flex; align-items: center; justify-content: center;
-  background: linear-gradient(135deg, #f5f7fa 0%, #e4e8ed 100%);
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
 }
+
+.login-bg {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #1e293b 100%);
+}
+
+.login-bg-pattern {
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(circle at 20% 50%, rgba(37, 99, 235, 0.15) 0%, transparent 50%),
+    radial-gradient(circle at 80% 20%, rgba(59, 130, 246, 0.1) 0%, transparent 40%),
+    radial-gradient(circle at 60% 80%, rgba(16, 185, 129, 0.08) 0%, transparent 40%);
+}
+
 .login-card {
-  width: 400px; background: #fff; border-radius: 12px; padding: 48px 36px;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+  position: relative;
+  z-index: 1;
+  width: 420px;
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(12px);
+  border-radius: var(--radius-lg);
+  padding: var(--space-10) var(--space-8);
+  box-shadow: var(--shadow-lg), 0 0 0 1px rgba(255, 255, 255, 0.1);
 }
-.login-header { text-align: center; margin-bottom: 36px; }
+
+.login-header { text-align: center; margin-bottom: var(--space-8); }
+
 .logo-icon {
-  width: 48px; height: 48px; background: #409eff; border-radius: 12px;
-  display: inline-flex; align-items: center; justify-content: center;
-  color: #fff; font-weight: 700; font-size: 22px; margin-bottom: 16px;
+  width: 56px;
+  height: 56px;
+  background: var(--color-primary);
+  border-radius: var(--radius-md);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  margin-bottom: var(--space-4);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
 }
-.login-header h1 { font-size: 22px; font-weight: 600; color: #1a1a1a; margin-bottom: 4px; }
-.login-header p { color: #8c8c8c; font-size: 14px; }
-.demo-hint { text-align: center; margin-top: 16px; font-size: 12px; color: #8c8c8c; }
-.demo-hint strong { color: #409eff; }
-.login-form { margin-top: 24px; }
+
+.login-header h1 {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+  margin-bottom: var(--space-1);
+}
+
+.login-header p {
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-sm);
+}
+
+.login-form { margin-top: var(--space-6); }
+
+.login-form :deep(.el-input__wrapper) {
+  padding: var(--space-1) var(--space-3);
+  box-shadow: 0 0 0 1px var(--color-border-base) inset;
+}
+
+.login-form :deep(.el-input__wrapper:hover) {
+  box-shadow: 0 0 0 1px var(--color-primary-light) inset;
+}
+
+.login-form :deep(.el-input__wrapper.is-focus) {
+  box-shadow: 0 0 0 1px var(--color-primary) inset;
+}
+
+.login-form :deep(.el-form-item) {
+  margin-bottom: var(--space-5);
+}
+
+.login-form :deep(.el-button--primary) {
+  height: 44px;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.05em;
+}
+
+.demo-hint {
+  text-align: center;
+  margin-top: var(--space-4);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+}
+
+.demo-hint strong {
+  color: var(--color-primary);
+  font-weight: var(--font-weight-medium);
+}
+
+.login-options {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.forgot-link {
+  color: var(--color-primary);
+  font-size: var(--font-size-xs);
+  padding: 0;
+}
 </style>

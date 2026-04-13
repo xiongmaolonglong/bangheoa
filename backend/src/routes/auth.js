@@ -6,6 +6,8 @@ const { requireAuth } = require('../middleware/auth');
 // 不需要认证
 router.post('/tenant/login', authController.tenantLogin);
 router.post('/client/login', authController.clientLogin);
+router.post('/admin/login', authController.superAdminLogin);
+router.post('/forgot-password', authController.forgotPassword);
 
 // 需要认证
 router.post('/change-password', requireAuth, authController.changePassword);
