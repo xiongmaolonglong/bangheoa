@@ -61,9 +61,10 @@
             <el-tag size="small" :type="statusType(row.status)">{{ statusLabel(row.status) }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="280">
+        <el-table-column label="操作" width="340">
           <template #default="{ row }">
             <el-button size="small" @click="viewDetail(row)">详情</el-button>
+            <el-button size="small" @click="viewLogs(row)">日志</el-button>
             <el-button v-if="row.status === 'completed'" size="small" type="success" @click="openVerifyDialog(row)">验收</el-button>
             <el-button v-if="row.status === 'scheduled'" size="small" type="warning" @click="startConstruction(row)">开始</el-button>
           </template>
@@ -106,6 +107,91 @@
         <el-button :type="verifyForm.result ? 'success' : 'danger'" @click="submitVerify" :loading="submitting">
           {{ verifyForm.result ? '确认通过' : '退回整改' }}
         </el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 施工日志抽屉 -->
+    <el-drawer v-model="showLogDrawer" title="施工日志" size="560px">
+      <div class="log-toolbar mb-16">
+        <el-button type="primary" size="small" @click="openAddLog">+ 添加日志</el-button>
+      </div>
+      <el-timeline v-if="constructionLogs.length">
+        <el-timeline-item v-for="log in constructionLogs" :key="log.id"
+          :timestamp="log.log_date || log.created_at" placement="top">
+          <div class="log-card">
+            <div class="log-head">
+              <el-tag size="small" :type="log.status === 'completed' ? 'success' : 'warning'">
+                {{ log.status === 'completed' ? '已完成' : '施工中' }}
+              </el-tag>
+              <span class="log-worker">{{ log.worker_name || log.operator || '—' }}</span>
+              <span class="log-weather" v-if="log.weather">{{ log.weather }}</span>
+            </div>
+            <div class="log-content">{{ log.content || log.work_description || '—' }}</div>
+            <div class="log-meta">
+              <span v-if="log.labor_count">用工 {{ log.labor_count }}人</span>
+              <span v-if="log.duration_hours">耗时 {{ log.duration_hours }}h</span>
+            </div>
+            <div class="log-actions">
+              <el-button text size="small" @click="editLog(log)">编辑</el-button>
+              <el-button text size="small" type="danger" @click="deleteLog(log)">删除</el-button>
+            </div>
+          </div>
+        </el-timeline-item>
+      </el-timeline>
+      <el-empty v-else description="暂无施工日志" />
+    </el-drawer>
+
+    <!-- 添加/编辑日志对话框 -->
+    <el-dialog v-model="showLogDialog" :title="logForm.id ? '编辑日志' : '添加日志'" width="520px">
+      <el-form :model="logForm" label-width="80px" ref="logFormRef">
+        <el-row :gutter="16">
+          <el-col :span="12">
+            <el-form-item label="日期" required>
+              <el-date-picker v-model="logForm.log_date" type="date" value-format="YYYY-MM-DD"
+                style="width:100%" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="天气">
+              <el-select v-model="logForm.weather" style="width:100%">
+                <el-option label="晴" value="晴" />
+                <el-option label="多云" value="多云" />
+                <el-option label="阴" value="阴" />
+                <el-option label="小雨" value="小雨" />
+                <el-option label="大雨" value="大雨" />
+                <el-option label="雪" value="雪" />
+              </el-select>
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-form-item label="施工内容" required>
+          <el-input v-model="logForm.content" type="textarea" :rows="4"
+            placeholder="描述今日施工内容、进度、问题等" />
+        </el-form-item>
+        <el-row :gutter="16">
+          <el-col :span="8">
+            <el-form-item label="用工人数">
+              <el-input-number v-model="logForm.labor_count" :min="0" style="width:100%" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="8">
+            <el-form-item label="耗时(h)">
+              <el-input-number v-model="logForm.duration_hours" :min="0" :precision="1" style="width:100%" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="8">
+            <el-form-item label="状态">
+              <el-select v-model="logForm.status" style="width:100%">
+                <el-option label="施工中" value="in_progress" />
+                <el-option label="已完成" value="completed" />
+              </el-select>
+            </el-form-item>
+          </el-col>
+        </el-row>
+      </el-form>
+      <template #footer>
+        <el-button @click="showLogDialog = false">取消</el-button>
+        <el-button type="primary" @click="submitLog" :loading="logSubmitting">保存</el-button>
       </template>
     </el-dialog>
   </div>
@@ -222,6 +308,77 @@ async function submitVerify() {
 }
 
 onMounted(fetchList)
+
+// 施工日志
+const showLogDrawer = ref(false)
+const showLogDialog = ref(false)
+const logSubmitting = ref(false)
+const logFormRef = ref(null)
+const constructionLogs = ref([])
+const currentLogWorkOrderId = ref('')
+const logForm = reactive({
+  id: null, log_date: '', weather: '', content: '', labor_count: null,
+  duration_hours: null, status: 'in_progress'
+})
+
+async function viewLogs(row) {
+  currentLogWorkOrderId.value = row.work_order_id
+  constructionLogs.value = []
+  showLogDrawer.value = true
+  try {
+    const res = await api.get(`/construction/${row.work_order_id}/logs`)
+    constructionLogs.value = res.data || []
+  } catch (e) {
+    console.error('加载施工日志失败:', e)
+  }
+}
+
+function openAddLog() {
+  Object.assign(logForm, {
+    id: null, log_date: new Date().toISOString().slice(0, 10), weather: '',
+    content: '', labor_count: null, duration_hours: null, status: 'in_progress'
+  })
+  showLogDialog.value = true
+}
+
+function editLog(log) {
+  Object.assign(logForm, {
+    id: log.id, log_date: log.log_date || '', weather: log.weather || '',
+    content: log.content || '', labor_count: log.labor_count || null,
+    duration_hours: log.duration_hours || null, status: log.status || 'in_progress'
+  })
+  showLogDialog.value = true
+}
+
+async function submitLog() {
+  if (!logForm.content) return ElMessage.warning('请填写施工内容')
+  logSubmitting.value = true
+  try {
+    const payload = { ...logForm, work_order_id: currentLogWorkOrderId.value }
+    if (logForm.id) {
+      await api.put(`/construction/logs/${logForm.id}`, payload)
+      ElMessage.success('日志已更新')
+    } else {
+      await api.post(`/construction/${currentLogWorkOrderId.value}/logs`, payload)
+      ElMessage.success('日志已添加')
+    }
+    showLogDialog.value = false
+    viewLogs({ work_order_id: currentLogWorkOrderId.value })
+  } catch (e) {
+    ElMessage.error(e.response?.data?.error || '操作失败')
+  } finally {
+    logSubmitting.value = false
+  }
+}
+
+async function deleteLog(log) {
+  try {
+    await ElMessageBox.confirm('确定删除此施工日志吗？', '提示', { type: 'warning' })
+    await api.delete(`/construction/logs/${log.id}`)
+    ElMessage.success('已删除')
+    viewLogs({ work_order_id: currentLogWorkOrderId.value })
+  } catch {}
+}
 </script>
 
 <style scoped>
@@ -234,4 +391,12 @@ onMounted(fetchList)
 .pagination-box { display: flex; justify-content: flex-end; margin-top: var(--space-4); }
 .wo-link { color: var(--color-primary); text-decoration: none; }
 .wo-link:hover { text-decoration: underline; }
+.log-toolbar { display: flex; justify-content: flex-end; }
+.log-card { background: var(--color-bg-page); border-radius: var(--radius-sm); padding: 12px; }
+.log-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.log-worker { font-weight: var(--font-weight-medium); font-size: var(--font-size-sm); }
+.log-weather { color: var(--color-text-tertiary); font-size: var(--font-size-xs); margin-left: auto; }
+.log-content { font-size: var(--font-size-sm); line-height: 1.6; margin-bottom: 8px; }
+.log-meta { color: var(--color-text-tertiary); font-size: var(--font-size-xs); display: flex; gap: 12px; }
+.log-actions { margin-top: 8px; border-top: 1px solid var(--color-border-light); padding-top: 8px; }
 </style>

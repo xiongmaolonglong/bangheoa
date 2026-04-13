@@ -22,7 +22,7 @@
 
     <el-tabs v-model="activeTab">
       <el-tab-pane label="待设计" name="designing">
-        <el-table :data="designList" stripe v-loading="loading">
+        <el-table :data="designList" stripe v-loading="loading" @row-click="handleRowClick">
           <el-table-column prop="work_order_no" label="工单号" width="160">
             <template #default="{ row }">
               <router-link :to="`/work-orders/${row.id}`" class="wo-link">{{ row.work_order_no }}</router-link>
@@ -32,6 +32,11 @@
           <el-table-column label="测量面积" width="100">
             <template #default="{ row }">{{ calcArea(row) }}㎡</template>
           </el-table-column>
+          <el-table-column label="材料类型" width="120">
+            <template #default="{ row }">
+              <span class="text-muted">{{ getMaterialTypes(row) || '—' }}</span>
+            </template>
+          </el-table-column>
           <el-table-column label="设计次数" width="100">
             <template #default="{ row }">
               <el-tag size="small" type="info">{{ row.design_count || 0 }} 次</el-tag>
@@ -39,7 +44,7 @@
           </el-table-column>
           <el-table-column label="操作" width="120">
             <template #default="{ row }">
-              <el-button type="primary" size="small" @click="openDesign(row)">上传设计</el-button>
+              <el-button type="primary" size="small" @click.stop="openDesign(row)">上传设计</el-button>
             </template>
           </el-table-column>
         </el-table>
@@ -124,6 +129,59 @@
         <el-button type="danger" @click="confirmReject" :loading="submitting">确认驳回</el-button>
       </template>
     </el-dialog>
+
+    <!-- 测量数据查看抽屉 -->
+    <el-drawer v-model="showMeasureDrawer" title="测量数据参考" size="600px">
+      <el-descriptions :column="2" border class="mb-16">
+        <el-descriptions-item label="工单号">{{ measureWO.work_order_no }}</el-descriptions-item>
+        <el-descriptions-item label="项目">{{ measureWO.title }}</el-descriptions-item>
+        <el-descriptions-item label="总面积">{{ measureTotalArea }}㎡</el-descriptions-item>
+        <el-descriptions-item label="测量员">{{ measureWO.measurements?.[0]?.measurer?.name || '—' }}</el-descriptions-item>
+      </el-descriptions>
+
+      <!-- 各面尺寸可视化 -->
+      <div v-if="measureFaces.length">
+        <h4 class="section-title">各面尺寸对比</h4>
+        <div class="face-grid">
+          <div v-for="(face, i) in measureFaces" :key="i" class="face-card">
+            <div class="face-title">{{ face.label || (i + 1) + '面' }}</div>
+            <div class="face-dims">{{ face.width || 0 }}m × {{ face.height || 0 }}m</div>
+            <div class="face-area">{{ (face.area || (face.width * face.height) || 0).toFixed(2) }}㎡</div>
+            <div class="face-bar">
+              <div class="face-bar-fill" :style="{ width: getBarWidth(face) + '%' }"></div>
+            </div>
+            <div v-if="face.notes" class="face-note">{{ face.notes }}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 材料分布 -->
+      <div v-if="measureMaterials.length > 1">
+        <h4 class="section-title">材料分布</h4>
+        <div class="material-bar">
+          <div v-for="(mat, i) in measureMaterials" :key="i"
+            class="material-segment"
+            :style="{ width: getMaterialWidth(mat) + '%', backgroundColor: materialColors[i % materialColors.length] }">
+            {{ mat.type }} {{ mat.faces.length }}面
+          </div>
+        </div>
+      </div>
+
+      <!-- 设计版本对比（如果有历史设计） -->
+      <div v-if="measureWO.designs?.length > 1">
+        <h4 class="section-title">设计版本历史</h4>
+        <div class="version-list">
+          <div v-for="(d, i) in measureWO.designs" :key="i" class="version-item">
+            <span class="version-tag">v{{ i + 1 }}</span>
+            <span class="version-date">{{ d.created_at || d.submitted_at || '—' }}</span>
+            <el-tag size="small" :type="d.status === 'approved' ? 'success' : d.status === 'rejected' ? 'danger' : 'warning'">
+              {{ d.status === 'approved' ? '通过' : d.status === 'rejected' ? '驳回' : '待审' }}
+            </el-tag>
+            <span class="version-type">{{ d.design_type || '—' }}</span>
+          </div>
+        </div>
+      </div>
+    </el-drawer>
   </div>
 </template>
 
@@ -254,6 +312,58 @@ async function confirmReject() {
 }
 
 onMounted(fetchData)
+
+// 测量数据可视化
+const showMeasureDrawer = ref(false)
+const measureWO = reactive({ id: '', work_order_no: '', title: '', designs: [], measurements: [] })
+const measureFaces = ref([])
+const measureMaterials = ref([])
+
+const measureTotalArea = computed(() => {
+  return measureFaces.value.reduce((s, f) => s + (f.area || (f.width * f.height) || 0), 0).toFixed(2)
+})
+
+const materialColors = ['#2563eb', '#16a34a', '#ea580c', '#9333ea', '#dc2626', '#0891b2']
+
+function handleRowClick(row) {
+  openMeasureView(row)
+}
+
+function openMeasureView(row) {
+  if (!row.measurements?.length) return
+  Object.assign(measureWO, {
+    id: row.id, work_order_no: row.work_order_no, title: row.title,
+    designs: row.designs || [], measurements: row.measurements
+  })
+  // 收集所有面
+  const allFaces = []
+  const allMats = []
+  for (const m of (row.measurements[0]?.materials || [])) {
+    allMats.push(m)
+    for (const f of (m.faces || [])) {
+      allFaces.push({ ...f, materialType: m.type })
+    }
+  }
+  measureFaces.value = allFaces
+  measureMaterials.value = allMats
+  showMeasureDrawer.value = true
+}
+
+function getBarWidth(face) {
+  const maxArea = Math.max(...measureFaces.value.map(f => f.area || (f.width * f.height) || 0), 1)
+  return ((face.area || (face.width * face.height) || 0) / maxArea * 100).toFixed(0)
+}
+
+function getMaterialWidth(mat) {
+  const totalFaces = measureMaterials.value.reduce((s, m) => s + m.faces.length, 0) || 1
+  return (mat.faces.length / totalFaces * 100).toFixed(0)
+}
+
+function getMaterialTypes(row) {
+  if (!row.measurements?.length) return ''
+  const mats = row.measurements[0]?.materials || []
+  return mats.map(m => m.type).join('、')
+}
 </script>
 
 <style scoped>
@@ -270,4 +380,20 @@ onMounted(fetchData)
 .text-muted { color: var(--color-text-tertiary); font-size: var(--font-size-xs); }
 .wo-link { color: var(--color-primary); text-decoration: none; }
 .wo-link:hover { text-decoration: underline; }
+.section-title { font-size: var(--font-size-md); font-weight: var(--font-weight-semibold); margin: 16px 0 12px; }
+.face-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+.face-card { background: var(--color-bg-page); border: 1px solid var(--color-border-light); border-radius: var(--radius-sm); padding: 12px; }
+.face-title { font-weight: var(--font-weight-medium); font-size: var(--font-size-sm); margin-bottom: 4px; }
+.face-dims { font-size: var(--font-size-xs); color: var(--color-text-tertiary); }
+.face-area { font-size: var(--font-size-md); font-weight: var(--font-weight-semibold); color: var(--color-primary); margin: 4px 0; }
+.face-bar { height: 6px; background: var(--color-border-light); border-radius: 3px; overflow: hidden; }
+.face-bar-fill { height: 100%; background: var(--color-primary); border-radius: 3px; transition: width 0.3s; }
+.face-note { font-size: var(--font-size-xs); color: var(--color-text-tertiary); margin-top: 4px; }
+.material-bar { display: flex; height: 32px; border-radius: var(--radius-sm); overflow: hidden; margin-bottom: 8px; }
+.material-segment { display: flex; align-items: center; justify-content: center; color: #fff; font-size: var(--font-size-xs); font-weight: var(--font-weight-medium); min-width: 60px; }
+.version-list { display: flex; flex-direction: column; gap: 8px; }
+.version-item { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: var(--color-bg-page); border-radius: var(--radius-sm); font-size: var(--font-size-sm); }
+.version-tag { font-weight: var(--font-weight-semibold); color: var(--color-primary); }
+.version-date { color: var(--color-text-tertiary); }
+.version-type { margin-left: auto; color: var(--color-text-secondary); }
 </style>

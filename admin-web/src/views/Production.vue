@@ -55,7 +55,14 @@
         <el-table-column label="状态" width="110">
           <template #default="{ row }"><el-tag size="small">{{ statusLabel(row.status) }}</el-tag></template>
         </el-table-column>
-        <el-table-column label="操作" width="260">
+        <el-table-column label="生产进度" width="200">
+          <template #default="{ row }">
+            <div class="progress-cell">
+              <el-progress :percentage="getProgressPct(row)" :status="getProgressStatus(row)" :stroke-width="14" />
+            </div>
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="300">
           <template #default="{ row }">
             <el-button size="small" @click="openStatusDialog(row)">更新进度</el-button>
             <el-button size="small" type="warning" @click="openQualityDialog(row)" v-if="!row.quality_result && row.status !== 'scheduled'">质检</el-button>
@@ -175,6 +182,19 @@
           <el-descriptions-item label="质检说明">{{ detailTask.quality_notes || '—' }}</el-descriptions-item>
           <el-descriptions-item label="创建时间">{{ detailTask.created_at }}</el-descriptions-item>
         </el-descriptions>
+        <!-- 生产进度 -->
+        <div class="mt-16">
+          <h4 class="section-title">生产进度</h4>
+          <div v-for="step in progressSteps" :key="step.id" class="progress-step">
+            <div class="step-header">
+              <span class="step-name">{{ step.step_name }}</span>
+              <el-input-number v-model="step.progress_pct" :min="0" :max="100" size="small"
+                :controls="false" style="width:70px" @change="saveProgress" />
+              <span class="step-pct">{{ step.progress_pct }}%</span>
+            </div>
+            <el-progress :percentage="step.progress_pct" :stroke-width="8" />
+          </div>
+        </div>
         <div v-if="detailTask.workOrder" class="mt-16">
           <h4 class="section-title">关联工单</h4>
           <el-descriptions :column="1" border>
@@ -344,6 +364,54 @@ const detailTask = ref({})
 function viewTaskDetail(row) {
   detailTask.value = row
   showDetail.value = true
+  // 加载生产进度
+  loadProgress(row.work_order_id || row.id)
+}
+
+// 生产进度
+const progressSteps = ref([])
+
+async function loadProgress(workOrderId) {
+  if (!workOrderId) return
+  try {
+    const res = await api.get(`/production/${workOrderId}/progress`)
+    progressSteps.value = res.data || []
+  } catch (e) {
+    console.error('加载进度失败:', e)
+    progressSteps.value = []
+  }
+}
+
+async function saveProgress() {
+  if (!detailTask.value.work_order_id) return
+  try {
+    const updates = progressSteps.value.map(s => ({
+      step_id: s.id,
+      progress_pct: Math.min(100, Math.max(0, s.progress_pct)),
+    }))
+    await api.put(`/production/${detailTask.value.work_order_id}/progress`, { steps: updates })
+  } catch (e) {
+    console.error('保存进度失败:', e)
+  }
+}
+
+function getProgressPct(row) {
+  // 如果有进度数据，取平均值
+  if (row.progress_steps?.length) {
+    const steps = row.progress_steps
+    const total = steps.reduce((s, step) => s + (step.progress_pct || 0), 0)
+    return Math.round(total / steps.length)
+  }
+  // 根据状态估算
+  const statusPct = { scheduled: 0, producing: 50, completed: 100, shipped: 100, quality_checked: 90, qualified: 95, warehoused: 100 }
+  return statusPct[row.status] || 0
+}
+
+function getProgressStatus(row) {
+  const pct = getProgressPct(row)
+  if (pct >= 100) return 'success'
+  if (pct >= 50) return ''
+  return 'exception'
 }
 
 async function fetchTasks() {
@@ -377,4 +445,9 @@ onMounted(fetchTasks)
 .pagination-box { display: flex; justify-content: flex-end; margin-top: var(--space-4); }
 .wo-link { color: var(--color-primary); text-decoration: none; }
 .wo-link:hover { text-decoration: underline; }
+.progress-cell { padding: 4px 0; }
+.progress-step { margin-bottom: 16px; }
+.step-header { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.step-name { font-weight: var(--font-weight-medium); font-size: var(--font-size-sm); min-width: 60px; }
+.step-pct { font-size: var(--font-size-xs); color: var(--color-text-tertiary); min-width: 36px; text-align: right; }
 </style>
