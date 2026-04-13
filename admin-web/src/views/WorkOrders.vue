@@ -310,7 +310,7 @@
               v-model="createForm[field.field_key]" type="date" :placeholder="field.placeholder || '请选择日期'" style="width:100%" value-format="YYYY-MM-DD" />
             <!-- image -->
             <el-upload v-else-if="field.field_type === 'image'"
-              action="/api/v1/files/upload" list-type="picture-card"
+              action="/api/v1/files" list-type="picture-card"
               :file-list="getUploadFileList(field.field_key)"
               :on-success="(res) => onFileSuccess(res, field.field_key)"
               :on-error="onFileError"
