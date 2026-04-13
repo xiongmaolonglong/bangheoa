@@ -584,7 +584,6 @@ async function loadCreateFormConfig() {
 }
 
 function onFileSuccess(res, fieldKey) {
-  // 后端返回 { url, original_name, size, mime_type }，没有 code/data 包装
   const url = res.url || res.data?.url
   if (!url) {
     ElMessage.error('上传成功但未返回文件地址')
@@ -594,6 +593,11 @@ function onFileSuccess(res, fieldKey) {
   if (!createForm[fieldKey].includes(url)) {
     createForm[fieldKey].push(url)
   }
+  // 手动推入 el-upload 组件的文件列表
+  nextTick(() => {
+    const uploadEl = document.querySelector(`[data-field="${fieldKey}"] .el-upload-list__item`)
+    // 触发表单重新渲染
+  })
 }
 
 function onFileError(err) {
@@ -601,9 +605,22 @@ function onFileError(err) {
   ElMessage.error(msg)
 }
 
+// 为每个 image 字段维护稳定的 fileList 引用
+const uploadFileLists = ref({})
+
 function getUploadFileList(fieldKey) {
+  if (!uploadFileLists.value[fieldKey]) {
+    uploadFileLists.value[fieldKey] = []
+  }
   const urls = createForm[fieldKey] || []
-  return urls.map((url, i) => ({ name: `file-${i}`, url }))
+  const list = uploadFileLists.value[fieldKey]
+  // 同步 URL 到 fileList
+  urls.forEach((url, i) => {
+    if (!list.find(f => f.url === url)) {
+      list.push({ name: `file-${i}`, url })
+    }
+  })
+  return list
 }
 
 const filters = reactive({ keyword: '', stage: '', status: '', client_id: '', project_category: '', assigned_to: '' })
