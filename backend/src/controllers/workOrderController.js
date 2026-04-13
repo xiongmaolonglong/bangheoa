@@ -389,6 +389,65 @@ async function advanceWorkOrder(req, res) {
   return success(res, flattenWorkOrder(wo), '推进成功');
 }
 
+/**
+ * PUT /api/v1/work-orders/:id/stage
+ * 看板拖拽变更环节（允许最多跨2个环节）
+ */
+async function updateStage(req, res) {
+  const { id } = req.params;
+  const { target_stage } = req.body;
+  const tenantId = req.tenantId || req.user.tenant_id;
+
+  if (!STAGE_ORDER.includes(target_stage)) return error(res, '无效的目标环节', 400);
+
+  const wo = await WorkOrder.findOne({ where: { id: parseInt(id, 10), tenant_id: tenantId } });
+  if (!wo) return error(res, '工单不存在', 404);
+
+  const fromIdx = STAGE_ORDER.indexOf(wo.current_stage);
+  const toIdx = STAGE_ORDER.indexOf(target_stage);
+  if (Math.abs(toIdx - fromIdx) > 2) return error(res, '不能跨环节移动，请通过详情页面操作', 400);
+
+  const oldStage = wo.current_stage;
+  wo.current_stage = target_stage;
+  await wo.save();
+
+  await createLog(wo.id, req.user, 'stage_changed', target_stage,
+    `从${STAGE_LABELS[oldStage]}拖拽到${STAGE_LABELS[target_stage]}`);
+
+  return success(res, flattenWorkOrder(wo), '环节已更新');
+}
+
+/**
+ * POST /api/v1/work-orders/batch-advance
+ * 批量推进工单到指定环节
+ */
+async function batchAdvance(req, res) {
+  const { work_order_ids, target_stage } = req.body;
+  if (!work_order_ids?.length) return error(res, '工单ID列表不能为空', 400);
+  if (!STAGE_ORDER.includes(target_stage)) return error(res, '无效的目标环节', 400);
+
+  const tenantId = req.tenantId || req.user.tenant_id;
+  const updated = [];
+  const skipped = [];
+
+  for (const id of work_order_ids) {
+    const wo = await WorkOrder.findOne({ where: { id: parseInt(id, 10), tenant_id: tenantId } });
+    if (!wo) { skipped.push({ id, reason: '不存在' }); continue; }
+    const fromIdx = STAGE_ORDER.indexOf(wo.current_stage);
+    const toIdx = STAGE_ORDER.indexOf(target_stage);
+    if (toIdx <= fromIdx) { skipped.push({ id, reason: '环节不能回退' }); continue; }
+
+    const oldStage = wo.current_stage;
+    wo.current_stage = target_stage;
+    await wo.save();
+    await createLog(wo.id, req.user, 'batch_stage_changed', target_stage,
+      `批量从${STAGE_LABELS[oldStage]}到${STAGE_LABELS[target_stage]}`);
+    updated.push(id);
+  }
+
+  return success(res, { updated, skipped }, `成功推进 ${updated.length} 个工单`);
+}
+
 // ==================== 操作日志 ====================
 
 /**
@@ -430,4 +489,6 @@ module.exports = {
   updateWorkOrder,
   deleteWorkOrder,
   advanceWorkOrder,
+  updateStage,
+  batchAdvance,
 };

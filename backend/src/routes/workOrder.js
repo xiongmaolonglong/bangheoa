@@ -28,6 +28,12 @@ router.delete('/:id', controller.deleteWorkOrder);
 // 阶段推进（必须在 :id 之前）
 router.put('/:id/advance', controller.advanceWorkOrder);
 
+// 看板拖拽变更（必须在 :id 之前）
+router.put('/:id/stage', controller.updateStage);
+
+// 批量推进（必须在 :id 之前）
+router.post('/batch-advance', controller.batchAdvance);
+
 // 工单详情
 router.get('/:id', controller.getWorkOrder);
 

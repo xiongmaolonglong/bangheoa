@@ -3,6 +3,9 @@
     <div class="page-header flex-between">
       <h1 class="page-title">工单管理</h1>
       <div class="page-actions">
+        <el-button @click="handleRefresh" :loading="loading">
+          <el-icon><Refresh /></el-icon>刷新
+        </el-button>
         <el-button :type="viewMode === 'list' ? '' : 'primary'" @click="viewMode = viewMode === 'kanban' ? 'list' : 'kanban'">
           {{ viewMode === 'kanban' ? '列表视图' : '看板视图' }}
         </el-button>
@@ -290,11 +293,11 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, computed, watch } from 'vue'
+import { ref, reactive, onMounted, onUnmounted, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, Search, Download } from '@element-plus/icons-vue'
-import * as XLSX from 'xlsx'
+import { Plus, Search, Download, Refresh } from '@element-plus/icons-vue'
+import { exportWithTimestamp } from '../utils/export'
 import { useAuthStore } from '../store/auth'
 import api from '../api'
 import BatchOpsDialog from '../components/BatchOpsDialog.vue'
@@ -338,7 +341,7 @@ function clearSelection() {
 
 async function loadUserOptions() {
   try {
-    const res = await api.get('/tenant/users')
+    const res = await api.get('/tenants/users')
     const payload = res.data || {}
     userOptions.value = (Array.isArray(payload) ? payload : (payload.list || []))
       .filter(u => u.status === 'active')
@@ -419,17 +422,16 @@ async function onDropOnCol(e, targetStage) {
   if (toIdx <= fromIdx) {
     return ElMessage.warning('只能向后推进环节')
   }
+  if (Math.abs(toIdx - fromIdx) > 2) {
+    return ElMessage.warning('不能跨环节移动，请通过详情页面操作')
+  }
 
   try {
-    await ElMessageBox.confirm(
-      `将「${wo.title}」从「${stageLabel(wo.current_stage)}」推进到「${stageLabel(targetStage)}」？`,
-      '推进环节', { type: 'warning' }
-    )
-    await api.put(`/work-orders/${wo.id}/advance`, { target_stage: targetStage })
-    ElMessage.success('已推进')
+    await api.put(`/work-orders/${wo.id}/stage`, { target_stage: targetStage })
+    ElMessage.success('环节已更新')
     loadWorkOrders()
   } catch (err) {
-    if (err !== 'cancel') ElMessage.error(err.response?.data?.error || '操作失败')
+    if (err.response) ElMessage.error(err.response.data?.error || '更新失败')
   }
 }
 
@@ -504,25 +506,23 @@ async function deleteWorkOrder(row) {
   } catch {}
 }
 
-// 导出 Excel
-function exportExcel() {
-  const headers = ['工单号', '项目名称', '甲方企业', '项目分类', '当前环节', '状态', '负责人', '截止日期']
-  const rows = tableData.value.map(w => [
-    w.work_order_no,
-    w.title,
-    w.client_name,
-    categoryLabel(w.project_category),
-    stageLabel(w.current_stage),
-    w.is_timeout ? '超时' : '正常',
-    w.assigned_to || '未分配',
-    w.deadline || '',
-  ])
+const EXPORT_COLUMNS = [
+  { key: 'work_order_no', label: '工单号' },
+  { key: 'title', label: '项目名称' },
+  { key: 'client_name', label: '甲方企业' },
+  { key: 'current_stage', label: '当前环节' },
+  { key: 'assigned_to', label: '负责人' },
+  { key: 'deadline', label: '截止日期' },
+  { key: 'created_at', label: '创建日期' },
+]
 
-  const ws = XLSX.utils.aoa_to_sheet([headers, ...rows])
-  ws['!cols'] = headers.map(() => ({ wch: 16 }))
-  const wb = XLSX.utils.book_new()
-  XLSX.utils.book_append_sheet(wb, ws, '工单列表')
-  XLSX.writeFile(wb, `工单列表_${new Date().toISOString().slice(0, 10)}.xlsx`)
+function exportExcel() {
+  const data = viewMode.value === 'kanban'
+    ? kanbanCols.value.flatMap(c => c.items || [])
+    : tableData.value
+  if (!data.length) return ElMessage.warning('没有可导出的数据')
+  exportWithTimestamp(data, EXPORT_COLUMNS, '工单列表')
+  ElMessage.success(`已导出 ${data.length} 条数据`)
 }
 
 async function createWorkOrder() {
@@ -545,18 +545,36 @@ async function createWorkOrder() {
   }
 }
 
+let refreshTimer = null
+
+function startAutoRefresh() {
+  stopAutoRefresh()
+  refreshTimer = setInterval(() => loadWorkOrders(), 30000)
+}
+
+function stopAutoRefresh() {
+  if (refreshTimer) { clearInterval(refreshTimer); refreshTimer = null }
+}
+
+function handleRefresh() {
+  loadWorkOrders()
+  ElMessage.success('已刷新')
+}
+
 onMounted(() => {
   loadWorkOrders()
   loadProxyConfig()
   loadUserOptions()
   api.get('/clients').then(res => { clients.value = res.data?.list || res.data || [] }).catch(() => {})
-  // 加载默认甲方
   api.get('/clients/default').then(res => {
     if (res.code === 0 && res.data?.default_client_id) {
       createForm.client_id = res.data.default_client_id
     }
   }).catch(() => {})
+  startAutoRefresh()
 })
+
+onUnmounted(() => stopAutoRefresh())
 
 function openProxyMeasure(row) {
   proxySubmitted.value = row.id
