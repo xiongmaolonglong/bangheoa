@@ -1,77 +1,129 @@
 <template>
   <div>
-    <div class="page-header"><h1 class="page-title">派单管理</h1></div>
-    <el-card>
-      <el-table :data="list" stripe>
-        <el-table-column prop="work_order_no" label="工单号" width="160">
-          <template #default="{ row }">
-            <router-link :to="`/work-orders/${row.id}`" class="wo-link">{{ row.work_order_no }}</router-link>
-          </template>
-        </el-table-column>
-        <el-table-column prop="title" label="项目名称" min-width="150" />
-        <el-table-column prop="deadline" label="截止日期" width="110" />
-        <el-table-column label="状态" width="80">
-          <template #default="{ row }">
-            <el-tag size="small" :type="row.status === 'assigned' ? 'warning' : 'info'">
-              {{ row.status === 'assigned' ? '已派单' : '待派单' }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="操作" width="100">
-          <template #default="{ row }">
-            <el-button v-if="row.status !== 'assigned'" type="primary" size="small" @click="openDispatch(row)">派单</el-button>
-            <span v-else class="text-muted">已派</span>
-          </template>
-        </el-table-column>
-      </el-table>
-    </el-card>
-    <el-dialog v-model="showDialog" title="派单" width="480px">
-      <el-form :model="form" label-width="80px">
-        <el-form-item label="工单"><span class="wo-link">{{ form.work_order_no }}</span></el-form-item>
-        <el-form-item label="测量员">
-          <el-select v-model="form.assigned_to" placeholder="请选择" style="width:100%">
-            <el-option v-for="u in users" :key="u.id" :label="u.name" :value="u.id" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="截止时间"><el-date-picker v-model="form.deadline" type="date" style="width:100%" /></el-form-item>
-        <el-form-item label="备注"><el-input v-model="form.notes" type="textarea" :rows="2" /></el-form-item>
-      </el-form>
-      <template #footer><el-button @click="showDialog = false">取消</el-button><el-button type="primary" @click="submitDispatch">确认派单</el-button></template>
-    </el-dialog>
+    <div class="page-header">
+      <h1 class="page-title">派单管理</h1>
+      <p class="page-desc">查看待派单工单与测量员工作负载</p>
+    </div>
+
+    <!-- 统计 -->
+    <el-row :gutter="16" class="mb-20">
+      <el-col :span="6" v-for="stat in statCards" :key="stat.label">
+        <el-card shadow="hover" class="stat-card">
+          <div class="stat-body">
+            <div class="stat-number" :style="{ color: stat.color }">{{ stat.count }}</div>
+            <div class="stat-label">{{ stat.label }}</div>
+          </div>
+        </el-card>
+      </el-col>
+    </el-row>
+
+    <el-row :gutter="20">
+      <!-- 待派单工单 -->
+      <el-col :span="14">
+        <el-card>
+          <template #header><span class="section-title">待派单工单</span></template>
+          <el-table :data="pendingList" stripe v-loading="loading">
+            <el-table-column prop="work_order_no" label="工单号" width="160">
+              <template #default="{ row }">
+                <router-link :to="`/work-orders/${row.id}`" class="wo-link">{{ row.work_order_no }}</router-link>
+              </template>
+            </el-table-column>
+            <el-table-column prop="title" label="项目名称" min-width="150" show-overflow-tooltip />
+            <el-table-column prop="client_name" label="甲方" width="120" />
+            <el-table-column prop="created_at" label="创建时间" width="120" />
+            <el-table-column label="操作" width="100">
+              <template #default="{ row }">
+                <el-button type="primary" size="small" @click="goDispatch(row)">派单</el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+          <el-empty v-if="!loading && !pendingList.length" description="暂无待派单工单" />
+        </el-card>
+      </el-col>
+
+      <!-- 测量员负载 -->
+      <el-col :span="10">
+        <el-card>
+          <template #header><span class="section-title">测量员工作负载</span></template>
+          <div v-if="measurerStats.length" class="measurer-list">
+            <div v-for="m in measurerStats" :key="m.id" class="measurer-item">
+              <div class="measurer-info">
+                <span class="measurer-name">{{ m.name }}</span>
+                <span class="measurer-count">{{ m.task_count || 0 }} 个任务</span>
+              </div>
+              <el-progress :percentage="Math.min((m.task_count || 0) * 20, 100)" :color="m.task_count > 4 ? '#dc2626' : '#16a34a'" :stroke-width="6" />
+            </div>
+          </div>
+          <el-empty v-else description="暂无测量员数据" />
+        </el-card>
+      </el-col>
+    </el-row>
   </div>
 </template>
+
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import api from '../api'
-const list = ref([])
-const showDialog = ref(false)
-const users = ref([])
-const form = reactive({ work_order_no: '', assigned_to: '', deadline: '', notes: '' })
 
-onMounted(async () => {
+const router = useRouter()
+const loading = ref(false)
+const pendingList = ref([])
+const measurerStats = ref([])
+const statCards = reactive([])
+
+async function fetchList() {
+  loading.value = true
   try {
-    const res = await api.get('/assignments', { params: { status: 'pending' } })
-    list.value = res.data?.list || []
-    api.get('/tenant/users', { params: { role: 'measurer', status: 'active' } }).then(r => users.value = r.data?.list || []).catch(() => {})
+    const res = await api.get('/work-orders', { params: { stage: 'assignment', limit: 50 } })
+    const payload = res.data?.list || res.data || []
+    pendingList.value = Array.isArray(payload) ? payload.filter(w => !w.assigned_tenant_user_id) : []
   } catch {
-    list.value = [
-      { id: 7, work_order_no: 'GG-2026-0007', title: '步步高 XX 银行门头', deadline: '2026-04-20' },
-      { id: 10, work_order_no: 'GG-2026-0010', title: '茶颜悦色五一广场店', deadline: '2026-04-25' }
-    ]
+    pendingList.value = []
+  } finally {
+    loading.value = false
   }
-})
-function openDispatch(row) { form.work_order_no = row.work_order_no; form.id = row.id; showDialog.value = true }
-async function submitDispatch() {
-  try {
-    await api.post('/assignments', { work_order_id: form.id, assigned_to: form.assigned_to, deadline: form.deadline, notes: form.notes })
-    ElMessage.success('派单成功')
-    showDialog.value = false
-    onMounted
-  } catch {}
 }
+
+async function fetchMeasurers() {
+  try {
+    const res = await api.get('/tenants/users')
+    const users = res.data?.list || res.data || []
+    const measurers = users.filter(u => u.role === 'measurer' && u.status === 'active')
+    measurerStats.value = measurers
+    statCards.length = 0
+    statCards.push(
+      { label: '待派单', count: pendingList.value.length, color: '#e6a23c' },
+      { label: '测量员', count: measurers.length, color: '#2563eb' },
+      { label: '已派单', count: measurers.reduce((s, m) => s + (m.task_count || 0), 0), color: '#16a34a' },
+      { label: '平均负载', count: measurers.length ? Math.round(measurers.reduce((s, m) => s + (m.task_count || 0), 0) / measurers.length) : 0, color: '#6b7280' },
+    )
+  } catch {
+    measurerStats.value = []
+  }
+}
+
+function goDispatch(row) {
+  router.push(`/work-orders/${row.id}`)
+}
+
+onMounted(() => { fetchList(); fetchMeasurers() })
 </script>
+
 <style scoped>
-.page-title { font-size: 20px; font-weight: 600; color: #1a1a1a; }
-.wo-link { color: #1890ff; font-family: monospace; text-decoration: none; }
-.text-muted { color: #8c8c8c; font-size: 12px; }
+.page-header { margin-bottom: var(--space-6); }
+.page-desc { color: var(--color-text-tertiary); font-size: var(--font-size-sm); margin-top: var(--space-1); }
+.mb-20 { margin-bottom: var(--space-5); }
+.section-title { font-size: var(--font-size-md); font-weight: var(--font-weight-semibold); }
+.stat-card .stat-body { text-align: center; padding: var(--space-2) 0; }
+.stat-number { font-size: var(--font-size-xl); font-weight: var(--font-weight-semibold); }
+.stat-label { color: var(--color-text-tertiary); font-size: var(--font-size-sm); margin-top: var(--space-1); }
+.wo-link { color: var(--color-primary); text-decoration: none; }
+.wo-link:hover { text-decoration: underline; }
+.measurer-list { max-height: 400px; overflow-y: auto; }
+.measurer-item { padding: var(--space-3) 0; border-bottom: 1px solid var(--color-border-light); }
+.measurer-item:last-child { border-bottom: none; }
+.measurer-info { display: flex; justify-content: space-between; margin-bottom: var(--space-2); }
+.measurer-name { font-weight: var(--font-weight-medium); }
+.measurer-count { color: var(--color-text-tertiary); font-size: var(--font-size-xs); }
 </style>
