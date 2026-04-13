@@ -117,7 +117,7 @@ const pieChartOption = computed(() => ({
       name: statusLabels[key] || key,
       value,
     })),
-  }]),
+  }],
 }))
 
 onMounted(async () => {
