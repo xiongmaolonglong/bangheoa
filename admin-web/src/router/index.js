@@ -67,6 +67,12 @@ const routes = [
         meta: { title: '施工管理' }
       },
       {
+        path: 'construction/:workOrderId',
+        name: 'ConstructionDetail',
+        component: () => import('../views/ConstructionDetail.vue'),
+        meta: { title: '施工详情' }
+      },
+      {
         path: 'finance',
         name: 'Finance',
         component: () => import('../views/Finance.vue'),
@@ -89,6 +95,18 @@ const routes = [
         name: 'Organization',
         component: () => import('../views/Organization.vue'),
         meta: { title: '组织架构' }
+      },
+      {
+        path: 'settings',
+        name: 'Settings',
+        component: () => import('../views/Settings.vue'),
+        meta: { title: '系统配置' }
+      },
+      {
+        path: 'clients',
+        name: 'Clients',
+        component: () => import('../views/Clients.vue'),
+        meta: { title: '甲方管理' }
       }
     ]
   }
