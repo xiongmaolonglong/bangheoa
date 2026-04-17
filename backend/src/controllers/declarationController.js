@@ -26,9 +26,8 @@ async function createDeclaration(req, res) {
     approver_id,
   } = req.body;
 
-  if (!title) {
-    return error(res, '标题不能为空', 400);
-  }
+  // title 可以从前端传入，或者用 project_type + 描述生成
+  const effectiveTitle = title || project_type || description || '申报工单';
 
   const t = await sequelize.transaction();
 
@@ -36,17 +35,30 @@ async function createDeclaration(req, res) {
     const userId = req.user.user_id;
     const clientId = req.user.client_id;
 
-    // Find approver to get tenant_id and client settings
-    const approver = await ClientUser.findByPk(approver_id, {
+    // 获取当前用户的 client 信息以确定 tenant
+    const currentUser = await ClientUser.findByPk(userId, {
       include: [{ model: Client, attributes: ['id', 'tenant_id', 'approval_enabled'] }],
       transaction: t,
     });
-    if (!approver) {
+    if (!currentUser) {
       await t.rollback();
-      return error(res, '审批人不存在', 400);
+      return error(res, '用户不存在', 404);
     }
-    const tenantId = approver.client.tenant_id;
-    const clientApprovalEnabled = approver.client.approval_enabled;
+    const tenantId = currentUser.Client?.tenant_id || currentUser.client?.tenant_id;
+    const clientApprovalEnabled = currentUser.Client?.approval_enabled || currentUser.client?.approval_enabled;
+
+    // 获取审批人（如果前端没传 approver_id，则找该甲方的 manager）
+    let resolvedApproverId = approver_id;
+    if (!resolvedApproverId && clientApprovalEnabled) {
+      const manager = await ClientUser.findOne({
+        where: { client_id: clientId, role: 'manager', status: 'active' },
+        transaction: t,
+      });
+      resolvedApproverId = manager?.id;
+    }
+
+    // 如果启用了审批但找不到审批人，自动关闭审批流
+    let effectiveApprovalEnabled = clientApprovalEnabled && !!resolvedApproverId;
 
     // Generate work order number
     const { work_order_no } = await generateWorkOrderNo(tenantId);
@@ -57,10 +69,10 @@ async function createDeclaration(req, res) {
       tenant_id: tenantId,
       client_id: clientId,
       client_user_id: userId,
-      title,
+      title: effectiveTitle,
       project_category,
       description,
-      current_stage: clientApprovalEnabled ? 'declaration' : 'assignment',
+      current_stage: effectiveApprovalEnabled ? 'declaration' : 'assignment',
       status: 'submitted',
     }, { transaction: t });
 
@@ -81,23 +93,22 @@ async function createDeclaration(req, res) {
     }, { transaction: t });
 
     // Handle approval flow
-    if (clientApprovalEnabled && approver_id) {
+    if (effectiveApprovalEnabled && resolvedApproverId) {
       await WoApproval.create({
         work_order_id: wo.id,
-        approver_id,
+        approver_id: resolvedApproverId,
         status: 'pending',
       }, { transaction: t });
 
       await wo.update({
         current_stage: 'approval',
-        status: 'pending_approval',
       }, { transaction: t });
 
       // Notify approver
-      const approver = await ClientUser.findByPk(approver_id, { transaction: t });
+      const approver = await ClientUser.findByPk(resolvedApproverId, { transaction: t });
       if (approver) {
         await Notification.create({
-          user_id: approver_id,
+          user_id: resolvedApproverId,
           user_type: 'client',
           title: '新的申报待审批',
           content: `您有一条新的申报需要审批：${title}`,
@@ -128,7 +139,7 @@ async function createDeclaration(req, res) {
     return success(res, {
       id: declaration.id,
       work_order_no: wo.work_order_no,
-      approval_enabled: approvalEnabled,
+      approval_enabled: clientApprovalEnabled,
     }, '申报已创建', 201);
   } catch (err) {
     if (!t.finished) await t.rollback();
@@ -142,13 +153,14 @@ async function createDeclaration(req, res) {
  */
 async function getDeclarations(req, res) {
   try {
-    const { status, page = 1, limit = 10 } = req.query;
+    const { status, stage, page = 1, limit = 10 } = req.query;
     const pageNum = parseInt(page, 10) || 1;
     const limitNum = parseInt(limit, 10) || 10;
     const offset = (pageNum - 1) * limitNum;
 
     const where = { '$work_order.client_user_id$': req.user.user_id };
     if (status) where['$work_order.status$'] = status;
+    if (stage) where['$work_order.current_stage$'] = stage;
 
     const { count, rows } = await WoDeclaration.findAndCountAll({
       where,
@@ -179,6 +191,52 @@ async function getDeclarations(req, res) {
   } catch (err) {
     console.error('getDeclarations error:', err);
     return error(res, '获取申报列表失败', 500);
+  }
+}
+
+/**
+ * GET /api/v1/declarations/my-pending-approvals
+ * 我的审批记录（待审批/已审批/已驳回）
+ */
+async function getMyApprovals(req, res) {
+  try {
+    const { tab = 'pending', page = 1, limit = 10 } = req.query;
+    const pageNum = parseInt(page, 10) || 1;
+    const limitNum = parseInt(limit, 10) || 10;
+    const offset = (pageNum - 1) * limitNum;
+
+    const approvalStatus = { pending: 'pending', approved: 'approved', rejected: 'rejected' };
+    const status = approvalStatus[tab] || 'pending';
+
+    const { count, rows } = await WoDeclaration.findAndCountAll({
+      where: { '$work_order->approval.approver_id$': req.user.user_id, '$work_order->approval.status$': status },
+      include: [
+        {
+          model: WorkOrder,
+          as: 'work_order',
+          attributes: ['id', 'work_order_no', 'title', 'current_stage', 'created_at'],
+          include: [
+            { model: WoApproval, as: 'approval', attributes: ['id', 'status', 'comment', 'approved_at'], required: true },
+          ],
+        },
+        { model: ClientUser, as: 'creator', attributes: ['id', 'name'] },
+      ],
+      order: [['created_at', 'DESC']],
+      limit: limitNum,
+      offset,
+      subQuery: false,
+      distinct: true,
+    });
+
+    return paginate(res, rows, {
+      total: count,
+      page: pageNum,
+      limit: limitNum,
+      total_pages: Math.ceil(count / limitNum),
+    });
+  } catch (err) {
+    console.error('getMyApprovals error:', err);
+    return error(res, '获取审批列表失败', 500);
   }
 }
 
@@ -223,7 +281,7 @@ async function getTenantDeclarations(req, res) {
     const limitNum = parseInt(limit, 10) || 10;
     const offset = (pageNum - 1) * limitNum;
 
-    const where = { '$work_order.client.tenant_id$': req.user.tenant_id };
+    const where = { '$work_order.client.tenant_id$': req.user.tenant_id, created_by: { [Sequelize.Op.ne]: null } };
     if (status) where['$work_order.status$'] = status;
     if (stage) where['$work_order.current_stage$'] = stage;
 
@@ -242,6 +300,7 @@ async function getTenantDeclarations(req, res) {
         },
         { model: ClientUser, as: 'creator', attributes: ['id', 'name'] },
       ],
+      attributes: ['id', 'project_type', 'created_by', 'created_at'],
       order: [['created_at', 'DESC']],
       limit: limitNum,
       offset,
@@ -249,7 +308,14 @@ async function getTenantDeclarations(req, res) {
       distinct: true,
     });
 
-    return paginate(res, rows, {
+    // 将申报时间映射到 work_order 上方便前端使用
+    const mappedRows = rows.map(r => {
+      const data = r.toJSON();
+      data.submitted_at = data.created_at;
+      return data;
+    });
+
+    return paginate(res, mappedRows, {
       total: count,
       page: pageNum,
       limit: limitNum,
@@ -263,11 +329,15 @@ async function getTenantDeclarations(req, res) {
 /**
  * GET /api/v1/tenant/declarations/:id
  * 广告商查看申报详情
+ * 支持：申报 ID 或工单 ID（当传工单 ID 时，自动查找关联的申报）
  */
 async function getTenantDeclarationById(req, res) {
   try {
-    const declaration = await WoDeclaration.findOne({
-      where: { id: req.params.id },
+    const id = req.params.id;
+
+    // 先尝试按申报 ID 查找
+    let declaration = await WoDeclaration.findOne({
+      where: { id },
       include: [
         {
           model: WorkOrder,
@@ -282,6 +352,26 @@ async function getTenantDeclarationById(req, res) {
         { model: ClientUser, as: 'creator', attributes: ['id', 'name'] },
       ],
     });
+
+    // 如果按申报 ID 找不到，尝试按工单 ID 查找
+    if (!declaration) {
+      declaration = await WoDeclaration.findOne({
+        where: { work_order_id: id },
+        include: [
+          {
+            model: WorkOrder,
+            as: 'work_order',
+            where: { tenant_id: req.user.tenant_id },
+            attributes: ['id', 'work_order_no', 'title', 'description', 'status', 'current_stage', 'created_at'],
+            include: [
+              { model: Client, as: 'client', attributes: ['id', 'name', 'contact_name', 'contact_phone'] },
+              { model: WoApproval, as: 'approval', attributes: ['id', 'status', 'comment', 'approved_at'], required: false },
+            ],
+          },
+          { model: ClientUser, as: 'creator', attributes: ['id', 'name'] },
+        ],
+      });
+    }
 
     if (!declaration) {
       return error(res, '申报不存在或无权访问', 404);
@@ -336,7 +426,7 @@ async function approveDeclaration(req, res) {
     await approval.update({
       status: 'approved',
       comment,
-      approved_at: Sequelize.fn('CURDATE'),
+      approved_at: Sequelize.fn('NOW'),
     }, { transaction: t });
 
     // Update work order: flow to assignment stage (advertiser)
@@ -438,7 +528,7 @@ async function rejectDeclaration(req, res) {
     await approval.update({
       status: 'rejected',
       comment,
-      approved_at: Sequelize.fn('CURDATE'),
+      approved_at: Sequelize.fn('NOW'),
     }, { transaction: t });
 
     // Update work order
@@ -497,12 +587,60 @@ async function rejectDeclaration(req, res) {
   }
 }
 
+/**
+ * POST /api/v1/tenant/declarations/:id/receive
+ * 广告商接收申报，流转到派单环节
+ */
+async function receiveDeclaration(req, res) {
+  try {
+    const declaration = await WoDeclaration.findOne({
+      where: { id: req.params.id },
+      include: [
+        {
+          model: WorkOrder,
+          as: 'work_order',
+          where: { tenant_id: req.user.tenant_id },
+          attributes: ['id', 'work_order_no', 'title'],
+        },
+      ],
+    });
+
+    if (!declaration) {
+      return error(res, '申报不存在或无权访问', 404);
+    }
+
+    const wo = declaration.work_order;
+    if (!['declaration', 'assignment'].includes(wo.current_stage)) {
+      return error(res, '工单当前状态不允许接收', 400);
+    }
+
+    await wo.update({ current_stage: 'assignment', status: 'submitted' });
+
+    await WorkOrderLog.create({
+      work_order_id: wo.id,
+      user_id: req.user.user_id,
+      user_type: 'tenant',
+      action: 'declaration_received',
+      stage: 'assignment',
+      detail: `广告商已接收工单，待派单`,
+      ip_address: req.ip,
+    });
+
+    return success(res, { work_order_no: wo.work_order_no }, '已接收申报');
+  } catch (err) {
+    console.error('receiveDeclaration error:', err);
+    return error(res, err.message || '接收申报失败', 500);
+  }
+}
+
 module.exports = {
   createDeclaration,
   getDeclarations,
+  getMyApprovals,
   getDeclarationById,
   getTenantDeclarations,
   getTenantDeclarationById,
   approveDeclaration,
   rejectDeclaration,
+  receiveDeclaration,
 };

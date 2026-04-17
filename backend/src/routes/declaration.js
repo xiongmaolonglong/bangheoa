@@ -2,10 +2,10 @@ const express = require('express');
 
 const router = express.Router();
 const { requireClient } = require('../middleware/auth');
-const { injectTenant } = require('../middleware/tenant');
 const {
   createDeclaration,
   getDeclarations,
+  getMyApprovals,
   getDeclarationById,
   approveDeclaration,
   rejectDeclaration,
@@ -14,10 +14,15 @@ const {
 // Client routes
 router.post('/', requireClient, createDeclaration);
 router.get('/', requireClient, getDeclarations);
-router.get('/:id', requireClient, getDeclarationById);
 
-// Approval actions
+// 我的审批（必须在 :id 之前）
+router.get('/my-approvals', requireClient, getMyApprovals);
+
+// Approval actions（必须在 :id 之前）
 router.post('/:id/approve', requireClient, approveDeclaration);
 router.post('/:id/reject', requireClient, rejectDeclaration);
+
+// 申报详情
+router.get('/:id', requireClient, getDeclarationById);
 
 module.exports = router;

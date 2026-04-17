@@ -1,8 +1,10 @@
-const { Op } = require('sequelize');
+const { Op, fn, col } = require('sequelize');
+const sequelize = require('../config/database');
 const WoAssignment = require('../models/WoAssignment');
 const WoMeasurement = require('../models/WoMeasurement');
 const WorkOrder = require('../models/WorkOrder');
 const WorkOrderLog = require('../models/WorkOrderLog');
+const Tenant = require('../models/Tenant');
 const Notification = require('../models/Notification');
 const TenantUser = require('../models/TenantUser');
 const { success, error, paginate } = require('../utils/response');
@@ -227,18 +229,22 @@ async function receiveAssignment(req, res) {
 
 /**
  * GET /api/v1/measurements/tasks - 测量员任务列表
+ * 管理员（role=admin/super_admin）可查看所有工单
  */
 async function listMeasurementTasks(req, res) {
   try {
     const { status, page = 1, limit = 20 } = req.query;
     const offset = (parseInt(page) - 1) * parseInt(limit);
-    const userId = req.user.user_id;
+    const isAdmin = req.user.role === 'admin' || req.user.role === 'super_admin';
 
-    // 查询当前用户被派单的工单
+    // 管理员看所有，测量员只看自己的
     const where = {
-      assigned_tenant_user_id: userId,
       current_stage: 'measurement',
     };
+
+    if (!isAdmin) {
+      where.assigned_tenant_user_id = req.user.user_id;
+    }
 
     if (status) where.status = status;
 
@@ -374,6 +380,348 @@ async function submitMeasurement(req, res) {
 }
 
 /**
+ * POST /api/v1/measurements/:workOrderId/proxy-submit - 后台代录测量数据
+ */
+async function proxySubmitMeasurement(req, res) {
+  try {
+    const { workOrderId } = req.params;
+    const proxyData = req.body;
+
+    if (!workOrderId) return error(res, '工单ID不能为空', 400);
+
+    const where = ensureWorkOrderOwnership(req, workOrderId);
+    const workOrder = await WorkOrder.findOne({ where });
+    if (!workOrder) return error(res, '工单不存在', 404);
+
+    // 将代录数据转为测量数据格式
+    const basic_info = {
+      weather: proxyData.measure_date ? '未知' : '未知',
+      access: '',
+      vehicle_access: false,
+      environment_flags: [],
+      notes: proxyData.site_remark || proxyData.remark || '',
+      // 保存代录原始数据
+      proxy_data: proxyData,
+      proxy_submitted_by: req.user.user_id,
+      proxy_submitted_at: new Date().toISOString(),
+    };
+
+    // 单位换算辅助：将数值按单位转换为米
+    const UNIT_TO_METER = { m: 1, cm: 0.01, mm: 0.001 };
+    function toMeters(val, unit) {
+      const num = Number(val) || 0;
+      const factor = UNIT_TO_METER[unit] || 1;
+      return num * factor;
+    }
+
+    // 加载租户模板配置
+    let projectTemplates = [];
+    try {
+      const tenant = await Tenant.findByPk(req.user.tenant_id, { attributes: ['settings'] });
+      const raw = tenant?.settings;
+      const settings = typeof raw === 'string' ? JSON.parse(raw || '{}') : (raw || {});
+      projectTemplates = settings.project_templates || [];
+    } catch {}
+
+    // 获取项目名称
+    const projectTmpl = projectTemplates.find(t => t.id === proxyData.template_id);
+    const projectName = projectTmpl?.name || null;
+
+    // 从模板中查找字段的单位定义
+    function getFieldUnit(adTypeKey, fieldKey) {
+      const tmpl = projectTemplates.find(t => t.id === proxyData.template_id);
+      const adType = tmpl?.ad_types?.find(a => a.key === adTypeKey);
+      const field = adType?.face_fields?.find(f => f.field_key === fieldKey);
+      return field?.field_unit || 'm';
+    }
+
+    // 构建面数据：按 field_role 或字段顺序映射 width/height
+    function buildFaces(faces, adTypeKey) {
+      return faces.map((face, idx) => {
+        // 如果前端已经传了标准化后的 width/height，直接使用（保持原始值不变）
+        if (face.width !== undefined && face.height !== undefined) {
+          const w = Number(face.width) || 0;
+          const h = Number(face.height) || 0;
+          const area = face.area !== undefined ? Number(face.area) : 0;
+          const wM = face._widthM !== undefined ? Number(face._widthM) : w;
+          const hM = face._heightM !== undefined ? Number(face._heightM) : h;
+          const result = {
+            width: w,
+            height: h,
+            _widthM: wM,
+            _heightM: hM,
+            unit: face.unit || 'm',
+            direction: face.direction || '',
+            area: area || Number((wM * hM).toFixed(4)),
+            photos: face.photos || [],
+            notes: face.notes || '',
+            label: face.label || face.direction || `第${idx + 1}面`,
+            special_flag: !!face.special_flag,
+            group_name: face.group_name || '',
+            is_unified: !!face.is_unified,
+          };
+          // 保留额外字段
+          const reservedKeys = ['width', 'height', '_widthM', '_heightM', 'unit', 'direction', 'area', 'photos', 'notes', 'label', 'special_flag', 'group_name', 'is_unified'];
+          for (const [k, v] of Object.entries(face)) {
+            if (!reservedKeys.includes(k) && !k.endsWith('_meter')) {
+              result[k] = v;
+            }
+          }
+          return result;
+        }
+        // 否则按模板字段 role 或顺序提取数值（兼容旧格式）
+        const tmpl = projectTemplates.find(t => t.id === proxyData.template_id);
+        const adType = tmpl?.ad_types?.find(a => a.key === adTypeKey);
+        const numFields = (adType?.face_fields || []).filter(f => f.field_type === 'number');
+
+        // 优先使用 field_role 映射
+        let widthMeter = 0, heightMeter = 0;
+        let widthOrig = 0, heightOrig = 0;
+        const extraNumFields = {};
+
+        for (const field of numFields) {
+          const key = field.field_key;
+          const val = Number(face[key]) || 0;
+          const unit = field.field_unit || 'm';
+          const meterVal = unit === 'cm' ? val / 100 : (unit === 'mm' ? val / 1000 : val);
+          const role = field.field_role || '';
+
+          if (role === 'width') {
+            widthOrig = val;
+            widthMeter = meterVal;
+          } else if (role === 'height') {
+            heightOrig = val;
+            heightMeter = meterVal;
+          } else {
+            extraNumFields[key] = val;
+            extraNumFields[key + '_meter'] = meterVal;
+          }
+        }
+
+        // 如果没有通过 role 找到，按顺序回退
+        if (widthMeter === 0 && heightMeter === 0 && numFields.length >= 2) {
+          const f1 = numFields[0];
+          const v1 = Number(face[f1.field_key]) || 0;
+          const u1 = f1.field_unit || 'm';
+          widthOrig = v1;
+          widthMeter = u1 === 'cm' ? v1 / 100 : (u1 === 'mm' ? v1 / 1000 : v1);
+
+          const f2 = numFields[1];
+          const v2 = Number(face[f2.field_key]) || 0;
+          const u2 = f2.field_unit || 'm';
+          heightOrig = v2;
+          heightMeter = u2 === 'cm' ? v2 / 100 : (u2 === 'mm' ? v2 / 1000 : v2);
+        }
+
+        // 查找 label 字段
+        const labelField = (adType?.face_fields || []).find(f => f.field_role === 'label' && f.field_type === 'select');
+        const labelVal = labelField ? (face[labelField.field_key] || '') : '';
+
+        const result = {
+          width: Number(widthOrig.toFixed(4)),
+          height: Number(heightOrig.toFixed(4)),
+          _widthM: Number(widthMeter.toFixed(4)),
+          _heightM: Number(heightMeter.toFixed(4)),
+          unit: 'm',
+          direction: face.direction || '',
+          area: Number((widthMeter * heightMeter).toFixed(4)),
+          photos: face.photos || [],
+          notes: face.note || face.notes || '',
+          label: labelVal || face.label || face.direction || `第${idx + 1}面`,
+          special_flag: false,
+          group_name: face.group_name || '',
+          is_unified: !!face.is_unified,
+        };
+
+        // 合并额外数字字段
+        Object.assign(result, extraNumFields);
+
+        // 保留非数字额外字段
+        const reservedKeys = ['width', 'height', '_widthM', '_heightM', 'unit', 'direction', 'area', 'photos', 'notes', 'label', 'special_flag', 'group_name', 'is_unified'];
+        for (const field of (adType?.face_fields || [])) {
+          if (!reservedKeys.includes(field.field_key) && field.field_type !== 'number') {
+            result[field.field_key] = face[field.field_key];
+          }
+        }
+
+        return result;
+      });
+    }
+
+    // 转换测量数据：支持四种格式
+    let materials = [];
+
+    // 格式1：多广告类型格式 { template_id, faces: [{ ad_type, length, ... }] }
+    if (proxyData.template_id && Array.isArray(proxyData.faces) && !proxyData.ad_type && proxyData.faces.some(f => f.ad_type)) {
+      const groupBy = (arr, key) => arr.reduce((acc, item) => {
+        const k = item[key] || 'unknown';
+        if (!acc[k]) acc[k] = [];
+        acc[k].push(item);
+        return acc;
+      }, {});
+      const grouped = groupBy(proxyData.faces, 'ad_type');
+      for (const [adType, faces] of Object.entries(grouped)) {
+        materials.push({
+          material_type: adType,
+          template_id: proxyData.template_id,
+          faces: buildFaces(faces, adType),
+        });
+      }
+    }
+    // 格式2：项目模板格式 { template_id, ad_type, faces: [...] }
+    else if (proxyData.template_id && proxyData.ad_type && Array.isArray(proxyData.faces)) {
+      materials.push({
+        material_type: proxyData.ad_type,
+        template_id: proxyData.template_id,
+        faces: buildFaces(proxyData.faces, proxyData.ad_type),
+      });
+    }
+    // 格式2：materials 嵌套结构 [{ material_type, material_note, faces: [{ length, width, ... }] }]
+    else if (proxyData.materials && Array.isArray(proxyData.materials)) {
+      materials = proxyData.materials.map(mat => ({
+        material_type: mat.material_type,
+        template_id: proxyData.template_id || mat.template_id,
+        material_note: mat.material_note,
+        faces: buildFaces(mat.faces, mat.material_type),
+      }));
+    }
+    // 格式3：旧扁平格式 { length, width, material_type, photos, remark }
+    else if (proxyData.length && proxyData.width) {
+      materials.push({
+        type: proxyData.material_type || 'other',
+        faces: [{
+          label: 'A面',
+          length: Number(proxyData.length),
+          width: Number(proxyData.width || proxyData.height),
+          height: Number(proxyData.height_from_ground) || 0,
+          area: proxyData.area || Number((proxyData.length * (proxyData.width || proxyData.height)).toFixed(2)),
+          photos: proxyData.photos || [],
+          notes: proxyData.remark || '',
+          special_flag: false,
+        }],
+      });
+    }
+
+    // 自动计算面积（支持新旧两种格式）
+    if (materials && Array.isArray(materials)) {
+      for (const material of materials) {
+        if (material.faces && Array.isArray(material.faces)) {
+          for (const face of material.faces) {
+            const w = face.width;
+            const h = face.height;
+            if (w != null && h != null && face.area == null) {
+              face.area = Number((w * h).toFixed(4));
+            }
+          }
+        }
+      }
+    }
+
+    let measurement = await WoMeasurement.findOne({ where: { work_order_id: workOrderId } });
+
+    const measurementData = {
+      work_order_id: workOrderId,
+      measurer_id: req.user.user_id,
+      basic_info: { ...basic_info, project_name: projectName },
+      materials,
+      signature_path: null,
+      sketch_path: null,
+      status: 'measured',
+      measured_at: new Date().toISOString().slice(0, 10),
+      is_proxy: true,
+    };
+
+    if (measurement) {
+      await measurement.update(measurementData);
+    } else {
+      measurement = await WoMeasurement.create(measurementData);
+    }
+
+    // 解析已有 custom_data
+    let existingCustomData = {};
+    try {
+      if (workOrder.custom_data) {
+        existingCustomData = typeof workOrder.custom_data === 'string'
+          ? JSON.parse(workOrder.custom_data)
+          : workOrder.custom_data;
+      }
+    } catch {}
+
+    await workOrder.update({
+      current_stage: 'measurement',
+      status: 'measured',
+      custom_data: JSON.stringify({ ...existingCustomData, project_name: projectName }),
+    });
+
+    await createLog(
+      workOrderId,
+      req.user,
+      'proxy_submit_measurement',
+      'measurement',
+      `后台代录测量数据`,
+      req.ip
+    );
+
+    return success(res, measurement, '代录测量数据已提交', 201);
+  } catch (err) {
+    console.error('proxySubmitMeasurement error:', err);
+    return error(res, '代录测量数据提交失败');
+  }
+}
+
+/**
+ * PUT /api/v1/measurements/:workOrderId - 更新测量数据（审核前修改）
+ */
+async function updateMeasurement(req, res) {
+  try {
+    const { workOrderId } = req.params;
+    const { materials } = req.body;
+
+    if (!workOrderId) return error(res, '工单ID不能为空', 400);
+
+    const where = ensureWorkOrderOwnership(req, workOrderId);
+    const workOrder = await WorkOrder.findOne({ where });
+    if (!workOrder) return error(res, '工单不存在', 404);
+
+    const measurement = await WoMeasurement.findOne({
+      where: { work_order_id: workOrderId },
+      order: [['id', 'DESC']],
+    });
+
+    if (!measurement) return error(res, '测量记录不存在', 404);
+
+    // 自动计算面积
+    if (materials && Array.isArray(materials)) {
+      for (const material of materials) {
+        if (material.faces && Array.isArray(material.faces)) {
+          for (const face of material.faces) {
+            if (face.width != null && face.height != null && face.area == null) {
+              face.area = Number((face.width * face.height).toFixed(4));
+            }
+          }
+        }
+      }
+    }
+
+    await measurement.update({ materials });
+
+    await createLog(
+      workOrderId,
+      req.user.user_id,
+      'update_measurement',
+      'measurement',
+      '审核前修改了测量数据',
+      req.ip
+    );
+
+    return success(res, measurement, '数据已保存');
+  } catch (err) {
+    console.error('updateMeasurement error:', err);
+    return error(res, '保存测量数据失败');
+  }
+}
+
+/**
  * POST /api/v1/measurements/:workOrderId/review - 审核测量结果
  */
 async function reviewMeasurement(req, res) {
@@ -381,7 +729,7 @@ async function reviewMeasurement(req, res) {
     const { workOrderId } = req.params;
     const { action, reason } = req.body;
 
-    if (!action || !['approve', 'reject'].includes(action)) {
+    if (!action || !['approve', 'reject', 'resubmit'].includes(action)) {
       return error(res, '操作类型无效，必须为 approve 或 reject', 400);
     }
     if (action === 'reject' && !reason) {
@@ -405,7 +753,7 @@ async function reviewMeasurement(req, res) {
       // 通过：工单流转到设计环节
       await workOrder.update({
         current_stage: 'design',
-        status: 'measured',
+        status: 'designing',
       });
       await measurement.update({ status: 'measured' });
 
@@ -428,20 +776,21 @@ async function reviewMeasurement(req, res) {
           workOrderId
         );
       }
-    } else {
-      // 驳回
+    } else if (action === 'reject') {
+      // 驳回：工单状态回到测量环节
       await measurement.update({
         status: 'rejected',
         rejection_reason: reason,
       });
       await workOrder.update({
+        current_stage: 'measurement',
         status: 'rejected',
       });
 
       await createLog(
         workOrderId,
         req.user.user_id,
-        'reject_measurement',
+        'measurement_rejected',
         'measurement',
         `测量结果被驳回：${reason}`,
         req.ip
@@ -457,9 +806,50 @@ async function reviewMeasurement(req, res) {
           workOrderId
         );
       }
+    } else if (action === 'resubmit') {
+      // 重新提交：驳回后修改重新进入审核
+      if (req.body.materials) {
+        const mats = req.body.materials;
+        for (const mat of mats) {
+          if (mat.faces && Array.isArray(mat.faces)) {
+            for (const face of mat.faces) {
+              // 如果前端没传 area，按后端已有的 area 保留；前端如果改了 width/height 需要同时传 area
+              if (face.area == null) {
+                face.area = Number(((face.width || 0) * (face.height || 0)).toFixed(4));
+              }
+            }
+          }
+        }
+        await measurement.update({ materials: mats, status: 'measured', rejection_reason: null });
+      } else {
+        await measurement.update({ status: 'measured', rejection_reason: null });
+      }
+      await workOrder.update({
+        current_stage: 'measurement',
+        status: 'measured',
+      });
+
+      await createLog(
+        workOrderId,
+        req.user.user_id,
+        'resubmit_measurement',
+        'measurement',
+        '驳回后修改并重新提交测量数据',
+        req.ip
+      );
+
+      // 通知审核人
+      await sendNotification(
+        req.user.user_id,
+        '测量数据重新提交',
+        `工单 ${workOrder.work_order_no} 的测量数据已重新提交，请审核`,
+        'measurement_resubmitted',
+        workOrderId
+      );
     }
 
-    return success(res, { workOrder, measurement }, action === 'approve' ? '审核通过' : '已驳回');
+    const messages = { approve: '审核通过', reject: '已驳回', resubmit: '修改已提交' };
+    return success(res, { workOrder, measurement }, messages[action] || '操作成功');
   } catch (err) {
     console.error('reviewMeasurement error:', err);
     return error(res, '审核失败');
@@ -473,7 +863,6 @@ async function getMeasurementHistory(req, res) {
   try {
     const { workOrderId } = req.params;
 
-    // 获取当前工单
     const currentWhere = ensureWorkOrderOwnership(req, workOrderId);
     const currentOrder = await WorkOrder.findOne({
       where: currentWhere,
@@ -481,12 +870,6 @@ async function getMeasurementHistory(req, res) {
     });
 
     if (!currentOrder) return error(res, '工单不存在', 404);
-
-    // 这里基于申报信息中的地址查询，需要关联 declaration
-    // 由于 WoDeclaration 可能有地址信息，我们根据当前工单的地址来查历史工单
-    // 如果工单本身没有直接地址字段，通过派单/申报信息获取
-    // 这里假设通过 assigned_to 和 tenant 来找到相似历史工单
-    // 实际应该基于地址匹配，暂时返回同租户已完成的测量工单
 
     const historyOrders = await WorkOrder.findAll({
       where: {
@@ -511,6 +894,118 @@ async function getMeasurementHistory(req, res) {
   }
 }
 
+/**
+ * GET /api/v1/assignments/recommended-measurers - 推荐测量员
+ */
+async function getRecommendedMeasurers(req, res) {
+  try {
+    const tenantId = req.user.tenant_id;
+
+    const measurers = await TenantUser.findAll({
+      where: { tenant_id: tenantId, role: 'measurer', status: 'active' },
+      attributes: ['id', 'name', 'phone', 'role'],
+    });
+
+    const counts = await WorkOrder.findAll({
+      where: { tenant_id: tenantId, current_stage: 'measurement' },
+      attributes: ['assigned_tenant_user_id', [fn('COUNT', col('id')), 'task_count']],
+      group: ['assigned_tenant_user_id'],
+      raw: true,
+    });
+
+    const taskMap = {};
+    for (const c of counts) {
+      taskMap[c.assigned_tenant_user_id] = parseInt(c.task_count, 10);
+    }
+
+    const result = measurers.map(m => {
+      const taskCount = taskMap[m.id] || 0;
+      let loadLevel = 'free';
+      if (taskCount >= 3) loadLevel = 'busy';
+      else if (taskCount >= 1) loadLevel = 'moderate';
+
+      return {
+        ...m.toJSON(),
+        task_count: taskCount,
+        load_level: loadLevel,
+        load_label: loadLevel === 'free' ? '空闲' : loadLevel === 'moderate' ? `${taskCount}个任务` : '繁忙',
+      };
+    });
+
+    const order = { free: 0, moderate: 1, busy: 2 };
+    result.sort((a, b) => order[a.load_level] - order[b.load_level]);
+
+    return success(res, result);
+  } catch (err) {
+    console.error('getRecommendedMeasurers error:', err);
+    return error(res, '获取推荐测量员失败');
+  }
+}
+
+/**
+ * POST /api/v1/tenant/measurements/batch-review - 批量审核
+ */
+async function batchReviewMeasurements(req, res) {
+  try {
+    const { ids, action, reason } = req.body;
+    if (!ids?.length) return error(res, '工单ID列表不能为空', 400);
+    if (!['approve', 'reject'].includes(action)) return error(res, '操作类型无效', 400);
+    if (action === 'reject' && !reason) return error(res, '驳回时必须填写原因', 400);
+
+    const t = await sequelize.transaction();
+    try {
+      const results = { approved: [], rejected: [], failed: [] };
+
+      for (const woId of ids) {
+        try {
+          const measurement = await WoMeasurement.findOne({
+            where: { work_order_id: woId },
+            order: [['id', 'DESC']],
+            transaction: t,
+          });
+          if (!measurement) { results.failed.push({ id: woId, reason: '无测量记录' }); continue; }
+
+          const workOrder = await WorkOrder.findByPk(woId, { transaction: t });
+          if (!workOrder) { results.failed.push({ id: woId, reason: '工单不存在' }); continue; }
+
+          // 租户隔离验证
+          if (workOrder.tenant_id !== req.tenantId) {
+            results.failed.push({ id: woId, reason: '无权操作此工单' });
+            continue;
+          }
+
+          if (action === 'approve') {
+            await workOrder.update({ current_stage: 'design', status: 'designing' }, { transaction: t });
+            await measurement.update({ status: 'measured' }, { transaction: t });
+            results.approved.push(woId);
+          } else {
+            await workOrder.update({ current_stage: 'measurement', status: 'rejected' }, { transaction: t });
+            await measurement.update({ status: 'rejected', rejection_reason: reason }, { transaction: t });
+            results.rejected.push(woId);
+          }
+        } catch (e) {
+          results.failed.push({ id: woId, reason: e.message });
+        }
+      }
+
+      // 全部失败时才回滚，部分成功则提交
+      if (results.approved.length === 0 && results.rejected.length === 0 && results.failed.length > 0) {
+        await t.rollback();
+      } else {
+        await t.commit();
+      }
+
+      return success(res, results, `通过 ${results.approved.length} 个，驳回 ${results.rejected.length} 个`);
+    } catch (err) {
+      await t.rollback();
+      throw err;
+    }
+  } catch (err) {
+    console.error('batchReviewMeasurements error:', err);
+    return error(res, '批量审核失败');
+  }
+}
+
 module.exports = {
   listAssignments,
   createAssignment,
@@ -519,6 +1014,10 @@ module.exports = {
   listMeasurementTasks,
   getMeasurementTask,
   submitMeasurement,
+  updateMeasurement,
+  proxySubmitMeasurement,
   reviewMeasurement,
   getMeasurementHistory,
+  getRecommendedMeasurers,
+  batchReviewMeasurements,
 };

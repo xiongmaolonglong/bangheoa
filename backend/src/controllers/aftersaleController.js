@@ -100,7 +100,7 @@ async function listAftersales(req, res) {
       {
         model: WorkOrder,
         as: 'workOrder',
-        attributes: ['id', 'work_order_no', 'title', 'current_stage', 'status'],
+        attributes: ['id', 'work_order_no', 'title', 'current_stage', 'status', 'custom_data'],
         required: false,
       },
       {
@@ -170,7 +170,7 @@ async function getAftersale(req, res) {
       {
         model: WorkOrder,
         as: 'workOrder',
-        attributes: ['id', 'work_order_no', 'title', 'current_stage', 'status'],
+        attributes: ['id', 'work_order_no', 'title', 'current_stage', 'status', 'custom_data'],
         required: false,
       },
       { model: ClientUser, as: 'clientRequester', attributes: ['id', 'real_name', 'phone'], required: false },

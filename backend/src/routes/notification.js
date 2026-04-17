@@ -15,10 +15,10 @@ router.post('/read-all', controller.markAllAsRead);
 // 通知列表
 router.get('/', controller.listNotifications);
 
+// 子路由（必须在 :id 之前）
+router.post('/:id/read', controller.markAsRead);
+
 // 通知详情（自动标记已读）
 router.get('/:id', controller.getNotification);
-
-// 标记单条已读
-router.post('/:id/read', controller.markAsRead);
 
 module.exports = router;

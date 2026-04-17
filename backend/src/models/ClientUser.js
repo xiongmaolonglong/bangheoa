@@ -7,6 +7,7 @@ module.exports = sequelize.define('ClientUser', {
   client_id: { type: DataTypes.INTEGER, allowNull: false },
   name: { type: DataTypes.STRING(50), allowNull: false },
   phone: { type: DataTypes.STRING(20), unique: true },
+  real_name: { type: DataTypes.STRING(50) },
   wechat_openid: { type: DataTypes.STRING(100), unique: true },
   password_hash: { type: DataTypes.STRING(255), allowNull: false },
   role: { type: DataTypes.ENUM('staff', 'manager'), defaultValue: 'staff' },

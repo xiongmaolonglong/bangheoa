@@ -1,8 +1,13 @@
 const jwt = require('jsonwebtoken');
+const Client = require('../models/Client');
 
 function verifyToken(token) {
+  const secret = process.env.JWT_SECRET;
+  if (!secret || secret.includes('dev-secret')) {
+    throw new Error('JWT_SECRET 未配置或仍为开发默认值，生产环境必须设置强密钥');
+  }
   try {
-    return jwt.verify(token, process.env.JWT_SECRET || 'dev-secret-change-me');
+    return jwt.verify(token, secret);
   } catch {
     return null;
   }
@@ -126,4 +131,49 @@ function requireAdmin(req, res, next) {
   next();
 }
 
-module.exports = { requireAuth, requireTenant, requireClient, requireAdmin };
+/**
+ * tenant（广告商）或 client（甲方）均可访问
+ */
+function requireTenantOrClient(req, res, next) {
+  const header = req.headers.authorization;
+  if (!header || !header.startsWith('Bearer ')) {
+    return res.status(401).json({ error: '未登录或登录已过期' });
+  }
+
+  const token = header.slice(7);
+  const payload = verifyToken(token);
+  if (!payload) {
+    return res.status(401).json({ error: '未登录或登录已过期' });
+  }
+
+  if (payload.user_type !== 'tenant' && payload.user_type !== 'client') {
+    return res.status(403).json({ error: '无权访问此资源' });
+  }
+
+  req.user = {
+    user_id: payload.user_id,
+    user_type: payload.user_type,
+    tenant_id: payload.tenant_id,
+    client_id: payload.client_id,
+    role: payload.role,
+  };
+
+  next();
+}
+
+/**
+ * 解析 client 用户的 tenant_id 并注入到 req.user
+ * 用于 multer 等需要同步访问 req.user.tenant_id 的场景
+ */
+async function injectTenant(req, res, next) {
+  if (req.user?.tenant_id) return next();
+  if (req.user?.user_type === 'client' && req.user?.client_id) {
+    const client = await Client.findByPk(req.user.client_id, { attributes: ['tenant_id'] });
+    if (client) {
+      req.user.tenant_id = client.tenant_id;
+    }
+  }
+  next();
+}
+
+module.exports = { requireAuth, requireTenant, requireClient, requireTenantOrClient, requireAdmin, injectTenant };

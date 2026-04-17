@@ -29,8 +29,28 @@ router.use('/auth', authRoutes);
 // Address dictionary routes -> /api/v1/addresses/*
 router.use('/addresses', addressRoutes);
 
-// Tenant management routes -> /api/v1/tenants/*
+const clientOrgRoutes = require('./clientOrg');
+const formConfigRoutes = require('./formConfig');
+const tenantSettingsRoutes = require('./tenantSettings');
+
+// 表单配置 routes -> /api/v1/tenant/form-config/*
+// 必须在 /tenant 之前，因为 form-config 允许甲方用户访问
+router.use('/tenant/form-config', formConfigRoutes);
+
+// 甲方用户组织架构 routes -> /api/v1/client-organization/*
+router.use('/client-organization', clientOrgRoutes);
+
+// 租户系统配置 routes -> /api/v1/tenant/settings
+router.use('/tenant/settings', tenantSettingsRoutes);
+
+// Tenant declaration routes -> /api/v1/tenant/declarations/*
+// 必须在 /tenant 之前
+router.use('/tenant/declarations', tenantDeclarationRoutes);
+
+// Tenant management routes -> /api/v1/tenants/* (and /tenant/* for frontend compatibility)
+// /tenant 是通配路由，会拦截所有 /tenant/* 子路径，所以必须在更具体的路由之后注册
 router.use('/tenants', tenantRoutes);
+router.use('/tenant', tenantRoutes);
 
 // Client (甲方) management routes -> /api/v1/clients/*
 router.use('/clients', clientRoutes);
@@ -46,9 +66,6 @@ router.use('/designs', designRoutes);
 
 // Declaration routes (client) -> /api/v1/declarations/*
 router.use('/declarations', declarationRoutes);
-
-// Tenant declaration routes -> /api/v1/tenant/declarations/*
-router.use('/tenant/declarations', tenantDeclarationRoutes);
 
 // File upload routes -> /api/v1/files/*
 router.use('/files', fileRoutes);
@@ -67,20 +84,6 @@ router.use('/archives', archiveRoutes);
 
 // Aftersale routes -> /api/v1/aftersales/*
 router.use('/aftersales', aftersaleRoutes);
-
-const clientOrgRoutes = require('./clientOrg');
-const formConfigRoutes = require('./formConfig');
-
-// 表单配置 routes -> /api/v1/tenant/form-config/*
-router.use('/tenant/form-config', formConfigRoutes);
-
-// 甲方用户组织架构 routes -> /api/v1/client-organization/*
-router.use('/client-organization', clientOrgRoutes);
-
-const tenantSettingsRoutes = require('./tenantSettings');
-
-// 租户系统配置 routes -> /api/v1/tenant/settings
-router.use('/tenant/settings', tenantSettingsRoutes);
 
 // Notification routes -> /api/v1/notifications/*
 router.use('/notifications', notificationRoutes);

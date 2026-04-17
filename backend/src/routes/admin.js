@@ -9,9 +9,11 @@ router.use(requireAdmin);
 // ========== 租户管理 ==========
 router.get('/tenants', controller.listTenants);
 router.post('/tenants', controller.createTenant);
+
+// 子路由（必须在 :id 之前）
+router.put('/tenants/:id/status', controller.updateTenantStatus);
 router.get('/tenants/:id', controller.getTenant);
 router.put('/tenants/:id', controller.updateTenant);
-router.put('/tenants/:id/status', controller.updateTenantStatus);
 
 // ========== 全局数据看板 ==========
 router.get('/dashboard', controller.getDashboard);
@@ -19,8 +21,10 @@ router.get('/dashboard/trend', controller.getDashboardTrend);
 
 // ========== 工单穿透查询 ==========
 router.get('/work-orders', controller.listAllWorkOrders);
-router.get('/work-orders/:id', controller.getWorkOrder);
+
+// 子路由（必须在 :id 之前）
 router.get('/work-orders/:id/logs', controller.getWorkOrderLogs);
+router.get('/work-orders/:id', controller.getWorkOrder);
 
 // ========== 甲方监管 ==========
 router.get('/clients', controller.listAllClients);

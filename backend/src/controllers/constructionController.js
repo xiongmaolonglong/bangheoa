@@ -20,56 +20,85 @@ async function createLog(workOrderId, user, action, stage, detail) {
 
 /**
  * GET /api/v1/construction/tasks
- * 施工员任务列表
- * 筛选: ?status=&page=&limit=
+ * 施工任务列表
+ * 显示所有施工阶段的工单（有或无施工记录）
+ * 筛选: ?status=&keyword=&page=&limit=
  */
 async function listTasks(req, res) {
-  const { status, page = 1, limit = 20 } = req.query;
+  const { status, keyword, page = 1, limit = 20 } = req.query;
   const tenantId = req.user.role === 'super_admin' ? undefined : (req.tenantId || req.user.tenant_id);
 
-  const where = {};
-  if (status) where.status = status;
+  const isAdmin = req.user.role === 'admin' || req.user.role === 'super_admin';
 
-  // 如果当前用户是施工员，只显示自己的任务
-  if (req.user.user_type === 'tenant' && req.user.user_id) {
-    where.constructor_id = req.user.user_id;
+  // 构建工单查询条件
+  const woWhere = { current_stage: 'construction' };
+  if (tenantId) woWhere.tenant_id = tenantId;
+
+  // 关键词搜索
+  if (keyword) {
+    const { Op } = require('sequelize');
+    woWhere[Op.or] = [
+      { work_order_no: { [Op.like]: `%${keyword}%` } },
+      { title: { [Op.like]: `%${keyword}%` } },
+    ];
   }
 
-  // 租户隔离
-  if (tenantId) {
-    const woIds = await WorkOrder.findAll({
-      where: { tenant_id: tenantId },
-      attributes: ['id'],
-      raw: true,
-    });
-    if (woIds.length === 0) {
-      return paginate(res, [], { page: parseInt(page, 10), limit: parseInt(limit, 10), total: 0, pages: 0 });
-    }
-    where.work_order_id = woIds.map(w => w.id);
+  // 非管理员只看分配给自己的工单
+  if (!isAdmin && req.user.user_type === 'tenant' && req.user.user_id) {
+    woWhere.constructor_id = req.user.user_id;
   }
 
   const offset = (Math.max(1, parseInt(page, 10)) - 1) * parseInt(limit, 10);
   const pageSize = Math.min(Math.max(1, parseInt(limit, 10)), 100);
 
-  const { count, rows } = await WoConstruction.findAndCountAll({
-    where,
+  // 查询施工阶段的工单，左连接施工记录
+  const { count, rows: workOrders } = await WorkOrder.findAndCountAll({
+    where: woWhere,
+    attributes: ['id', 'work_order_no', 'title', 'current_stage', 'status', 'deadline', 'constructor_id'],
     include: [
       {
-        model: WorkOrder,
-        as: 'workOrder',
-        attributes: ['id', 'work_order_no', 'title', 'current_stage', 'status', 'deadline'],
+        model: WoConstruction,
+        as: 'constructions',
+        where: status ? { status } : {},
         required: false,
-      },
-      {
-        model: TenantUser,
-        as: 'constructor',
-        attributes: ['id', 'real_name', 'phone'],
-        required: false,
+        limit: 1,
+        order: [['created_at', 'DESC']],
+        include: [
+          {
+            model: TenantUser,
+            as: 'constructor',
+            attributes: ['id', 'real_name', 'phone'],
+            required: false,
+          },
+        ],
       },
     ],
     order: [['created_at', 'DESC']],
     limit: pageSize,
     offset,
+    distinct: true,
+  });
+
+  // 转换为前端期望的格式
+  const list = workOrders.map(wo => {
+    const construction = wo.constructions && wo.constructions[0];
+    return {
+      id: construction?.id || null,
+      work_order_id: wo.id,
+      workOrder: {
+        id: wo.id,
+        work_order_no: wo.work_order_no,
+        title: wo.title,
+        current_stage: wo.current_stage,
+        status: wo.status,
+        deadline: wo.deadline,
+      },
+      constructor: construction?.constructor || null,
+      constructor_name: construction?.constructor?.real_name || null,
+      status: construction?.status || 'scheduled',
+      constructed_at: construction?.constructed_at || null,
+      duration_minutes: construction?.duration_minutes || null,
+    };
   });
 
   const pagination = {
@@ -79,7 +108,7 @@ async function listTasks(req, res) {
     pages: Math.ceil(count / pageSize),
   };
 
-  return paginate(res, rows, pagination);
+  return paginate(res, list, pagination);
 }
 
 // ==================== 施工任务详情 ====================
@@ -114,18 +143,21 @@ async function getTask(req, res) {
   });
 
   const result = {
-    work_order: workOrder,
+    work_order: {
+      ...workOrder.toJSON(),
+      custom_data: workOrder.custom_data ? (typeof workOrder.custom_data === 'string' ? JSON.parse(workOrder.custom_data) : workOrder.custom_data) : null,
+    },
     constructions,
   };
 
   return success(res, result);
 }
 
-// ==================== 提交施工记录 ====================
+// ==================== 提交/更新施工记录 ====================
 
 /**
  * POST /api/v1/construction/:workOrderId
- * 提交施工记录
+ * 提交或更新施工记录
  * 请求体: { before_photos, during_photos, after_photos, notes, duration_minutes, signature_path }
  */
 async function submitConstruction(req, res) {
@@ -141,31 +173,44 @@ async function submitConstruction(req, res) {
     return error(res, '工单不存在', 404);
   }
 
-  // 创建施工记录
-  const construction = await WoConstruction.create({
-    work_order_id: workOrder.id,
-    constructor_id: req.user.user_id,
-    before_photos: before_photos || [],
-    during_photos: during_photos || [],
-    after_photos: after_photos || [],
-    notes: notes || null,
-    duration_minutes: duration_minutes || 0,
-    signature_path: signature_path || null,
-    status: 'completed',
-    constructed_at: new Date().toISOString().slice(0, 10),
+  // 查找现有施工记录
+  let construction = await WoConstruction.findOne({
+    where: { work_order_id: workOrder.id },
+    order: [['created_at', 'DESC']],
   });
 
-  // 更新工单状态
-  await workOrder.update({
-    current_stage: 'construction',
-    status: 'completed',
-  });
+  const photoData = {
+    before_photos: before_photos !== undefined ? before_photos : construction?.before_photos || [],
+    during_photos: during_photos !== undefined ? during_photos : construction?.during_photos || [],
+    after_photos: after_photos !== undefined ? after_photos : construction?.after_photos || [],
+  };
+
+  if (construction) {
+    // 更新现有记录
+    await construction.update({
+      ...photoData,
+      notes: notes !== undefined ? notes : construction.notes,
+      duration_minutes: duration_minutes !== undefined ? duration_minutes : construction.duration_minutes,
+      signature_path: signature_path !== undefined ? signature_path : construction.signature_path,
+    });
+  } else {
+    // 创建新记录
+    construction = await WoConstruction.create({
+      work_order_id: workOrder.id,
+      constructor_id: req.user.user_id,
+      ...photoData,
+      notes: notes || null,
+      duration_minutes: duration_minutes || 0,
+      signature_path: signature_path || null,
+      status: 'scheduled',
+    });
+  }
 
   // 记录日志
-  await createLog(workOrder.id, req.user, 'construction_submitted', 'construction',
-    `施工记录已提交${notes ? ': ' + notes : ''}`);
+  await createLog(workOrder.id, req.user, 'construction_updated', 'construction',
+    `施工记录已更新${notes ? ': ' + notes : ''}`);
 
-  return success(res, construction, '施工记录已提交');
+  return success(res, construction, '施工记录已保存');
 }
 
 // ==================== 内部验收 ====================
@@ -335,6 +380,72 @@ async function reportException(req, res) {
   return success(res, { exception: exceptionDetail }, '异常已上报，相关人员将收到通知');
 }
 
+// ==================== 施工派单 ====================
+
+/**
+ * POST /api/v1/constructions/:workOrderId/assign
+ * 指派施工队/师傅
+ * 请求体: { constructor_id, start_date, end_date, remark }
+ */
+async function assignConstructor(req, res) {
+  const workOrderId = parseInt(req.params.workOrderId, 10);
+  const { constructor_id, start_date, end_date, remark } = req.body;
+
+  if (!constructor_id) {
+    return error(res, '请选择施工队/师傅', 400);
+  }
+
+  const tenantId = req.user.role === 'super_admin' ? undefined : (req.tenantId || req.user.tenant_id);
+  const woWhere = { id: workOrderId };
+  if (tenantId) woWhere.tenant_id = tenantId;
+
+  const workOrder = await WorkOrder.findOne({ where: woWhere });
+  if (!workOrder) {
+    return error(res, '工单不存在', 404);
+  }
+
+  const constructor = await TenantUser.findByPk(constructor_id);
+  if (!constructor) {
+    return error(res, '施工人员不存在', 404);
+  }
+
+  // 更新工单的施工派单信息
+  await workOrder.update({
+    constructor_id,
+    construction_start_date: start_date || null,
+    construction_end_date: end_date || null,
+  });
+
+  // 创建或更新施工记录
+  let construction = await WoConstruction.findOne({ where: { work_order_id: workOrderId } });
+  if (construction) {
+    await construction.update({ constructor_id });
+  } else {
+    construction = await WoConstruction.create({
+      work_order_id: workOrderId,
+      constructor_id,
+      status: 'scheduled',
+    });
+  }
+
+  // 更新工单状态
+  await workOrder.update({
+    current_stage: 'construction',
+    status: 'constructing',
+  });
+
+  // 记录日志
+  await createLog(workOrderId, req.user, 'constructor_assign', 'construction',
+    `指派施工人员：${constructor.name}${remark ? '，备注: ' + remark : ''}`);
+
+  return success(res, {
+    constructor_id,
+    constructor_name: constructor.name,
+    start_date,
+    end_date
+  }, '施工派单成功');
+}
+
 module.exports = {
   listTasks,
   getTask,
@@ -342,4 +453,5 @@ module.exports = {
   internalVerify,
   clientVerify,
   reportException,
+  assignConstructor,
 };

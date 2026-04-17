@@ -15,11 +15,11 @@ const ALLOWED_EXTENSIONS = new Set([
 
 /**
  * 文件大小限制（字节）
- * 图片: 10MB, 其他: 50MB
+ * 图片: 10MB, 其他: 500MB（设计源文件如 PSD/AI/CDR 通常较大）
  */
 const IMAGE_EXTENSIONS = new Set(['jpg', 'jpeg', 'png', 'gif']);
 const MAX_IMAGE_SIZE = 10 * 1024 * 1024;     // 10MB
-const MAX_FILE_SIZE = 50 * 1024 * 1024;      // 50MB
+const MAX_FILE_SIZE = 500 * 1024 * 1024;     // 500MB
 
 /**
  * 生成安全的文件名: {timestamp}-{random}.{ext}
@@ -48,7 +48,7 @@ const storage = multer.diskStorage({
   },
   filename(req, file, cb) {
     const filename = generateFilename(file.originalname);
-    req.savedFilename = filename; // 传递给 controller 使用
+    req.savedFilename = filename;
     cb(null, filename);
   },
 });
@@ -81,9 +81,10 @@ const upload = multer({
  * 单文件上传中间件
  */
 function uploadSingle(req, res, next) {
-  // 根据扩展名动态设置大小限制
-  const originalExt = req.file ? path.extname(req.file.originalname).toLowerCase().slice(1) : null;
-  const maxFileSize = originalExt && IMAGE_EXTENSIONS.has(originalExt) ? MAX_IMAGE_SIZE : MAX_FILE_SIZE;
+  // 根据 Content-Type 判断是否为图片
+  const ct = req.headers['content-type'] || '';
+  const isImage = ct.includes('image/jpeg') || ct.includes('image/png') || ct.includes('image/gif');
+  const maxFileSize = isImage ? MAX_IMAGE_SIZE : MAX_FILE_SIZE;
 
   const uploadWithLimits = multer({
     storage,

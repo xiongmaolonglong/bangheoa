@@ -10,13 +10,13 @@ router.use(requireAuth, injectTenant);
 // 归档列表
 router.get('/', controller.listArchives);
 
+// 归档导出（必须在 :workOrderId 之前）
+router.get('/:workOrderId/export', controller.exportArchive);
+
 // 创建归档
 router.post('/:workOrderId', controller.createArchive);
 
 // 归档详情
 router.get('/:workOrderId', controller.getArchive);
-
-// 归档导出
-router.get('/:workOrderId/export', controller.exportArchive);
 
 module.exports = router;

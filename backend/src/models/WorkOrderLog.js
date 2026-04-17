@@ -10,6 +10,11 @@ module.exports = sequelize.define('WorkOrderLog', {
   stage: { type: DataTypes.STRING(50) },
   detail: { type: DataTypes.TEXT },
   ip_address: { type: DataTypes.STRING(50) },
+  log_type: { type: DataTypes.STRING(30), comment: '操作类型' },
+  field_name: { type: DataTypes.STRING(50), comment: '变更字段名' },
+  old_value: { type: DataTypes.TEXT, comment: '变更前值' },
+  new_value: { type: DataTypes.TEXT, comment: '变更后值' },
+  amount_change: { type: DataTypes.DECIMAL(10, 2), comment: '金额变化' },
 }, {
   tableName: 'work_order_logs',
   underscored: true,

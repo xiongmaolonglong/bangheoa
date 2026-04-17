@@ -13,7 +13,7 @@ router.post('/', controller.createAftersale);
 // 售后列表
 router.get('/', controller.listAftersales);
 
-// 售后详情
+// 售后详情（必须在子路由之前）
 router.get('/:id', controller.getAftersale);
 
 // 处理售后

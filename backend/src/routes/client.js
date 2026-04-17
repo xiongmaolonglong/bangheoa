@@ -11,6 +11,12 @@ router.use(injectTenant);
 // ==================== 甲方企业 ====================
 router.get('/', clientController.listClients);
 router.post('/', clientController.createClient);
+
+// ==================== 默认甲方（必须在 :id 之前） ====================
+router.get('/default', clientController.getDefaultClient);
+router.put('/default', clientController.setDefaultClient);
+
+// ==================== 具体甲方操作 ====================
 router.get('/:id', clientController.getClient);
 router.put('/:id', clientController.updateClient);
 router.delete('/:id', clientController.deleteClient);

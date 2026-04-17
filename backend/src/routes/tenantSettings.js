@@ -1,13 +1,16 @@
 const express = require('express');
 const router = express.Router();
-const { requireTenant } = require('../middleware/auth');
+const { requireTenant, requireTenantOrClient } = require('../middleware/auth');
 const { injectTenant } = require('../middleware/tenant');
 const controller = require('../controllers/tenantSettingsController');
 
-// 需要 tenant 认证 + 租户隔离
-router.use(requireTenant, injectTenant);
+// 读取：广告商和甲方都可以
+router.get('/', requireTenantOrClient, injectTenant, controller.getSettings);
+router.get('/project-templates', requireTenantOrClient, injectTenant, controller.getProjectTemplates);
+router.get('/material-type-map', requireTenantOrClient, injectTenant, controller.getMaterialTypeMap);
 
-router.get('/', controller.getSettings);
+// 写入：仅广告商
+router.use(requireTenant, injectTenant);
 router.put('/', controller.updateSettings);
 router.patch('/:key', controller.updateSettingKey);
 

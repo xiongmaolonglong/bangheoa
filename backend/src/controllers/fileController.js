@@ -48,8 +48,6 @@ function uploadBatch(req, res) {
 /**
  * DELETE /api/v1/files/:filename
  * 删除文件
- *
- * 注意: filename 可能包含路径分隔符以支持子目录结构
  */
 function deleteFile(req, res) {
   const { filename } = req.params;

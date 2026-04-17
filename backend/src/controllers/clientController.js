@@ -450,6 +450,53 @@ async function deleteRegion(req, res) {
   }
 }
 
+// ==================== 默认甲方 ====================
+
+/**
+ * GET /api/v1/clients/default - 获取当前租户的默认甲方
+ */
+async function getDefaultClient(req, res) {
+  try {
+    const Tenant = require('../models/Tenant');
+    const tenantId = req.user.tenant_id;
+    const tenant = await Tenant.findByPk(tenantId, { attributes: ['id', 'name', 'default_client_id'] });
+    if (!tenant) return error(res, '租户不存在', 404);
+
+    if (tenant.default_client_id) {
+      const client = await Client.findByPk(tenant.default_client_id);
+      return success(res, { default_client_id: client?.id, client: client || null });
+    }
+    return success(res, { default_client_id: null, client: null });
+  } catch (err) {
+    console.error('getDefaultClient error:', err);
+    return error(res, '获取默认甲方失败');
+  }
+}
+
+/**
+ * PUT /api/v1/clients/default - 设置/取消默认甲方
+ * body: { client_id: number | null }
+ */
+async function setDefaultClient(req, res) {
+  try {
+    const Tenant = require('../models/Tenant');
+    const { client_id } = req.body;
+    const tenantId = req.user.tenant_id;
+
+    if (client_id) {
+      const client = await Client.findOne({ where: { id: client_id, tenant_id: tenantId } });
+      if (!client) return error(res, '甲方企业不存在或无权访问', 400);
+    }
+
+    const tenant = await Tenant.findByPk(tenantId);
+    await tenant.update({ default_client_id: client_id || null });
+    return success(res, { default_client_id: client_id }, '设置成功');
+  } catch (err) {
+    console.error('setDefaultClient error:', err);
+    return error(res, '设置默认甲方失败');
+  }
+}
+
 module.exports = {
   listClients,
   createClient,
@@ -467,4 +514,6 @@ module.exports = {
   listRegions,
   setRegions,
   deleteRegion,
+  getDefaultClient,
+  setDefaultClient,
 };

@@ -23,6 +23,14 @@ const WoFinance = require('./WoFinance');
 const WoArchive = require('./WoArchive');
 const WoAftersale = require('./WoAftersale');
 const Notification = require('./Notification');
+const FormConfig = require('./FormConfig');
+
+// New models for module refinement
+const WoChangeLog = require('./WoChangeLog');
+const WoConstructionLog = require('./WoConstructionLog');
+const WoProductionProgress = require('./WoProductionProgress');
+
+const WoProductionBatch = require('./WoProductionBatch');
 
 // Tenant associations
 Tenant.hasMany(TenantRegion, { foreignKey: 'tenant_id', as: 'regions' });
@@ -36,7 +44,7 @@ TenantUser.belongsTo(Tenant, { foreignKey: 'tenant_id' });
 TenantUser.belongsTo(TenantDepartment, { foreignKey: 'department_id', as: 'department' });
 
 Tenant.hasMany(Client, { foreignKey: 'tenant_id', as: 'clients' });
-Client.belongsTo(Tenant, { foreignKey: 'tenant_id' });
+Client.belongsTo(Tenant, { foreignKey: 'tenant_id', as: 'tenant' });
 
 // Client associations
 Client.hasMany(ClientUser, { foreignKey: 'client_id', as: 'users' });
@@ -65,6 +73,9 @@ WorkOrder.belongsTo(ClientUser, { foreignKey: 'client_user_id', as: 'creator' })
 TenantUser.hasMany(WorkOrder, { foreignKey: 'assigned_tenant_user_id', as: 'assigned_orders' });
 WorkOrder.belongsTo(TenantUser, { foreignKey: 'assigned_tenant_user_id', as: 'assignee' });
 
+TenantUser.hasMany(WorkOrder, { foreignKey: 'designer_id', as: 'design_orders' });
+WorkOrder.belongsTo(TenantUser, { foreignKey: 'designer_id', as: 'designer' });
+
 // WorkOrder has many stage records
 WorkOrder.hasMany(WorkOrderLog, { foreignKey: 'work_order_id', as: 'logs' });
 WorkOrderLog.belongsTo(WorkOrder, { foreignKey: 'work_order_id' });
@@ -76,28 +87,28 @@ WorkOrder.hasOne(WoApproval, { foreignKey: 'work_order_id', as: 'approval' });
 WoApproval.belongsTo(WorkOrder, { foreignKey: 'work_order_id' });
 
 WorkOrder.hasOne(WoAssignment, { foreignKey: 'work_order_id', as: 'assignment' });
-WoAssignment.belongsTo(WorkOrder, { foreignKey: 'work_order_id' });
+WoAssignment.belongsTo(WorkOrder, { foreignKey: 'work_order_id', as: 'workOrder' });
 
 WorkOrder.hasMany(WoMeasurement, { foreignKey: 'work_order_id', as: 'measurements' });
-WoMeasurement.belongsTo(WorkOrder, { foreignKey: 'work_order_id' });
+WoMeasurement.belongsTo(WorkOrder, { foreignKey: 'work_order_id', as: 'workOrder' });
 
 WorkOrder.hasMany(WoDesign, { foreignKey: 'work_order_id', as: 'designs' });
-WoDesign.belongsTo(WorkOrder, { foreignKey: 'work_order_id' });
+WoDesign.belongsTo(WorkOrder, { foreignKey: 'work_order_id', as: 'workOrder' });
 
 WorkOrder.hasMany(WoProduction, { foreignKey: 'work_order_id', as: 'productions' });
-WoProduction.belongsTo(WorkOrder, { foreignKey: 'work_order_id' });
+WoProduction.belongsTo(WorkOrder, { foreignKey: 'work_order_id', as: 'workOrder' });
 
 WorkOrder.hasMany(WoConstruction, { foreignKey: 'work_order_id', as: 'constructions' });
-WoConstruction.belongsTo(WorkOrder, { foreignKey: 'work_order_id' });
+WoConstruction.belongsTo(WorkOrder, { foreignKey: 'work_order_id', as: 'workOrder' });
 
 WorkOrder.hasMany(WoFinance, { foreignKey: 'work_order_id', as: 'finances' });
-WoFinance.belongsTo(WorkOrder, { foreignKey: 'work_order_id' });
+WoFinance.belongsTo(WorkOrder, { foreignKey: 'work_order_id', as: 'workOrder' });
 
 WorkOrder.hasOne(WoArchive, { foreignKey: 'work_order_id', as: 'archive' });
-WoArchive.belongsTo(WorkOrder, { foreignKey: 'work_order_id' });
+WoArchive.belongsTo(WorkOrder, { foreignKey: 'work_order_id', as: 'workOrder' });
 
 WorkOrder.hasMany(WoAftersale, { foreignKey: 'work_order_id', as: 'aftersales' });
-WoAftersale.belongsTo(WorkOrder, { foreignKey: 'work_order_id' });
+WoAftersale.belongsTo(WorkOrder, { foreignKey: 'work_order_id', as: 'workOrder' });
 
 // WoDeclaration -> ClientUser
 ClientUser.hasMany(WoDeclaration, { foreignKey: 'created_by', as: 'declarations' });
@@ -135,10 +146,24 @@ WoArchive.belongsTo(TenantUser, { foreignKey: 'archived_by', as: 'archiver' });
 
 // WoAftersale -> ClientUser, TenantUser
 ClientUser.hasMany(WoAftersale, { foreignKey: 'client_user_id', as: 'aftersales' });
-WoAftersale.belongsTo(ClientUser, { foreignKey: 'client_user_id', as: 'client_requester' });
+WoAftersale.belongsTo(ClientUser, { foreignKey: 'client_user_id', as: 'clientRequester' });
 
 TenantUser.hasMany(WoAftersale, { foreignKey: 'handler_id', as: 'handled_aftersales' });
 WoAftersale.belongsTo(TenantUser, { foreignKey: 'handler_id', as: 'handler' });
+
+// New associations for module refinement
+WorkOrder.hasMany(WoChangeLog, { foreignKey: 'work_order_id', as: 'changeLogs' });
+WoChangeLog.belongsTo(WorkOrder, { foreignKey: 'work_order_id' });
+
+WorkOrder.hasMany(WoConstructionLog, { foreignKey: 'work_order_id', as: 'constructionLogs' });
+WoConstructionLog.belongsTo(WorkOrder, { foreignKey: 'work_order_id' });
+
+WorkOrder.hasMany(WoProductionProgress, { foreignKey: 'work_order_id', as: 'productionProgress' });
+WoProductionProgress.belongsTo(WorkOrder, { foreignKey: 'work_order_id' });
+
+// WoProductionBatch -> WorkOrder (checklist references work orders)
+TenantUser.hasMany(WoProductionBatch, { foreignKey: 'creator_id', as: 'createdBatches' });
+WoProductionBatch.belongsTo(TenantUser, { foreignKey: 'creator_id', as: 'creator' });
 
 // Notification (polymorphic user_type, no FK association to user tables)
 
@@ -153,5 +178,8 @@ module.exports = {
   WoDeclaration, WoApproval, WoAssignment,
   WoMeasurement, WoDesign, WoProduction,
   WoConstruction, WoFinance, WoArchive,
-  WoAftersale, Notification,
+  WoAftersale, Notification, FormConfig,
+  // Module refinement models
+  WoChangeLog, WoConstructionLog, WoProductionProgress,
+  WoProductionBatch,
 };

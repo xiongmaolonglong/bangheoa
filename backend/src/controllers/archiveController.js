@@ -203,7 +203,7 @@ async function listArchives(req, res) {
       {
         model: WorkOrder,
         as: 'workOrder',
-        attributes: ['id', 'work_order_no', 'title', 'current_stage', 'status', 'completed_at'],
+        attributes: ['id', 'work_order_no', 'title', 'current_stage', 'status', 'completed_at', 'custom_data'],
         required: false,
       },
     ],
@@ -246,7 +246,7 @@ async function getArchive(req, res) {
       {
         model: WorkOrder,
         as: 'workOrder',
-        attributes: ['id', 'work_order_no', 'title', 'description', 'current_stage', 'status', 'completed_at'],
+        attributes: ['id', 'work_order_no', 'title', 'description', 'current_stage', 'status', 'completed_at', 'custom_data'],
         required: false,
       },
     ],

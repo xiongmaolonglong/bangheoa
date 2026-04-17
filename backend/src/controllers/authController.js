@@ -104,26 +104,29 @@ async function superAdminLogin(req, res) {
       return error(res, '手机号和密码不能为空', 400);
     }
 
-    // 超级管理员：从 TenantUser 中查找 role='admin' 的用户
-    const user = await TenantUser.findOne({ where: { phone, status: 'active' } });
-    if (!user) {
-      return error(res, '手机号或密码错误', 401);
+    // 超管账号从环境变量读取，与租户账号完全隔离
+    const adminPhone = process.env.SUPER_ADMIN_PHONE;
+    const adminPassword = process.env.SUPER_ADMIN_PASSWORD;
+
+    if (!adminPhone || !adminPassword) {
+      return error(res, '超级管理员未配置，请联系系统管理员');
     }
 
-    const valid = await bcrypt.compare(password, user.password_hash);
-    if (!valid) {
-      return error(res, '手机号或密码错误', 401);
+    if (phone !== adminPhone || password !== adminPassword) {
+      return error(res, '账号或密码错误', 401);
     }
 
-    // 超级管理员 token 使用 super_admin 角色
     const token = signToken({
-      user_id: user.id,
-      user_type: 'tenant',
-      tenant_id: user.tenant_id,
+      user_id: 0,
+      user_type: 'super_admin',
+      tenant_id: null,
       role: 'super_admin',
     });
 
-    return success(res, { token, user: sanitizeUser(user) }, '登录成功');
+    return success(res, {
+      token,
+      user: { id: 0, name: '超级管理员', phone: adminPhone, role: 'super_admin', user_type: 'super_admin' },
+    }, '登录成功');
   } catch (err) {
     console.error('Super admin login error:', err);
     return error(res, '登录失败，请稍后重试');
@@ -171,10 +174,14 @@ async function changePassword(req, res) {
 
 async function forgotPassword(req, res) {
   try {
-    const { phone, new_password } = req.body;
+    const { phone, name, new_password } = req.body;
 
     if (!phone || !new_password) {
       return error(res, '手机号和新密码不能为空', 400);
+    }
+
+    if (!name) {
+      return error(res, '请提供真实姓名用于验证', 400);
     }
 
     if (new_password.length < 6) {
@@ -184,6 +191,11 @@ async function forgotPassword(req, res) {
     const user = await TenantUser.findOne({ where: { phone, status: 'active' } });
     if (!user) {
       return error(res, '该手机号未注册', 404);
+    }
+
+    // 验证姓名匹配
+    if (user.name !== name) {
+      return error(res, '姓名与手机号不匹配', 400);
     }
 
     user.password_hash = new_password; // beforeUpdate hook will hash it

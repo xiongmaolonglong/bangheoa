@@ -13,19 +13,11 @@ router.get('/quotes', controller.listQuotes);
 // 结算模板导出
 router.get('/settlement-template/:workOrderId', controller.getSettlementTemplate);
 
-// 生成报价
-router.post('/:workOrderId/quote', controller.createQuote);
-
-// 收款记录
-router.post('/:workOrderId/payment', controller.recordPayment);
-
-// 开票记录
-router.post('/:workOrderId/invoice', controller.recordInvoice);
-
-// 结算资料提交
-router.post('/:workOrderId/settlement', controller.submitSettlement);
-
-// 结算驳回
+// 子路由（必须在 :workOrderId 之前）
 router.post('/:workOrderId/settlement/reject', controller.rejectSettlement);
+router.post('/:workOrderId/quote', controller.createQuote);
+router.post('/:workOrderId/payment', controller.recordPayment);
+router.post('/:workOrderId/invoice', controller.recordInvoice);
+router.post('/:workOrderId/settlement', controller.submitSettlement);
 
 module.exports = router;

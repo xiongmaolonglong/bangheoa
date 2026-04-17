@@ -1,3 +1,4 @@
+const Tenant = require('../models/Tenant');
 const TenantDepartment = require('../models/TenantDepartment');
 const TenantUser = require('../models/TenantUser');
 const { success, error, paginate } = require('../utils/response');
@@ -25,7 +26,29 @@ async function updateTenantInfo(req, res) {
   if (req.user.role !== 'super_admin') {
     return error(res, '仅超级管理员可操作', 403);
   }
-  return success(res, { message: '租户信息更新功能待完善' });
+
+  const tenantId = req.tenantId;
+  const tenant = await Tenant.findByPk(tenantId);
+  if (!tenant) {
+    return error(res, '租户不存在', 404);
+  }
+
+  const { name, contact_name, contact_phone, contact_email, max_users, order_code_prefix, modules } = req.body;
+  const updates = {};
+  if (name !== undefined) updates.name = name;
+  if (contact_name !== undefined) updates.contact_name = contact_name;
+  if (contact_phone !== undefined) updates.contact_phone = contact_phone;
+  if (contact_email !== undefined) updates.contact_email = contact_email;
+  if (max_users !== undefined) updates.max_users = parseInt(max_users, 10);
+  if (order_code_prefix !== undefined) updates.order_code_prefix = order_code_prefix;
+  if (modules !== undefined) updates.modules = modules;
+
+  if (Object.keys(updates).length === 0) {
+    return error(res, '没有需要更新的字段', 400);
+  }
+
+  await tenant.update(updates);
+  return success(res, tenant, '租户信息更新成功');
 }
 
 /**

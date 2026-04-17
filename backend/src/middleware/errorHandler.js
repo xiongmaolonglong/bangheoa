@@ -1,5 +1,18 @@
 function errorHandler(err, req, res, next) {
   console.error(err.stack);
+  // Multer 文件上传错误
+  if (err.name === 'MulterError') {
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      return res.status(413).json({ error: '文件过大，请压缩后重试（图片限 10MB，其他文件限 500MB）' });
+    }
+    if (err.code === 'LIMIT_UNEXPECTED_FILE') {
+      return res.status(400).json({ error: err.message });
+    }
+    if (err.code === 'LIMIT_FILE_COUNT') {
+      return res.status(400).json({ error: '文件数量超限' });
+    }
+    return res.status(400).json({ error: err.message });
+  }
   if (err.name === 'SequelizeValidationError') {
     return res.status(400).json({ error: '数据验证失败', details: err.errors.map(e => e.message) });
   }

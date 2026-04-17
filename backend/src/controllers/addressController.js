@@ -47,48 +47,30 @@ async function getAddressList(req, res) {
 
 async function getAddressTree(req, res) {
   try {
-    const provinces = await AddressDict.findAll({
-      where: { level: 'province' },
-      order: [['code', 'ASC']],
+    // 一次性查出所有地址数据
+    const allAddresses = await AddressDict.findAll({
+      order: [['parent_code', 'ASC'], ['code', 'ASC']],
     });
 
-    const tree = [];
-    for (const province of provinces) {
-      const cities = await AddressDict.findAll({
-        where: { parent_code: province.code },
-        order: [['code', 'ASC']],
-      });
+    // 在内存中构建映射
+    const map = {};
+    const roots = [];
 
-      const provinceNode = serializeAddress(province, true);
-      provinceNode.children = [];
-
-      for (const city of cities) {
-        const districts = await AddressDict.findAll({
-          where: { parent_code: city.code },
-          order: [['code', 'ASC']],
-        });
-
-        const cityNode = serializeAddress(city, true);
-        cityNode.children = [];
-
-        for (const district of districts) {
-          const streets = await AddressDict.findAll({
-            where: { parent_code: district.code },
-            order: [['code', 'ASC']],
-          });
-
-          const districtNode = serializeAddress(district, true);
-          districtNode.children = streets.map(s => serializeAddress(s));
-          cityNode.children.push(districtNode);
-        }
-
-        provinceNode.children.push(cityNode);
-      }
-
-      tree.push(provinceNode);
+    for (const addr of allAddresses) {
+      const node = { code: addr.code, name: addr.name, level: addr.level, parent_code: addr.parent_code, children: [] };
+      map[addr.code] = node;
     }
 
-    return success(res, tree);
+    for (const addr of allAddresses) {
+      const node = map[addr.code];
+      if (addr.parent_code && map[addr.parent_code]) {
+        map[addr.parent_code].children.push(node);
+      } else {
+        roots.push(node);
+      }
+    }
+
+    return success(res, roots);
   } catch (err) {
     console.error('Get address tree error:', err);
     return error(res, '获取地址树失败');
