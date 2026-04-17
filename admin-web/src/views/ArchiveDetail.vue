@@ -12,8 +12,11 @@
     <el-card class="mb-20">
       <template #header><span class="section-title">工单信息</span></template>
       <el-descriptions :column="2" border>
-        <el-descriptions-item label="工单号">{{ workOrder.work_order_no || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="项目名称">{{ workOrder.title || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="项目">
+          <el-tag v-if="projectName" type="primary" effect="plain">{{ projectName }}</el-tag>
+          <span v-else class="text-muted">-</span>
+        </el-descriptions-item>
+        <el-descriptions-item label="店铺名字">{{ workOrder.title || '-' }}</el-descriptions-item>
         <el-descriptions-item label="需求描述" :span="2">{{ workOrder.description || '-' }}</el-descriptions-item>
         <el-descriptions-item label="完成日期">{{ workOrder.completed_at || '-' }}</el-descriptions-item>
         <el-descriptions-item label="归档日期">{{ archive.archived_at || '-' }}</el-descriptions-item>
@@ -57,6 +60,11 @@ const loading = ref(true)
 
 const archive = ref({})
 const workOrder = ref({})
+
+const projectName = computed(() => {
+  const cd = workOrder.value.custom_data
+  return (typeof cd === 'string' ? JSON.parse(cd).project_name : cd?.project_name) || null
+})
 
 const totalFiles = computed(() => {
   return (archive.value.file_urls || []).reduce((sum, f) => sum + (f.urls ? f.urls.length : 1), 0)

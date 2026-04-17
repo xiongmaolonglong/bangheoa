@@ -51,7 +51,8 @@
               <span>近 7 天工单趋势</span>
             </div>
           </template>
-          <div ref="chartEl" class="chart-container"></div>
+          <div ref="chartEl" class="chart-container" v-if="trendData.new.some(v => v > 0) || trendData.completed.some(v => v > 0)"></div>
+          <el-empty v-else description="暂无趋势数据" :image-size="80" />
         </el-card>
       </el-col>
       <el-col :xs="24" :md="8">
@@ -75,39 +76,101 @@
         </el-card>
       </el-col>
     </el-row>
+
+    <!-- 各环节工单数 + 状态分布 -->
+    <el-row :gutter="20" class="mb-20">
+      <el-col :xs="24" :md="12">
+        <el-card class="chart-card">
+          <template #header>
+            <div class="card-header"><span>各环节工单数</span></div>
+          </template>
+          <div ref="barChartEl" class="chart-container"></div>
+        </el-card>
+      </el-col>
+      <el-col :xs="24" :md="12">
+        <el-card class="chart-card">
+          <template #header>
+            <div class="card-header"><span>状态分布</span></div>
+          </template>
+          <div ref="pieChartEl" class="chart-container"></div>
+        </el-card>
+      </el-col>
+    </el-row>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, computed, nextTick } from 'vue'
+import { ref, onMounted, computed, nextTick, markRaw } from 'vue'
 import { useRouter } from 'vue-router'
-import * as echarts from 'echarts'
 import api from '../api'
+import { logger } from '../utils/logger'
 import {
   Document, Position, Timer, Picture, Box, Tools
 } from '@element-plus/icons-vue'
 
 const router = useRouter()
 
+// 图标组件需要用 markRaw 包裹，避免 Vue 将其转为响应式
+const ICON_MAP = {
+  Document: markRaw(Document),
+  Position: markRaw(Position),
+  Timer: markRaw(Timer),
+  Picture: markRaw(Picture),
+  Box: markRaw(Box),
+  Tools: markRaw(Tools),
+}
+
 const stats = ref([
-  { label: '申报待接收', value: 0, icon: Document, colorClass: 'color-blue', stage: 'declaration' },
-  { label: '待派单', value: 0, icon: Position, colorClass: 'color-orange', stage: 'assignment' },
-  { label: '测量中', value: 0, icon: Timer, colorClass: 'color-cyan', stage: 'measurement' },
-  { label: '设计中', value: 0, icon: Picture, colorClass: 'color-purple', stage: 'design' },
-  { label: '待施工', value: 0, icon: Box, colorClass: 'color-green', stage: 'production' },
-  { label: '待结算', value: 0, icon: Tools, colorClass: 'color-pink', stage: 'construction' }
+  { label: '申报待接收', value: 0, icon: ICON_MAP.Document, colorClass: 'color-blue', stage: 'declaration' },
+  { label: '待派单', value: 0, icon: ICON_MAP.Position, colorClass: 'color-orange', stage: 'assignment' },
+  { label: '测量中', value: 0, icon: ICON_MAP.Timer, colorClass: 'color-cyan', stage: 'measurement' },
+  { label: '设计中', value: 0, icon: ICON_MAP.Picture, colorClass: 'color-purple', stage: 'design' },
+  { label: '待施工', value: 0, icon: ICON_MAP.Box, colorClass: 'color-green', stage: 'production' },
+  { label: '待结算', value: 0, icon: ICON_MAP.Tools, colorClass: 'color-pink', stage: 'construction' }
 ])
 const timeoutList = ref([])
 const trendData = ref({ new: [], completed: [] })
 const trendDates = ref([])
 const chartEl = ref(null)
+const barChartEl = ref(null)
+const pieChartEl = ref(null)
 let chartInstance = null
+let barInstance = null
+let pieInstance = null
+
+const stageLabels = {
+  declaration: '申报', approval: '审批', assignment: '派单', measurement: '测量',
+  design: '设计', production: '生产', construction: '施工', finance: '费用', archive: '归档'
+}
+const statusLabels = {
+  draft: '草稿', submitted: '已提交', assigned: '已派单', measuring: '测量中',
+  measured: '已测量', designing: '设计中', producing: '生产中', constructing: '施工中',
+  completed: '已完成', quoting: '报价中', archived: '已归档'
+}
+const rawStats = ref({ by_stage: {}, by_status: {} })
+let echarts = null
+
+async function ensureEcharts() {
+  if (!echarts) {
+    const { use } = await import('echarts')
+    const echartsCore = await import('echarts/core')
+    const { CanvasRenderer } = await import('echarts/renderers')
+    const { TitleComponent, TooltipComponent, LegendComponent, GridComponent } = await import('echarts/components')
+    const { LineChart, BarChart, PieChart } = await import('echarts/charts')
+    use([CanvasRenderer, TitleComponent, TooltipComponent, LegendComponent, GridComponent, LineChart, BarChart, PieChart])
+    echarts = echartsCore.default || echartsCore
+  }
+  return echarts
+}
 
 const monthStats = ref([
   { label: '本月新建', value: 0, sub: '', color: '#2563eb' },
   { label: '本月完成', value: 0, sub: '', color: '#16a34a' },
   { label: '上月对比', value: 0, sub: '', color: '#6b7280' },
 ])
+
+// 趋势数据
+const trendApiData = ref(null)
 
 const timeoutDesc = computed(() => {
   return timeoutList.value.map(t => `${t.work_order_no}（${t.current_stage}超时）`).join('、')
@@ -117,10 +180,11 @@ function handleCardClick(stat) {
   router.push(`/work-orders?stage=${stat.stage}`)
 }
 
-function renderChart() {
+async function renderChart() {
   if (!chartEl.value) return
+  const ec = await ensureEcharts()
   if (!chartInstance) {
-    chartInstance = echarts.init(chartEl.value)
+    chartInstance = ec.init(chartEl.value)
     window.addEventListener('resize', () => chartInstance?.resize())
   }
   chartInstance.setOption({
@@ -157,38 +221,81 @@ function renderChart() {
   })
 }
 
-onMounted(async () => {
+async function renderBarChart() {
+  if (!barChartEl.value) return
+  const ec = await ensureEcharts()
+  if (!barInstance) {
+    barInstance = ec.init(barChartEl.value)
+    window.addEventListener('resize', () => barInstance?.resize())
+  }
+  const byStage = rawStats.value.by_stage || {}
+  const keys = Object.keys(byStage)
+  barInstance.setOption({
+    tooltip: { trigger: 'axis' },
+    grid: { left: '3%', right: '4%', bottom: '3%', top: '8%', containLabel: true },
+    xAxis: { type: 'category', data: keys.map(k => stageLabels[k] || k), axisLabel: { color: '#6b7280', fontSize: 11 } },
+    yAxis: { type: 'value', splitLine: { lineStyle: { color: '#f3f4f6', type: 'dashed' } }, axisLabel: { color: '#6b7280', fontSize: 11 } },
+    series: [{ type: 'bar', data: Object.values(byStage), itemStyle: { color: '#2563eb', borderRadius: [4, 4, 0, 0] } }],
+  })
+}
+
+async function renderPieChart() {
+  if (!pieChartEl.value) return
+  const ec = await ensureEcharts()
+  if (!pieInstance) {
+    pieInstance = ec.init(pieChartEl.value)
+    window.addEventListener('resize', () => pieInstance?.resize())
+  }
+  const byStatus = rawStats.value.by_status || {}
+  pieInstance.setOption({
+    tooltip: { trigger: 'item' },
+    series: [{
+      type: 'pie', radius: ['40%', '70%'],
+      data: Object.entries(byStatus).map(([key, value]) => ({ name: statusLabels[key] || key, value })),
+      label: { color: '#6b7280', fontSize: 12 },
+    }],
+  })
+}
+
+onMounted(() => {
+  // 异步加载数据，不阻塞页面渲染
+  loadData()
+})
+
+async function loadData() {
   try {
     const res = await api.get('/work-orders/stats')
     const data = res.data || {}
     const stageCount = data.by_stage || {}
     const statConfigs = [
-      { label: '申报待接收', key: 'declaration' },
-      { label: '待派单', key: 'assignment' },
-      { label: '测量中', key: 'measurement' },
-      { label: '设计中', key: 'design' },
-      { label: '待施工', key: 'production' },
-      { label: '待结算', key: 'construction' }
+      { label: '申报待接收', key: 'declaration', icon: ICON_MAP.Document, colorClass: 'color-blue' },
+      { label: '待派单', key: 'assignment', icon: ICON_MAP.Position, colorClass: 'color-orange' },
+      { label: '测量中', key: 'measurement', icon: ICON_MAP.Timer, colorClass: 'color-cyan' },
+      { label: '设计中', key: 'design', icon: ICON_MAP.Picture, colorClass: 'color-purple' },
+      { label: '待施工', key: 'production', icon: ICON_MAP.Box, colorClass: 'color-green' },
+      { label: '待结算', key: 'construction', icon: ICON_MAP.Tools, colorClass: 'color-pink' }
     ]
     stats.value = statConfigs.map(cfg => ({
       label: cfg.label,
       value: stageCount[cfg.key] || 0,
-      icon: stats.value.find(s => s.label === cfg.label)?.icon || Document,
-      colorClass: stats.value.find(s => s.label === cfg.label)?.colorClass || 'color-blue',
+      icon: cfg.icon,
+      colorClass: cfg.colorClass,
       stage: cfg.key
     }))
     timeoutList.value = data.timeout_orders || []
+    rawStats.value = { by_stage: data.by_stage || {}, by_status: data.by_status || {} }
 
-    // 月度统计（从总数估算）
+    // 月度统计（需要后端提供真实数据，暂时显示 0）
     const total = data.total || 0
-    const thisMonthNew = Math.round(total * 0.3) // 估算本月占比
-    const thisMonthDone = Math.round(total * 0.2)
+    const thisMonthNew = 0
+    const thisMonthDone = 0
     monthStats.value = [
       { label: '本月新建', value: thisMonthNew, sub: `累计工单 ${total} 个`, color: '#2563eb' },
       { label: '本月完成', value: thisMonthDone, sub: '已归档/验收', color: '#16a34a' },
       { label: '上月对比', value: data.timeout_count || 0, sub: '超时工单', color: '#ea580c' },
     ]
 
+    // 获取 7 日趋势数据
     const today = new Date()
     const dates = []
     const newCounts = []
@@ -200,6 +307,25 @@ onMounted(async () => {
       newCounts.push(0)
       completedCounts.push(0)
     }
+
+    const trendRes = await api.get('/work-orders/trend', { params: { days: 7 } }).catch(() => null)
+    if (trendRes?.data && Array.isArray(trendRes.data)) {
+      trendApiData.value = trendRes.data
+      // 使用真实数据覆盖
+      const dateKeys = dates.map((_, i) => {
+        const d = new Date(today)
+        d.setDate(d.getDate() - (6 - i))
+        return d.toISOString().split('T')[0]
+      })
+      for (const item of trendRes.data) {
+        const idx = dateKeys.indexOf(item.date)
+        if (idx !== -1) {
+          newCounts[idx] = item.new_count || 0
+          completedCounts[idx] = item.completed_count || 0
+        }
+      }
+    }
+
     trendDates.value = dates
     trendData.value = { new: newCounts, completed: completedCounts }
   } catch {
@@ -208,7 +334,9 @@ onMounted(async () => {
 
   await nextTick()
   renderChart()
-})
+  renderBarChart()
+  renderPieChart()
+}
 </script>
 
 <style scoped>

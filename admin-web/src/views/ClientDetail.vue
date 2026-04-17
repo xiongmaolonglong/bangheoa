@@ -31,7 +31,7 @@
             <router-link :to="`/work-orders/${row.id}`" class="wo-link">{{ row.work_order_no }}</router-link>
           </template>
         </el-table-column>
-        <el-table-column prop="title" label="项目名称" min-width="150" />
+        <el-table-column prop="title" label="店铺名字" min-width="150" />
         <el-table-column label="当前环节" width="100">
           <template #default="{ row }"><el-tag size="small">{{ stageLabel(row.current_stage) }}</el-tag></template>
         </el-table-column>

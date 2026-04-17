@@ -17,7 +17,7 @@
     </el-form>
 
     <el-alert v-if="batchAction === 'delete'" type="warning" show-icon :closable="false" style="margin-bottom: 16px">
-      仅可删除处于「待派单」阶段且未派单的工单
+      已归档的工单不可删除
     </el-alert>
 
     <template #footer>
@@ -29,7 +29,7 @@
 
 <script setup>
 import { ref, reactive, watch } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '../api'
 
 const props = defineProps({ modelValue: Boolean, count: Number, selections: Array, userOptions: Array })
@@ -47,6 +47,24 @@ async function executeBatch() {
   if (batchAction.value === 'dispatch' && !batchForm.assigned_to) {
     return ElMessage.warning('请选择负责人')
   }
+
+  // 删除操作需要二次确认
+  if (batchAction.value === 'delete') {
+    // 过滤出可删除的工单（排除已归档）
+    const deletable = props.selections.filter(s => s.current_stage !== 'archive')
+    const skipped = props.selections.filter(s => s.current_stage === 'archive')
+    if (!deletable.length) {
+      return ElMessage.warning('选中的工单均已归档，不可删除')
+    }
+    let msg = `确定要删除 ${deletable.length} 项工单？`
+    if (skipped.length) msg += `\n（已跳过 ${skipped.length} 项已归档工单）`
+    try {
+      await ElMessageBox.confirm(msg, '确认删除', { type: 'warning', confirmButtonText: '确定删除', cancelButtonText: '取消' })
+    } catch {
+      return
+    }
+  }
+
   executing.value = true
   const ids = props.selections.map(s => s.id)
 
@@ -58,7 +76,18 @@ async function executeBatch() {
         deadline: batchForm.deadline || null,
       })))
     } else if (batchAction.value === 'delete') {
-      await Promise.all(ids.map(id => api.delete(`/work-orders/${id}`)))
+      const deletableIds = props.selections
+        .filter(s => s.current_stage !== 'archive')
+        .map(s => s.id)
+      const skippedCount = ids.length - deletableIds.length
+      await Promise.all(deletableIds.map(id => api.delete(`/work-orders/${id}`)))
+      let msg = `成功删除 ${deletableIds.length} 项`
+      if (skippedCount) msg += `，跳过 ${skippedCount} 项已归档工单`
+      ElMessage.success(msg)
+      emit('done')
+      visible.value = false
+      executing.value = false
+      return
     }
     ElMessage.success(`成功执行 ${ids.length} 项`)
     emit('done')

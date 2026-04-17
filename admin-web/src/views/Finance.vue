@@ -2,9 +2,12 @@
   <div>
     <div class="page-header flex-between">
       <h1 class="page-title">费用管理</h1>
-      <el-button type="primary" @click="showStats = !showStats">
-        {{ showStats ? '隐藏统计' : '费用统计' }}
-      </el-button>
+      <div style="display:flex;gap:8px">
+        <el-button @click="exportFinance"><el-icon><Download /></el-icon>导出</el-button>
+        <el-button type="primary" @click="showStats = !showStats">
+          {{ showStats ? '隐藏统计' : '费用统计' }}
+        </el-button>
+      </div>
     </div>
 
     <!-- 统计卡片 -->
@@ -55,7 +58,7 @@
             <router-link :to="`/work-orders/${row.work_order_id}`" class="wo-link">{{ row.workOrder?.work_order_no }}</router-link>
           </template>
         </el-table-column>
-        <el-table-column label="项目名称" min-width="150">
+        <el-table-column label="店铺名字" min-width="150">
           <template #default="{ row }">{{ row.workOrder?.title }}</template>
         </el-table-column>
         <el-table-column label="报价" width="120">
@@ -152,8 +155,10 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
+import { Download } from '@element-plus/icons-vue'
 import api from '../api'
 import { formatMoney } from '../utils/format'
+import { exportWithTimestamp } from '../utils/export'
 
 const list = ref([])
 const loading = ref(false)
@@ -167,7 +172,7 @@ const stats = reactive({ totalQuote: 0, totalPaid: 0, totalPending: 0 })
 const chartOption = ref({
   xAxis: { type: 'category', data: ['1月', '2月', '3月', '4月', '5月', '6月'] },
   yAxis: { type: 'value', name: '金额(¥)' },
-  series: [{ type: 'bar', data: [0, 0, 0, 0, 0, 0], itemStyle: { color: '#2563eb' } }],
+  series: [{ type: 'bar', data: [], itemStyle: { color: '#2563eb' } }],
   tooltip: { trigger: 'axis' },
 })
 
@@ -187,8 +192,24 @@ async function fetchList() {
     stats.totalQuote = list.value.reduce((s, r) => s + (r.quote_amount || 0), 0)
     stats.totalPaid = list.value.filter(r => r.status === 'paid').reduce((s, r) => s + (r.quote_amount || 0), 0)
     stats.totalPending = stats.totalQuote - stats.totalPaid
-  } catch { list.value = [] }
+  } catch (e) {
+    ElMessage.error(e.response?.data?.error || '加载失败')
+    list.value = []
+  }
   finally { loading.value = false }
+}
+
+function exportFinance() {
+  if (!list.value.length) return ElMessage.warning('没有可导出的数据')
+  exportWithTimestamp(list.value, [
+    { key: 'work_order_no', label: '工单号', map: row => row.workOrder?.work_order_no },
+    { key: 'title', label: '店铺名字', map: row => row.workOrder?.title },
+    { key: 'quote_amount', label: '报价总额', map: row => row.quote_amount?.toFixed(2) || '0.00' },
+    { key: 'budget_used', label: '已用金额', map: row => row.budget_used?.toFixed(2) || '0.00' },
+    { key: 'budget_remaining', label: '剩余金额', map: row => row.budget_remaining?.toFixed(2) || '0.00' },
+    { key: 'status', label: '状态', map: row => statusLabel(row.status) },
+  ], '费用管理')
+  ElMessage.success(`已导出 ${list.value.length} 条数据`)
 }
 
 function budgetPercent(row) {

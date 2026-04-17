@@ -14,10 +14,11 @@
     <el-card class="mb-20">
       <template #header><span class="section-title">售后信息</span></template>
       <el-descriptions :column="2" border>
-        <el-descriptions-item label="工单号">
-          <router-link :to="`/work-orders/${aftersale.workOrder?.id}`" class="wo-link">{{ aftersale.workOrder?.work_order_no }}</router-link>
+        <el-descriptions-item label="项目">
+          <el-tag v-if="projectName" type="primary" effect="plain">{{ projectName }}</el-tag>
+          <span v-else class="text-muted">-</span>
         </el-descriptions-item>
-        <el-descriptions-item label="项目名称">{{ aftersale.workOrder?.title }}</el-descriptions-item>
+        <el-descriptions-item label="店铺名字">{{ aftersale.workOrder?.title }}</el-descriptions-item>
         <el-descriptions-item label="提交人">{{ aftersale.clientRequester?.real_name || '-' }}</el-descriptions-item>
         <el-descriptions-item label="联系电话">{{ aftersale.clientRequester?.phone || '-' }}</el-descriptions-item>
         <el-descriptions-item label="处理人">{{ aftersale.handler?.real_name || '未分配' }}</el-descriptions-item>
@@ -72,7 +73,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { formatDate } from '../utils/format'
@@ -84,6 +85,11 @@ const loading = ref(true)
 const submitting = ref(false)
 
 const aftersale = ref({})
+
+const projectName = computed(() => {
+  const cd = aftersale.value.workOrder?.custom_data
+  return (typeof cd === 'string' ? JSON.parse(cd).project_name : cd?.project_name) || null
+})
 
 const STATUS_MAP = {
   pending: '待处理', processing: '处理中', resolved: '已解决', closed: '已关闭',

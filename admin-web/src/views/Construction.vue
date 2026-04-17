@@ -3,6 +3,7 @@
     <div class="page-header flex-between">
       <h1 class="page-title">施工管理</h1>
       <div>
+        <el-button @click="exportConstruction"><el-icon><Download /></el-icon>导出</el-button>
         <el-button @click="fetchList" :icon="Refresh" circle title="刷新" />
       </div>
     </div>
@@ -44,7 +45,7 @@
             <router-link :to="`/work-orders/${row.work_order_id}`" class="wo-link">{{ row.workOrder?.work_order_no }}</router-link>
           </template>
         </el-table-column>
-        <el-table-column label="项目名称" min-width="150">
+        <el-table-column label="店铺名字" min-width="150">
           <template #default="{ row }">{{ row.workOrder?.title }}</template>
         </el-table-column>
         <el-table-column label="施工员" width="120">
@@ -201,8 +202,10 @@
 import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Refresh } from '@element-plus/icons-vue'
+import { Refresh, Download } from '@element-plus/icons-vue'
 import api from '../api'
+import { logger } from '../utils/logger'
+import { exportWithTimestamp } from '../utils/export'
 
 const router = useRouter()
 const list = ref([])
@@ -231,10 +234,9 @@ async function fetchList() {
   try {
     const params = { ...filters, page: pagination.page, limit: pagination.pageSize }
     const res = await api.get('/construction/tasks', { params })
-    const payload = res.data || {}
-    list.value = payload.list || payload || []
-    pagination.total = payload.total || 0
-    // 统计
+    // api 拦截器已返回 res.data，所以 res 就是响应体
+    list.value = res.data || []
+    pagination.total = res.pagination?.total || 0
     computeStats()
   } catch {
     list.value = []
@@ -242,6 +244,19 @@ async function fetchList() {
   } finally {
     loading.value = false
   }
+}
+
+function exportConstruction() {
+  if (!list.value.length) return ElMessage.warning('没有可导出的数据')
+  exportWithTimestamp(list.value, [
+    { key: 'work_order_no', label: '工单号', map: row => row.workOrder?.work_order_no || '-' },
+    { key: 'title', label: '项目名称', map: row => row.workOrder?.title || '-' },
+    { key: 'status', label: '状态', map: row => STATUS_MAP[row.status] || row.status },
+    { key: 'constructor', label: '施工人', map: row => row.constructor_name || '-' },
+    { key: 'start_date', label: '开始日期' },
+    { key: 'end_date', label: '完成日期' },
+  ], '施工管理')
+  ElMessage.success(`已导出 ${list.value.length} 条数据`)
 }
 
 function computeStats() {
@@ -329,7 +344,7 @@ async function viewLogs(row) {
     const res = await api.get(`/construction/${row.work_order_id}/logs`)
     constructionLogs.value = res.data || []
   } catch (e) {
-    console.error('加载施工日志失败:', e)
+    logger.error('加载施工日志失败:', e)
   }
 }
 

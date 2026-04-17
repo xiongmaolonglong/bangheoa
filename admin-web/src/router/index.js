@@ -49,16 +49,40 @@ const routes = [
         meta: { title: '派单管理' }
       },
       {
+        path: 'audit',
+        name: 'AuditCenter',
+        component: () => import('../views/AuditCenter.vue'),
+        meta: { title: '审核中心' }
+      },
+      {
+        path: 'audit/:id',
+        name: 'AuditDetail',
+        component: () => import('../views/AuditDetail.vue'),
+        meta: { title: '审核详情' }
+      },
+      {
         path: 'designs',
         name: 'Designs',
         component: () => import('../views/Designs.vue'),
         meta: { title: '设计管理' }
       },
       {
+        path: 'designs/:workOrderId',
+        name: 'DesignDetail',
+        component: () => import('../views/DesignDetail.vue'),
+        meta: { title: '设计详情' }
+      },
+      {
         path: 'production',
         name: 'Production',
         component: () => import('../views/Production.vue'),
         meta: { title: '生产管理' }
+      },
+      {
+        path: 'production/:id',
+        name: 'ProductionDetail',
+        component: () => import('../views/ProductionDetail.vue'),
+        meta: { title: '生产任务详情' }
       },
       {
         path: 'construction',
@@ -119,8 +143,25 @@ const routes = [
         name: 'Clients',
         component: () => import('../views/Clients.vue'),
         meta: { title: '甲方管理' }
+      },
+      {
+        path: 'notifications',
+        name: 'Notifications',
+        component: () => import('../views/Notifications.vue'),
+        meta: { title: '消息通知' }
+      },
+      {
+        path: 'audit-logs',
+        name: 'AuditLogs',
+        component: () => import('../views/AuditLogs.vue'),
+        meta: { title: '操作日志审计' }
       }
     ]
+  },
+  {
+    path: '/:pathMatch(.*)*',
+    name: 'NotFound',
+    component: () => import('../views/NotFound.vue')
   }
 ]
 

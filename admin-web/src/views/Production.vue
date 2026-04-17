@@ -2,452 +2,670 @@
   <div>
     <div class="page-header flex-between">
       <h1 class="page-title">生产管理</h1>
-      <div>
-        <el-button @click="fetchTasks" :icon="Refresh" circle title="刷新" />
-        <el-button type="primary" @click="openMergeDialog">+ 合并创建生产任务</el-button>
+      <div class="page-actions">
+        <el-button @click="handleRefresh" :loading="loading">
+          <el-icon><Refresh /></el-icon>刷新
+        </el-button>
       </div>
     </div>
 
-    <!-- 筛选 -->
-    <el-card class="mb-20">
-      <el-form :inline="true">
-        <el-form-item>
-          <el-select v-model="filters.status" placeholder="全部状态" clearable style="width:120px" @change="fetchTasks">
-            <el-option v-for="(label, val) in STATUS_MAP" :key="val" :label="label" :value="val" />
-          </el-select>
-        </el-form-item>
-        <el-form-item>
-          <el-input v-model="filters.material_type" placeholder="材料类型" clearable style="width:140px" @change="fetchTasks" />
-        </el-form-item>
-        <el-form-item>
-          <el-button @click="fetchTasks">搜索</el-button>
-        </el-form-item>
-      </el-form>
-    </el-card>
+    <!-- 统计卡片 -->
+    <el-row :gutter="16" class="mb-16">
+      <el-col :span="6">
+        <el-card shadow="hover" class="stat-card">
+          <div class="stat-value" style="color:var(--color-warning)">{{ stats.pending }}</div>
+          <div class="stat-label">待生产</div>
+        </el-card>
+      </el-col>
+      <el-col :span="6">
+        <el-card shadow="hover" class="stat-card">
+          <div class="stat-value" style="color:var(--color-primary)">{{ stats.producing }}</div>
+          <div class="stat-label">生产中</div>
+        </el-card>
+      </el-col>
+      <el-col :span="6">
+        <el-card shadow="hover" class="stat-card">
+          <div class="stat-value" style="color:var(--color-success)">{{ stats.completed }}</div>
+          <div class="stat-label">已完成</div>
+        </el-card>
+      </el-col>
+      <el-col :span="6">
+        <el-card shadow="hover" class="stat-card">
+          <div class="stat-value" style="color:var(--color-text-primary)">{{ stats.materialTypes }}</div>
+          <div class="stat-label">材料种类</div>
+        </el-card>
+      </el-col>
+    </el-row>
 
-    <!-- 任务列表 -->
-    <el-card>
-      <el-table :data="tasks" stripe v-loading="loading">
-        <el-table-column prop="production_task_no" label="任务编号" width="170" />
-        <el-table-column prop="material_type" label="材料" width="120" />
-        <el-table-column prop="spec" label="规格" width="80" />
-        <el-table-column prop="quantity" label="数量" width="80" />
-        <el-table-column label="关联工单" min-width="180">
+    <!-- Tab 切换 -->
+    <el-tabs v-model="activeTab" type="card" class="mb-16">
+      <el-tab-pane name="tasks">
+        <template #label>生产任务 <el-badge :value="stats.pending" :hidden="!stats.pending" type="warning" style="margin-left:4px" /></template>
+      </el-tab-pane>
+      <el-tab-pane name="board">
+        <template #label>材料看板 <el-badge :value="boardMaterials.length" :hidden="!boardMaterials.length" style="margin-left:4px" /></template>
+      </el-tab-pane>
+      <el-tab-pane label="生产记录" name="history" />
+    </el-tabs>
+
+    <!-- Tab 1: 生产任务 -->
+    <el-card v-show="activeTab === 'tasks'">
+      <div class="filter-bar mb-16">
+        <el-input v-model="taskSearch" placeholder="搜索工单号/店铺名" clearable style="width:220px" @input="filterTasks" />
+        <el-select v-model="taskMaterialFilter" placeholder="全部材料" clearable style="width:140px" @change="filterTasks">
+          <el-option v-for="m in uniqueMaterials" :key="m" :label="m" :value="m" />
+        </el-select>
+        <el-select v-model="taskStatusFilter" placeholder="全部状态" clearable style="width:120px" @change="filterTasks">
+          <el-option label="待生产" value="pending" />
+          <el-option label="已完成" value="completed" />
+        </el-select>
+      </div>
+
+      <el-table :data="filteredTaskGroups" stripe v-loading="loading">
+        <el-table-column prop="work_order_no" label="工单号" width="160">
           <template #default="{ row }">
-            <template v-if="row.workOrder">
-              <router-link :to="`/work-orders/${row.workOrder.id}`" class="wo-link">{{ row.workOrder.work_order_no }}</router-link>
-              <span class="ml-8 text-muted">{{ row.workOrder.title }}</span>
-            </template>
-            <template v-else-if="row.task_ids?.length">
-              <span class="text-muted">关联 {{ row.task_ids.length }} 个工单</span>
-            </template>
-            <span v-else class="text-muted">—</span>
+            <router-link :to="`/production/${row.work_order_id}`" class="wo-link">{{ row.work_order_no }}</router-link>
           </template>
         </el-table-column>
-        <el-table-column label="质检结果" width="120">
+        <el-table-column prop="title" label="店铺名" min-width="140" />
+        <el-table-column label="材料" width="100">
           <template #default="{ row }">
-            <el-tag v-if="row.quality_result" :type="qualityTag(row.quality_result)" size="small">
-              {{ row.quality_result }}
-            </el-tag>
-            <span v-else class="text-muted">未检</span>
+            <el-tag size="small" type="info" effect="plain">{{ adTypeLabel(row.material_type) }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="状态" width="110">
-          <template #default="{ row }"><el-tag size="small">{{ statusLabel(row.status) }}</el-tag></template>
-        </el-table-column>
-        <el-table-column label="生产进度" width="200">
+        <el-table-column label="面明细" min-width="180">
           <template #default="{ row }">
-            <div class="progress-cell">
-              <el-progress :percentage="getProgressPct(row)" :status="getProgressStatus(row)" :stroke-width="14" />
+            <div class="face-list">
+              <span v-for="(f, i) in row.faces" :key="i" class="face-item">{{ f.label }}({{ Number(f.width||0).toFixed(2) }}×{{ Number(f.height||0).toFixed(2) }})</span>
             </div>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="300">
+        <el-table-column label="面积(m²)" width="90">
+          <template #default="{ row }">{{ row.totalArea.toFixed(2) }}</template>
+        </el-table-column>
+        <el-table-column label="状态" width="90">
           <template #default="{ row }">
-            <el-button size="small" @click="openStatusDialog(row)">更新进度</el-button>
-            <el-button size="small" type="warning" @click="openQualityDialog(row)" v-if="!row.quality_result && row.status !== 'scheduled'">质检</el-button>
-            <el-button size="small" type="info" @click="viewTaskDetail(row)">详情</el-button>
+            <el-tag size="small" :type="row.isCompleted ? 'success' : 'warning'" effect="plain">
+              {{ row.isCompleted ? '已完成' : '待生产' }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="生产任务号" width="160">
+          <template #default="{ row }">
+            <span v-if="row.production_task_no" class="batch-tag">{{ row.production_task_no }}</span>
+            <span v-else class="text-muted">—</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="120" fixed="right">
+          <template #default="{ row }">
+            <el-button v-if="!row.isCompleted" link type="primary" @click="startVerifyGroup(row)">标记完成</el-button>
+            <router-link v-else :to="`/production/${row.work_order_id}`" class="wo-link" style="font-size:13px">查看</router-link>
+          </template>
+        </el-table-column>
+      </el-table>
+    </el-card>
+
+    <!-- Tab 2: 材料看板 -->
+    <div v-show="activeTab === 'board'">
+      <template v-if="boardMaterials.length">
+        <div v-for="mat in boardMaterials" :key="mat.material_type" class="material-group-card mb-16">
+          <el-card>
+            <template #header>
+              <div class="material-group-header">
+                <div>
+                  <span class="material-title">{{ adTypeLabel(mat.material_type) }}</span>
+                  <span class="material-count">（{{ mat.items.length }} 个工单 · 共 {{ mat.totalArea.toFixed(2) }} m²）</span>
+                </div>
+                <el-button type="primary" size="small" @click="openVerifyDialog(mat.material_type)">
+                  标记完成 ({{ mat.items.length }})
+                </el-button>
+              </div>
+            </template>
+            <el-table :data="mat.items" stripe>
+              <el-table-column prop="work_order_no" label="工单号" width="160">
+                <template #default="{ row }">
+                  <router-link :to="`/production/${row.work_order_id}`" class="wo-link">{{ row.work_order_no }}</router-link>
+                </template>
+              </el-table-column>
+              <el-table-column prop="title" label="店铺名" min-width="120" />
+              <el-table-column label="面明细" min-width="200">
+                <template #default="{ row }">
+                  <span v-for="(f, i) in row.faces" :key="i" class="face-inline">{{ f.label }}({{ Number(f.width||0).toFixed(2) }}×{{ Number(f.height||0).toFixed(2) }})</span>
+                </template>
+              </el-table-column>
+              <el-table-column label="面积(m²)" width="90">
+                <template #default="{ row }">{{ row.totalArea.toFixed(2) }}</template>
+              </el-table-column>
+              <el-table-column label="操作" width="120">
+                <template #default="{ row }">
+                  <el-button link type="primary" @click="startVerifyGroup(row)">标记完成</el-button>
+                </template>
+              </el-table-column>
+            </el-table>
+          </el-card>
+        </div>
+      </template>
+      <el-card v-else>
+        <el-empty description="暂无待生产任务" :image-size="80" />
+      </el-card>
+    </div>
+
+    <!-- Tab 3: 生产记录 -->
+    <el-card v-show="activeTab === 'history'">
+      <div class="filter-bar mb-16">
+        <el-input v-model="historySearch" placeholder="搜索批次号/工单号" clearable style="width:220px" @input="filterHistory" />
+        <el-select v-model="historyMaterialFilter" placeholder="全部材料" clearable style="width:140px" @change="filterHistory">
+          <el-option v-for="m in historyMaterials" :key="m" :label="m" :value="m" />
+        </el-select>
+      </div>
+
+      <el-table :data="filteredBatches" stripe v-loading="historyLoading">
+        <el-table-column label="批次号" width="200">
+          <template #default="{ row }">
+            <span class="batch-tag">{{ row.batch_no }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="材料类型" width="100">
+          <template #default="{ row }">
+            <el-tag size="small" type="info" effect="plain">{{ adTypeLabel(row.material_type) }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="完成/总数" width="100">
+          <template #default="{ row }">{{ row.completed_count }}/{{ row.total_count }}</template>
+        </el-table-column>
+        <el-table-column label="生产日期" width="160">
+          <template #default="{ row }">{{ row.created_at?.slice(0, 19) || '-' }}</template>
+        </el-table-column>
+        <el-table-column label="操作人" width="100">
+          <template #default="{ row }">{{ row.creator?.name || row.creator_name || '-' }}</template>
+        </el-table-column>
+        <el-table-column label="备注" min-width="150">
+          <template #default="{ row }">{{ row.notes || '-' }}</template>
+        </el-table-column>
+        <el-table-column label="操作" width="80" fixed="right">
+          <template #default="{ row }">
+            <el-button link type="primary" @click="showBatchDetail(row)">详情</el-button>
           </template>
         </el-table-column>
       </el-table>
 
-      <!-- 分页 -->
-      <div class="pagination-box">
-        <el-pagination
-          v-model:current-page="pagination.page"
-          v-model:page-size="pagination.pageSize"
-          :total="pagination.total"
-          :page-sizes="[10, 20, 50]"
-          layout="total, sizes, prev, pager, next"
-          @current-change="fetchTasks"
-          @size-change="fetchTasks"
-        />
+      <div class="pagination-wrap">
+        <el-pagination v-model:current-page="historyPage" v-model:page-size="historyPageSize"
+          :total="historyTotal" :page-sizes="[10, 20, 50]" layout="total, sizes, prev, pager, next"
+          @size-change="loadBatches" @current-change="loadBatches" />
       </div>
     </el-card>
 
-    <!-- 合并创建对话框 -->
-    <el-dialog v-model="showMerge" title="合并创建生产任务" width="600px">
-      <el-form :model="mergeForm" label-width="100px">
-        <el-form-item label="选择工单" required>
-          <el-select v-model="mergeForm.work_order_ids" multiple filterable placeholder="选择要合并的工单" style="width:100%">
-            <el-option v-for="wo in availableWorkOrders" :key="wo.id" :label="`${wo.work_order_no} - ${wo.title}`" :value="wo.id" />
-          </el-select>
-          <div class="text-muted mt-4">已选 {{ mergeForm.work_order_ids.length }} 个工单</div>
-        </el-form-item>
-        <el-form-item label="材料类型" required>
-          <el-input v-model="mergeForm.material_type" placeholder="例如：铝塑板" />
-        </el-form-item>
-        <el-form-item label="规格">
-          <el-input v-model="mergeForm.spec" placeholder="例如：3mm" />
-        </el-form-item>
-        <el-form-item label="总数量" required>
-          <el-input-number v-model="mergeForm.quantity" :min="1" :precision="0" style="width:100%" />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="showMerge = false">取消</el-button>
-        <el-button type="primary" @click="handleMerge" :loading="submitting">确认创建</el-button>
-      </template>
-    </el-dialog>
-
-    <!-- 更新进度对话框 -->
-    <el-dialog v-model="showStatusDialog" title="更新生产状态" width="480px">
-      <el-descriptions :column="1" border class="mb-16">
-        <el-descriptions-item label="任务编号">{{ currentTask.production_task_no }}</el-descriptions-item>
-        <el-descriptions-item label="材料">{{ currentTask.material_type }}</el-descriptions-item>
-        <el-descriptions-item label="当前状态"><el-tag size="small">{{ statusLabel(currentTask.status) }}</el-tag></el-descriptions-item>
-      </el-descriptions>
-      <el-form label-width="80px">
-        <el-form-item label="目标状态" required>
-          <el-select v-model="newStatus" style="width:100%">
-            <el-option label="已排产" value="scheduled" />
-            <el-option label="生产中" value="producing" />
-            <el-option label="已完成" value="completed" />
-            <el-option label="已发货" value="shipped" />
-            <el-option label="质检中" value="quality_checked" />
-            <el-option label="质检合格" value="qualified" />
-            <el-option label="已入库" value="warehoused" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="备注">
-          <el-input v-model="statusNotes" type="textarea" :rows="2" placeholder="可选，填写备注或质检说明" />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="showStatusDialog = false">取消</el-button>
-        <el-button type="primary" @click="handleUpdateStatus" :loading="submitting">确认更新</el-button>
-      </template>
-    </el-dialog>
-
-    <!-- 质检对话框 -->
-    <el-dialog v-model="showQualityDialog" title="质量检验" width="520px">
-      <el-descriptions :column="1" border class="mb-16">
-        <el-descriptions-item label="任务编号">{{ qualityTask.production_task_no }}</el-descriptions-item>
-        <el-descriptions-item label="材料">{{ qualityTask.material_type }} / {{ qualityTask.spec || '-' }}</el-descriptions-item>
-      </el-descriptions>
-      <el-form :model="qualityForm" label-width="100px">
-        <el-form-item label="质检结果" required>
-          <el-radio-group v-model="qualityForm.result">
-            <el-radio label="合格">合格</el-radio>
-            <el-radio label="不合格">不合格</el-radio>
-            <el-radio label="待复检">待复检</el-radio>
-          </el-radio-group>
-        </el-form-item>
-        <el-form-item label="检验员">
-          <el-input v-model="qualityForm.inspector" placeholder="检验员姓名" />
-        </el-form-item>
-        <el-form-item label="检验日期">
-          <el-date-picker v-model="qualityForm.check_date" type="date" value-format="YYYY-MM-DD" style="width:100%" />
-        </el-form-item>
-        <el-form-item label="检验说明">
-          <el-input v-model="qualityForm.notes" type="textarea" :rows="3" placeholder="填写检验详情和备注" />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="showQualityDialog = false">取消</el-button>
-        <el-button type="primary" @click="submitQuality" :loading="submitting">提交质检</el-button>
-      </template>
-    </el-dialog>
-
-    <!-- 任务详情抽屉 -->
-    <el-drawer v-model="showDetail" title="生产任务详情" size="520px">
-      <template v-if="detailTask.id">
-        <el-descriptions :column="1" border>
-          <el-descriptions-item label="任务编号">{{ detailTask.production_task_no }}</el-descriptions-item>
-          <el-descriptions-item label="材料类型">{{ detailTask.material_type }}</el-descriptions-item>
-          <el-descriptions-item label="规格">{{ detailTask.spec || '—' }}</el-descriptions-item>
-          <el-descriptions-item label="数量">{{ detailTask.quantity }}</el-descriptions-item>
-          <el-descriptions-item label="状态"><el-tag size="small">{{ statusLabel(detailTask.status) }}</el-tag></el-descriptions-item>
-          <el-descriptions-item label="质检结果">{{ detailTask.quality_result || '—' }}</el-descriptions-item>
-          <el-descriptions-item label="质检说明">{{ detailTask.quality_notes || '—' }}</el-descriptions-item>
-          <el-descriptions-item label="创建时间">{{ detailTask.created_at }}</el-descriptions-item>
-        </el-descriptions>
-        <!-- 生产进度 -->
-        <div class="mt-16">
-          <h4 class="section-title">生产进度</h4>
-          <div v-for="step in progressSteps" :key="step.id" class="progress-step">
-            <div class="step-header">
-              <span class="step-name">{{ step.step_name }}</span>
-              <el-input-number v-model="step.progress_pct" :min="0" :max="100" size="small"
-                :controls="false" style="width:70px" @change="saveProgress" />
-              <span class="step-pct">{{ step.progress_pct }}%</span>
+    <!-- 核对完成对话框 -->
+    <el-dialog v-model="verifyVisible" :title="`核对完成 — ${adTypeLabel(verifyData.material_type)}`" width="560px" destroy-on-close>
+      <div class="verify-dialog-content">
+        <div class="verify-batch-no">
+          <span class="label">批次号</span>
+          <span class="value">{{ verifyData.batch_no }}</span>
+        </div>
+        <el-alert type="success" :closable="false" show-icon style="margin-bottom:16px">
+          请对照实物，勾选<strong>已生产完成</strong>的工单。未勾选的视为未完成，下次继续生产。
+        </el-alert>
+        <div class="verify-counter">已确认 <strong>{{ verifyCheckedCount }}</strong> / {{ verifyData.items?.length || 0 }}</div>
+        <el-checkbox-group v-model="verifyChecked" class="verify-checklist">
+          <div v-for="(item, idx) in verifyData.items" :key="idx" class="verify-item">
+            <el-checkbox :value="item.work_order_id">
+              <span class="verify-item-title"><strong>{{ item.work_order_no }}</strong> {{ item.title }} — {{ item.faceSummary }} ({{ item.area.toFixed(2) }}m²)</span>
+            </el-checkbox>
+            <div v-if="item.source_files?.length" class="verify-item-files">
+              <el-link v-for="(f, fi) in item.source_files" :key="fi" :href="f" type="primary" target="_blank" :underline="false" style="margin-right:12px">
+                📄 {{ f.split('/').pop() }}
+              </el-link>
             </div>
-            <el-progress :percentage="step.progress_pct" :stroke-width="8" />
+          </div>
+        </el-checkbox-group>
+        <el-input v-model="verifyNotes" type="textarea" :rows="2" placeholder="生产备注（可选）" style="margin-top:12px" />
+      </div>
+      <template #footer>
+        <el-button @click="verifyVisible = false">取消</el-button>
+        <el-button type="success" @click="confirmVerify">确认完成</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 批次详情对话框 -->
+    <el-dialog v-model="batchDetailVisible" title="批次详情" width="560px" destroy-on-close>
+      <div v-if="batchDetail">
+        <div class="batch-detail-header mb-16">
+          <span class="batch-tag">{{ batchDetail.batch_no }}</span>
+          <el-tag size="small" type="info" effect="plain" style="margin-left:8px">{{ adTypeLabel(batchDetail.material_type) }}</el-tag>
+          <el-tag size="small" :type="batchDetail.completed_count === batchDetail.total_count ? 'success' : 'warning'" effect="plain" style="margin-left:8px">
+            {{ batchDetail.completed_count }}/{{ batchDetail.total_count }} 已核对
+          </el-tag>
+        </div>
+        <el-descriptions :column="2" border size="small" class="mb-16">
+          <el-descriptions-item label="生产日期">{{ batchDetail.created_at?.slice(0, 19) || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="操作人">{{ batchDetail.creator?.name || batchDetail.creator_name || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="完成数量">{{ batchDetail.completed_count }}</el-descriptions-item>
+          <el-descriptions-item label="备注">{{ batchDetail.notes || '-' }}</el-descriptions-item>
+        </el-descriptions>
+        <div class="mb-8"><strong>核对清单</strong></div>
+        <div v-for="item in batchDetail.checklist" :key="item.work_order_id" class="batch-check-item">
+          <el-icon :color="item.checked ? 'var(--color-success)' : 'var(--color-text-tertiary)'">
+            <CircleCheckFilled v-if="item.checked" />
+            <CircleClose v-else />
+          </el-icon>
+          <div class="batch-check-info">
+            <span class="batch-check-wo">{{ item.work_order_no }} {{ item.title }}</span>
+            <el-tag size="small" :type="item.checked ? 'success' : 'info'" effect="plain">
+              {{ item.checked ? '已核对' : '未核对' }}
+            </el-tag>
           </div>
         </div>
-        <div v-if="detailTask.workOrder" class="mt-16">
-          <h4 class="section-title">关联工单</h4>
-          <el-descriptions :column="1" border>
-            <el-descriptions-item label="工单号">
-              <router-link :to="`/work-orders/${detailTask.workOrder.id}`" class="wo-link">{{ detailTask.workOrder.work_order_no }}</router-link>
-            </el-descriptions-item>
-            <el-descriptions-item label="项目名称">{{ detailTask.workOrder.title }}</el-descriptions-item>
-            <el-descriptions-item label="当前环节">{{ detailTask.workOrder.current_stage }}</el-descriptions-item>
-          </el-descriptions>
-        </div>
-      </template>
-    </el-drawer>
+      </div>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, watch } from 'vue'
+import { Refresh, CircleCheckFilled, CircleClose } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
-import { Refresh } from '@element-plus/icons-vue'
 import api from '../api'
 
-const tasks = ref([])
 const loading = ref(false)
-const submitting = ref(false)
-const showMerge = ref(false)
-const showStatusDialog = ref(false)
-const showQualityDialog = ref(false)
-const showDetail = ref(false)
+const activeTab = ref('tasks')
+const adTypeMap = ref({})
 
-const pagination = reactive({ page: 1, pageSize: 20, total: 0 })
-const filters = reactive({ status: '', material_type: '' })
+// ===== 数据 =====
+const allTasks = ref([])
+const batches = ref([])
+const historyLoading = ref(false)
+const historyPage = ref(1)
+const historyPageSize = ref(20)
+const historyTotal = ref(0)
 
-// 可用工单（用于合并创建）
-const availableWorkOrders = ref([])
+// 已完成的工单+材料组合
+const completedGroups = ref(new Set())
 
-const STATUS_MAP = {
-  scheduled: '已排产', producing: '生产中', completed: '已完成',
-  shipped: '已发货', quality_checked: '质检中', qualified: '质检合格',
-  warehoused: '已入库',
-}
-function statusLabel(s) { return STATUS_MAP[s] || s }
-function qualityTag(r) { return r === '合格' ? 'success' : r === '不合格' ? 'danger' : 'warning' }
+// ===== 统计 =====
+const stats = reactive({ pending: 0, producing: 0, completed: 0, materialTypes: 0 })
 
-// 合并创建
-const mergeForm = reactive({ work_order_ids: [], material_type: '', spec: '', quantity: 1 })
+// ===== 筛选 =====
+const taskSearch = ref('')
+const taskMaterialFilter = ref('')
+const taskStatusFilter = ref('')
+const historySearch = ref('')
+const historyMaterialFilter = ref('')
 
-async function openMergeDialog() {
-  // 加载设计环节和生产的工单供选择
+// ===== 核对对话框 =====
+const verifyVisible = ref(false)
+const verifyData = reactive({ material_type: '', batch_no: '', items: [] })
+const verifyChecked = ref([])
+const verifyNotes = ref('')
+const verifyCheckedCount = computed(() => verifyChecked.value.length)
+
+// ===== 批次详情 =====
+const batchDetailVisible = ref(false)
+const batchDetail = ref(null)
+
+// ===== 材料映射 =====
+async function loadSettings() {
   try {
-    const res = await api.get('/work-orders', {
-      params: { stage: 'design', limit: 100 }
-    })
-    const designOrders = res.data?.list || res.data || []
-    // 也加载当前生产环节的
-    const prodRes = await api.get('/work-orders', {
-      params: { stage: 'production', limit: 100 }
-    })
-    const prodOrders = prodRes.data?.list || prodRes.data || []
-    availableWorkOrders.value = [...designOrders, ...prodOrders]
-  } catch {
-    availableWorkOrders.value = []
-  }
-  mergeForm.work_order_ids = []
-  mergeForm.material_type = ''
-  mergeForm.spec = ''
-  mergeForm.quantity = 1
-  showMerge.value = true
+    const res = await api.get('/tenant/settings')
+    const settings = res.data || {}
+    const templates = settings.project_templates || []
+    for (const tmpl of templates) {
+      for (const adType of (tmpl.ad_types || [])) {
+        if (adType.key && adType.label) adTypeMap.value[adType.key] = adType.label
+      }
+    }
+  } catch {}
 }
 
-async function handleMerge() {
-  if (!mergeForm.work_order_ids.length) return ElMessage.warning('请选择至少一个工单')
-  if (!mergeForm.material_type) return ElMessage.warning('材料类型不能为空')
-  if (!mergeForm.quantity) return ElMessage.warning('数量不能为零')
-  submitting.value = true
-  try {
-    await api.post('/production/tasks/merge', {
-      work_order_ids: mergeForm.work_order_ids,
-      material_type: mergeForm.material_type,
-      spec: mergeForm.spec,
-      quantity: mergeForm.quantity,
-    })
-    ElMessage.success('生产任务创建成功')
-    showMerge.value = false
-    await fetchTasks()
-  } catch (e) {
-    ElMessage.error(e.response?.data?.error || '创建失败')
-  } finally {
-    submitting.value = false
-  }
+function adTypeLabel(v) {
+  if (!v) return '—'
+  return adTypeMap.value[v] || v
 }
 
-// 更新状态
-const currentTask = reactive({ id: '', production_task_no: '', material_type: '', spec: '', status: '' })
-const newStatus = ref('')
-const statusNotes = ref('')
-
-function openStatusDialog(row) {
-  currentTask.id = row.id
-  currentTask.production_task_no = row.production_task_no
-  currentTask.material_type = row.material_type
-  currentTask.spec = row.spec
-  currentTask.status = row.status
-  newStatus.value = row.status
-  statusNotes.value = row.quality_notes || ''
-  showStatusDialog.value = true
-}
-
-async function handleUpdateStatus() {
-  if (!newStatus.value) return ElMessage.warning('请选择状态')
-  submitting.value = true
-  try {
-    await api.post(`/production/tasks/${currentTask.id}/status`, {
-      status: newStatus.value,
-      notes: statusNotes.value,
-    })
-    ElMessage.success('状态已更新')
-    showStatusDialog.value = false
-    await fetchTasks()
-  } catch (e) {
-    ElMessage.error(e.response?.data?.error || '更新失败')
-  } finally {
-    submitting.value = false
-  }
-}
-
-// 质检
-const qualityTask = reactive({ id: '', production_task_no: '', material_type: '', spec: '' })
-const qualityForm = reactive({ result: '', inspector: '', check_date: '', notes: '' })
-
-function openQualityDialog(row) {
-  qualityTask.id = row.id
-  qualityTask.production_task_no = row.production_task_no
-  qualityTask.material_type = row.material_type
-  qualityTask.spec = row.spec
-  qualityForm.result = '合格'
-  qualityForm.inspector = ''
-  qualityForm.check_date = new Date().toISOString().split('T')[0]
-  qualityForm.notes = ''
-  showQualityDialog.value = true
-}
-
-async function submitQuality() {
-  if (!qualityForm.result) return ElMessage.warning('请选择质检结果')
-  submitting.value = true
-  try {
-    await api.post(`/production/tasks/${qualityTask.id}/status`, {
-      status: qualityForm.result === '合格' ? 'qualified' : 'quality_checked',
-      notes: `质检${qualityForm.result}，检验员：${qualityForm.inspector || '未填写'}，说明：${qualityForm.notes}`,
-      quality_result: qualityForm.result,
-      quality_inspector: qualityForm.inspector,
-      quality_date: qualityForm.check_date,
-      quality_notes: qualityForm.notes,
-    })
-    ElMessage.success('质检记录已提交')
-    showQualityDialog.value = false
-    await fetchTasks()
-  } catch (e) {
-    ElMessage.error(e.response?.data?.error || '提交失败')
-  } finally {
-    submitting.value = false
-  }
-}
-
-// 详情
-const detailTask = ref({})
-
-function viewTaskDetail(row) {
-  detailTask.value = row
-  showDetail.value = true
-  // 加载生产进度
-  loadProgress(row.work_order_id || row.id)
-}
-
-// 生产进度
-const progressSteps = ref([])
-
-async function loadProgress(workOrderId) {
-  if (!workOrderId) return
-  try {
-    const res = await api.get(`/production/${workOrderId}/progress`)
-    progressSteps.value = res.data || []
-  } catch (e) {
-    console.error('加载进度失败:', e)
-    progressSteps.value = []
-  }
-}
-
-async function saveProgress() {
-  if (!detailTask.value.work_order_id) return
-  try {
-    const updates = progressSteps.value.map(s => ({
-      step_id: s.id,
-      progress_pct: Math.min(100, Math.max(0, s.progress_pct)),
-    }))
-    await api.put(`/production/${detailTask.value.work_order_id}/progress`, { steps: updates })
-  } catch (e) {
-    console.error('保存进度失败:', e)
-  }
-}
-
-function getProgressPct(row) {
-  // 如果有进度数据，取平均值
-  if (row.progress_steps?.length) {
-    const steps = row.progress_steps
-    const total = steps.reduce((s, step) => s + (step.progress_pct || 0), 0)
-    return Math.round(total / steps.length)
-  }
-  // 根据状态估算
-  const statusPct = { scheduled: 0, producing: 50, completed: 100, shipped: 100, quality_checked: 90, qualified: 95, warehoused: 100 }
-  return statusPct[row.status] || 0
-}
-
-function getProgressStatus(row) {
-  const pct = getProgressPct(row)
-  if (pct >= 100) return 'success'
-  if (pct >= 50) return ''
-  return 'exception'
-}
-
-async function fetchTasks() {
+// ===== 加载工单数据 =====
+async function loadWorkOrders() {
   loading.value = true
   try {
-    const params = { ...filters, page: pagination.page, limit: pagination.pageSize }
-    const res = await api.get('/production/tasks', { params })
+    const res = await api.get('/work-orders', { params: { stage: 'production', page: 1, limit: 100 } })
     const payload = res.data || {}
-    tasks.value = payload.list || payload || []
-    pagination.total = payload.total || 0
-  } catch {
-    tasks.value = []
-    pagination.total = 0
+    const list = Array.isArray(payload) ? payload : (payload.list || [])
+
+    // 从 productions 数据构建完成状态映射和生产任务号映射
+    completedGroups.value = new Set()
+    const productionTaskNos = {}  // { "workOrderId|||material_type": "PROD-xxx" }
+    for (const wo of list) {
+      if (wo.productions) {
+        for (const p of wo.productions) {
+          if (p.status === 'completed' || p.status === 'shipped') {
+            completedGroups.value.add(`${wo.id}|||${p.material_type}`)
+          }
+          if (p.production_task_no) {
+            productionTaskNos[`${wo.id}|||${p.material_type}`] = p.production_task_no
+          }
+        }
+      }
+    }
+
+    allTasks.value = flattenWorkOrders(list, productionTaskNos)
+    updateStats()
+  } catch (e) {
+    ElMessage.error('加载工单失败')
+    allTasks.value = []
   } finally {
     loading.value = false
   }
 }
 
-onMounted(fetchTasks)
+// 将工单数据拆解为"工单+材料+面"的任务列表
+function flattenWorkOrders(workOrders, productionTaskNos = {}) {
+  const tasks = []
+  for (const wo of workOrders) {
+    // 从测量数据中提取材料+面信息
+    const measurements = wo.measurements || []
+    for (const m of measurements) {
+      // materials 可能是 JSON 字符串，需要解析
+      let materials = m.materials || []
+      if (typeof materials === 'string') {
+        try { materials = JSON.parse(materials) } catch { materials = [] }
+      }
+      for (const mat of materials) {
+        const faces = mat.faces || []
+        // 从设计数据获取该工单的源文件
+        const sourceFiles = []
+        if (wo.designs) {
+          for (const d of wo.designs) {
+            if (d.status === 'approved') {
+              let srcFiles = d.source_files || []
+              if (typeof srcFiles === 'string') { try { srcFiles = JSON.parse(srcFiles) } catch { srcFiles = [] } }
+              for (const f of srcFiles) {
+                if (!sourceFiles.includes(f)) sourceFiles.push(f)
+              }
+            }
+          }
+        }
+        // 获取该工单+材料的生产任务号
+        const taskNo = productionTaskNos[`${wo.id}|||${mat.material_type}`] || ''
+        for (const face of faces) {
+          tasks.push({
+            work_order_id: wo.id,
+            work_order_no: wo.work_order_no,
+            title: wo.title,
+            material_type: mat.material_type || '未分类',
+            face_label: face.label || '—',
+            width: face.width || 0,
+            height: face.height || 0,
+            area: face.area || 0,
+            source_files: sourceFiles,
+            production_task_no: taskNo,
+          })
+        }
+      }
+    }
+  }
+  return tasks
+}
+
+// ===== 按工单+材料合并 =====
+function groupByWoMaterial(taskList) {
+  const map = {}
+  taskList.forEach(t => {
+    const key = `${t.work_order_id}|||${t.material_type}`
+    if (!map[key]) {
+      map[key] = {
+        work_order_id: t.work_order_id,
+        work_order_no: t.work_order_no,
+        title: t.title,
+        material_type: t.material_type,
+        faces: [],
+        totalArea: 0,
+        production_task_no: t.production_task_no || '',
+        source_files: [],
+      }
+    }
+    map[key].faces.push({ label: t.face_label, width: t.width, height: t.height })
+    map[key].totalArea += (t.area || 0)
+    if (t.source_files?.length) {
+      t.source_files.forEach(f => { if (!map[key].source_files.includes(f)) map[key].source_files.push(f) })
+    }
+  })
+  return Object.values(map)
+}
+
+// 判断工单+材料组合是否已完成
+function isGroupCompleted(group) {
+  return completedGroups.value.has(`${group.work_order_id}|||${group.material_type}`)
+}
+
+// ===== 筛选后的任务 =====
+const filteredTaskGroups = computed(() => {
+  let groups = groupByWoMaterial(allTasks.value).map(g => ({
+    ...g,
+    isCompleted: isGroupCompleted(g),
+  }))
+  if (taskSearch.value) {
+    const kw = taskSearch.value.toLowerCase()
+    groups = groups.filter(g => g.work_order_no.toLowerCase().includes(kw) || g.title.toLowerCase().includes(kw))
+  }
+  if (taskMaterialFilter.value) {
+    groups = groups.filter(g => g.material_type === taskMaterialFilter.value)
+  }
+  if (taskStatusFilter.value === 'completed') {
+    groups = groups.filter(g => g.isCompleted)
+  } else if (taskStatusFilter.value === 'pending') {
+    groups = groups.filter(g => !g.isCompleted)
+  }
+  return groups
+})
+
+// ===== 材料看板 =====
+const boardMaterials = computed(() => {
+  const groups = groupByWoMaterial(allTasks.value).filter(g => !isGroupCompleted(g))
+  const byMat = {}
+  groups.forEach(item => {
+    if (!byMat[item.material_type]) byMat[item.material_type] = { material_type: item.material_type, items: [], totalArea: 0 }
+    byMat[item.material_type].items.push(item)
+    byMat[item.material_type].totalArea += item.totalArea
+  })
+  return Object.values(byMat).sort((a, b) => b.items.length - a.items.length)
+})
+
+const uniqueMaterials = computed(() => [...new Set(allTasks.value.map(t => t.material_type))])
+
+// ===== 批次数据 =====
+async function loadBatches() {
+  historyLoading.value = true
+  try {
+    const res = await api.get('/production/batches', {
+      params: { page: historyPage.value, limit: historyPageSize.value }
+    })
+    const payload = res.data || {}
+    batches.value = payload.list || []
+    historyTotal.value = payload.total || 0
+  } catch {
+    batches.value = []
+    historyTotal.value = 0
+  } finally {
+    historyLoading.value = false
+  }
+}
+
+const filteredBatches = computed(() => {
+  let list = batches.value
+  if (historySearch.value) {
+    const kw = historySearch.value.toLowerCase()
+    list = list.filter(b => b.batch_no?.toLowerCase().includes(kw) || JSON.stringify(b.checklist).toLowerCase().includes(kw))
+  }
+  if (historyMaterialFilter.value) {
+    list = list.filter(b => b.material_type === historyMaterialFilter.value)
+  }
+  return list
+})
+
+const historyMaterials = computed(() => [...new Set(batches.value.map(b => b.material_type))])
+
+// ===== 统计更新 =====
+function updateStats() {
+  const groups = groupByWoMaterial(allTasks.value)
+  const completed = groups.filter(g => isGroupCompleted(g)).length
+  stats.pending = groups.length - completed
+  stats.completed = completed
+  stats.producing = 0
+  stats.materialTypes = new Set(allTasks.value.map(t => t.material_type)).size
+}
+
+// ===== 筛选 =====
+function filterTasks() {} // computed 自动响应
+function filterHistory() {} // computed 自动响应
+
+// ===== 核对流程 =====
+function openVerifyDialog(materialType) {
+  const items = groupByWoMaterial(allTasks.value).filter(g => g.material_type === materialType && !isGroupCompleted(g))
+  if (!items.length) { ElMessage.warning('没有待生产任务'); return }
+  verifyData.material_type = materialType
+  verifyData.batch_no = '自动生成'
+  verifyData.items = items.map(g => ({
+    work_order_id: g.work_order_id,
+    work_order_no: g.work_order_no,
+    title: g.title,
+    faceSummary: g.faces.map(f => f.label).join(' + '),
+    area: g.totalArea,
+    source_files: g.source_files,
+  }))
+  verifyChecked.value = verifyData.items.map(i => i.work_order_id)
+  verifyNotes.value = ''
+  verifyVisible.value = true
+}
+
+function startVerifyGroup(group) {
+  verifyData.material_type = group.material_type
+  verifyData.batch_no = '自动生成'
+  verifyData.items = [{
+    work_order_id: group.work_order_id,
+    work_order_no: group.work_order_no,
+    title: group.title,
+    faceSummary: group.faces.map(f => f.label).join(' + '),
+    area: group.totalArea,
+    source_files: group.source_files,
+  }]
+  verifyChecked.value = verifyData.items.map(i => i.work_order_id)
+  verifyNotes.value = ''
+  verifyVisible.value = true
+}
+
+async function confirmVerify() {
+  if (!verifyChecked.value.length) {
+    ElMessage.warning('请至少勾选一个已完成的工单')
+    return
+  }
+
+  const items = verifyData.items.map(item => ({
+    work_order_id: item.work_order_id,
+    checked: verifyChecked.value.includes(item.work_order_id),
+  }))
+
+  try {
+    const res = await api.post('/production/batches', {
+      material_type: verifyData.material_type,
+      items,
+      notes: verifyNotes.value,
+    })
+    const data = res.data || {}
+    const batch = data.batch
+    verifyVisible.value = false
+
+    // 更新本地完成状态
+    items.forEach(item => {
+      if (item.checked) {
+        completedGroups.value.add(`${item.work_order_id}|||${verifyData.material_type}`)
+      }
+    })
+
+    await loadWorkOrders()
+    await loadBatches()
+
+    const uncompleted = verifyData.items.length - verifyChecked.value.length
+    if (uncompleted > 0) {
+      ElMessage.success(`${adTypeLabel(verifyData.material_type)}：${verifyChecked.value.length} 个已确认，${uncompleted} 个未完成下次继续`)
+    } else {
+      ElMessage.success(`批次 ${batch?.batch_no} 已完成，${verifyChecked.value.length} 个工单标记完成`)
+    }
+  } catch (e) {
+    ElMessage.error(e.response?.data?.error || '提交失败')
+  }
+}
+
+// ===== 批次详情 =====
+async function showBatchDetail(row) {
+  try {
+    const res = await api.get(`/production/batches/${row.id}`)
+    batchDetail.value = res.data || {}
+    batchDetailVisible.value = true
+  } catch (e) {
+    ElMessage.error('加载批次详情失败')
+  }
+}
+
+function handleRefresh() {
+  loadWorkOrders()
+  loadBatches()
+}
+
+onMounted(() => {
+  loadSettings()
+  loadWorkOrders()
+  loadBatches()
+})
 </script>
 
 <style scoped>
+.page-header { margin-bottom: var(--space-6); }
+.page-actions { display: flex; gap: var(--space-2); }
 .flex-between { display: flex; justify-content: space-between; align-items: center; }
 .mb-16 { margin-bottom: var(--space-4); }
-.mb-20 { margin-bottom: var(--space-5); }
-.mt-16 { margin-top: var(--space-4); }
-.mt-4 { margin-top: var(--space-1); }
-.ml-8 { margin-left: var(--space-2); }
-.section-title { font-size: var(--font-size-md); font-weight: var(--font-weight-semibold); margin-bottom: var(--space-3); }
-.text-muted { color: var(--color-text-tertiary); font-size: var(--font-size-xs); }
-.pagination-box { display: flex; justify-content: flex-end; margin-top: var(--space-4); }
-.wo-link { color: var(--color-primary); text-decoration: none; }
+.mb-8 { margin-bottom: var(--space-2); }
+
+.stat-card { text-align: center; padding: 4px 0; }
+.stat-value { font-size: 28px; font-weight: 700; }
+.stat-label { font-size: 13px; color: var(--color-text-tertiary); margin-top: 4px; }
+
+.filter-bar { display: flex; gap: var(--space-3); align-items: center; flex-wrap: wrap; }
+
+.wo-link { color: var(--color-primary); text-decoration: none; font-weight: 500; }
 .wo-link:hover { text-decoration: underline; }
-.progress-cell { padding: 4px 0; }
-.progress-step { margin-bottom: 16px; }
-.step-header { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
-.step-name { font-weight: var(--font-weight-medium); font-size: var(--font-size-sm); min-width: 60px; }
-.step-pct { font-size: var(--font-size-xs); color: var(--color-text-tertiary); min-width: 36px; text-align: right; }
+
+.batch-tag {
+  font-family: monospace; font-size: 12px; font-weight: 600;
+  color: var(--color-primary); background: #dbeafe;
+  padding: 2px 8px; border-radius: 4px; display: inline-block;
+}
+
+.text-muted { color: var(--color-text-tertiary); font-size: var(--font-size-xs); }
+
+.face-list { display: flex; flex-direction: column; gap: 2px; }
+.face-item { font-size: 12px; color: var(--color-text-secondary); }
+.face-inline { display: inline-block; font-size: 12px; color: var(--color-text-secondary); margin-right: 8px; }
+
+.material-group-header { display: flex; justify-content: space-between; align-items: center; }
+.material-title { font-weight: 700; font-size: 15px; color: var(--color-primary); }
+.material-count { font-size: 12px; color: var(--color-text-secondary); margin-left: 8px; }
+
+.verify-dialog-content { padding: 0; }
+.verify-batch-no { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--el-border-color-lighter); }
+.verify-batch-no .label { font-size: 13px; color: var(--color-text-secondary); }
+.verify-batch-no .value { font-family: monospace; font-size: 14px; font-weight: 600; color: var(--color-primary); background: #dbeafe; padding: 2px 12px; border-radius: 4px; }
+.verify-counter { font-size: 14px; margin-bottom: 8px; color: var(--color-text-secondary); }
+.verify-counter strong { color: var(--color-primary); }
+.verify-checklist { max-height: 300px; overflow-y: auto; }
+.verify-item { padding: 8px 0; border-bottom: 1px solid #f3f4f6; }
+.verify-item:last-child { border-bottom: none; }
+.verify-item-title { font-size: 13px; }
+.verify-item-files { padding-left: 24px; font-size: 12px; color: var(--color-text-secondary); margin-top: 4px; }
+
+.batch-detail-header { display: flex; align-items: center; }
+.batch-check-item { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px solid #f3f4f6; }
+.batch-check-item:last-child { border-bottom: none; }
+.batch-check-info { flex: 1; display: flex; justify-content: space-between; align-items: center; }
+.batch-check-wo { font-size: 13px; font-weight: 500; }
+
+.pagination-wrap { display: flex; justify-content: flex-end; margin-top: 16px; }
 </style>

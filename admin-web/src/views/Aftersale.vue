@@ -44,7 +44,7 @@
             <router-link :to="`/work-orders/${row.work_order_id}`" class="wo-link">{{ row.workOrder?.work_order_no }}</router-link>
           </template>
         </el-table-column>
-        <el-table-column label="项目名称" width="150">
+        <el-table-column label="店铺名字" width="150">
           <template #default="{ row }">{{ row.workOrder?.title }}</template>
         </el-table-column>
         <el-table-column label="问题描述" min-width="200" show-overflow-tooltip>
@@ -151,7 +151,8 @@ async function fetchList() {
       { label: '已解决', count: counts.resolved, color: '#67c23a' },
       { label: '已关闭', count: counts.closed, color: '#909399' },
     )
-  } catch {
+  } catch (e) {
+    ElMessage.error(e.response?.data?.error || '加载失败')
     list.value = []
     pagination.total = 0
   } finally {

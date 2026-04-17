@@ -28,23 +28,32 @@
     <!-- 列表 -->
     <el-card>
       <el-table :data="list" stripe v-loading="loading" @selection-change="handleSelectionChange">
-        <el-table-column type="selection" width="55" />
-        <el-table-column prop="work_order_no" label="工单号" width="160">
+        <el-table-column type="selection" width="55" :selectable="(row) => row.work_order?.current_stage !== 'approval'" />
+        <el-table-column label="工单号" width="160">
           <template #default="{ row }">
-            <router-link :to="`/work-orders/${row.id}`" class="wo-link">{{ row.work_order_no }}</router-link>
+            <router-link :to="`/work-orders/${row.work_order?.id}`" class="wo-link">{{ row.work_order?.work_order_no || '—' }}</router-link>
           </template>
         </el-table-column>
-        <el-table-column prop="title" label="项目名称" min-width="150" show-overflow-tooltip />
-        <el-table-column prop="client_name" label="甲方企业" width="140" />
-        <el-table-column prop="project_type" label="类型" width="100" />
-        <el-table-column label="需求摘要" min-width="180" show-overflow-tooltip>
-          <template #default="{ row }">{{ row.description || '—' }}</template>
+        <el-table-column label="店铺名字" min-width="150" show-overflow-tooltip>
+          <template #default="{ row }">{{ row.work_order?.title || '—' }}</template>
         </el-table-column>
-        <el-table-column prop="created_at" label="申报时间" width="160" />
+        <el-table-column label="甲方企业" width="140">
+          <template #default="{ row }">{{ row.work_order?.client?.name || '—' }}</template>
+        </el-table-column>
+        <el-table-column label="类型" width="100">
+          <template #default="{ row }">{{ row.project_type || '—' }}</template>
+        </el-table-column>
+        <el-table-column label="需求摘要" min-width="180" show-overflow-tooltip>
+          <template #default="{ row }">{{ row.work_order?.description || '—' }}</template>
+        </el-table-column>
+        <el-table-column label="申报时间" width="180">
+          <template #default="{ row }">{{ formatDate(row.work_order?.created_at) }}</template>
+        </el-table-column>
         <el-table-column label="操作" width="160">
           <template #default="{ row }">
-            <el-button type="primary" size="small" :loading="receiving[row.id]" @click="handleReceive(row)">接收</el-button>
-            <router-link :to="`/work-orders/${row.id}`"><el-button size="small">查看</el-button></router-link>
+            <el-button v-if="row.work_order?.current_stage === 'approval'" type="info" size="small" disabled>待审批</el-button>
+            <el-button v-else type="primary" size="small" :loading="receiving[row.id]" @click="handleReceive(row)">接收</el-button>
+            <router-link :to="`/work-orders/${row.work_order?.id}`"><el-button size="small">查看</el-button></router-link>
           </template>
         </el-table-column>
       </el-table>
@@ -83,20 +92,33 @@ function handleSelectionChange(rows) {
   selectedRows.value = rows
 }
 
+function formatDate(d) {
+  if (!d) return '—'
+  return new Date(d).toLocaleString('zh-CN', { hour12: false }).replace(/\//g, '-')
+}
+
 async function fetchList() {
   loading.value = true
   try {
-    const params = { stage: 'declaration', page: pagination.page, limit: pagination.pageSize }
+    const params = { page: pagination.page, limit: pagination.pageSize }
     const res = await api.get('/tenant/declarations', { params })
-    const payload = res.data?.list || res.data || []
-    list.value = Array.isArray(payload) ? payload : []
-    pagination.total = res.data?.total || list.value.length
+    // API 返回: { code: 0, data: rows, pagination: { total, page, limit } }
+    // axios interceptor 已解包 res.data，所以 res = { code: 0, data: rows, pagination }
+    const rows = res.data || []
+    list.value = Array.isArray(rows) ? rows : []
+    pagination.total = res.pagination?.total || list.value.length
     // 统计
     statCards.length = 0
+    const now = new Date()
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
     statCards.push(
       { label: '待接收', count: pagination.total, color: '#e6a23c' },
-      { label: '今日申报', count: list.value.filter(r => r.created_at?.startsWith(new Date().toISOString().split('T')[0])).length, color: '#2563eb' },
-      { label: '甲方企业', count: [...new Set(list.value.map(r => r.client_id))].length, color: '#16a34a' },
+      { label: '今日申报', count: list.value.filter(r => {
+        if (!r.work_order?.created_at) return false
+        const d = new Date(r.work_order.created_at)
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` === todayStr
+      }).length, color: '#2563eb' },
+      { label: '甲方企业', count: [...new Set(list.value.map(r => r.work_order?.client?.id).filter(Boolean))].length, color: '#16a34a' },
       { label: '已选', count: selectedRows.value.length, color: '#6b7280' },
     )
   } catch {
@@ -111,7 +133,7 @@ async function handleReceive(row) {
   receiving.value[row.id] = true
   try {
     await api.post(`/tenant/declarations/${row.id}/receive`)
-    ElMessage.success(`已接收工单 ${row.work_order_no}`)
+    ElMessage.success(`已接收工单 ${row.work_order?.work_order_no}`)
     list.value = list.value.filter(w => w.id !== row.id)
     await fetchList()
   } catch (e) {

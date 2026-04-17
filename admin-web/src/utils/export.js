@@ -1,4 +1,12 @@
-import * as XLSX from 'xlsx'
+let XLSX = null
+
+async function ensureXLSX() {
+  if (!XLSX) {
+    const mod = await import('xlsx')
+    XLSX = mod
+  }
+  return XLSX
+}
 
 /**
  * 将数据导出为 Excel 文件
@@ -6,13 +14,17 @@ import * as XLSX from 'xlsx'
  * @param {Array} columns - 列定义 [{ key: 'id', label: '编号' }]
  * @param {string} filename - 文件名（不含扩展名）
  */
-export function exportToExcel(data, columns, filename = 'export') {
+export async function exportToExcel(data, columns, filename = 'export') {
+  const xlsx = await ensureXLSX()
   const header = columns.map(col => col.label)
-  const rows = data.map(item => columns.map(col => item[col.key] ?? ''))
-  const ws = XLSX.utils.aoa_to_sheet([header, ...rows])
-  const wb = XLSX.utils.book_new()
-  XLSX.utils.book_append_sheet(wb, ws, 'Sheet1')
-  XLSX.writeFile(wb, `${filename}.xlsx`)
+  const rows = data.map(item => columns.map(col => {
+    const val = col.map ? col.map(item) : (item[col.key] ?? '')
+    return val ?? ''
+  }))
+  const ws = xlsx.utils.aoa_to_sheet([header, ...rows])
+  const wb = xlsx.utils.book_new()
+  xlsx.utils.book_append_sheet(wb, ws, 'Sheet1')
+  xlsx.writeFile(wb, `${filename}.xlsx`)
 }
 
 /**

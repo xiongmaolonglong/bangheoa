@@ -3,6 +3,7 @@
     <div class="page-header flex-between">
       <h1 class="page-title">归档管理</h1>
       <div>
+        <el-button @click="exportArchive"><el-icon><Download /></el-icon>导出</el-button>
         <el-button @click="fetchList" :icon="Refresh" circle title="刷新" />
       </div>
     </div>
@@ -40,7 +41,7 @@
             <router-link :to="`/work-orders/${row.work_order_id}`" class="wo-link">{{ row.workOrder?.work_order_no }}</router-link>
           </template>
         </el-table-column>
-        <el-table-column label="项目名称" min-width="150">
+        <el-table-column label="店铺名字" min-width="150">
           <template #default="{ row }">{{ row.workOrder?.title }}</template>
         </el-table-column>
         <el-table-column label="文件数" width="100">
@@ -77,8 +78,9 @@
 import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Refresh } from '@element-plus/icons-vue'
+import { Refresh, Download } from '@element-plus/icons-vue'
 import api from '../api'
+import { exportWithTimestamp } from '../utils/export'
 
 const router = useRouter()
 const list = ref([])
@@ -108,12 +110,26 @@ async function fetchList() {
       { label: '本月归档', count: thisWeekCount, color: '#16a34a' },
       { label: '文件总数', count: list.value.reduce((s, r) => s + countFiles(r.file_urls), 0), color: '#ea580c' },
     )
-  } catch {
+  } catch (e) {
+    ElMessage.error(e.response?.data?.error || '加载失败')
     list.value = []
     pagination.total = 0
   } finally {
     loading.value = false
   }
+}
+
+function exportArchive() {
+  if (!list.value.length) return ElMessage.warning('没有可导出的数据')
+  exportWithTimestamp(list.value, [
+    { key: 'work_order_no', label: '工单号', map: row => row.workOrder?.work_order_no || '-' },
+    { key: 'title', label: '项目名称', map: row => row.workOrder?.title || '-' },
+    { key: 'archived_at', label: '归档时间' },
+    { key: 'archived_by', label: '归档人', map: row => row.archiver?.name || '-' },
+    { key: 'file_count', label: '文件数', map: row => countFiles(row.file_urls) },
+    { key: 'remark', label: '备注' },
+  ], '归档管理')
+  ElMessage.success(`已导出 ${list.value.length} 条数据`)
 }
 
 function countFiles(files) {
@@ -123,10 +139,6 @@ function countFiles(files) {
 
 function viewDetail(row) {
   router.push(`/archive/${row.work_order_id}`)
-}
-
-function exportArchive(row) {
-  ElMessage.info('导出功能开发中')
 }
 
 onMounted(fetchList)

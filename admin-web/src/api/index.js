@@ -18,7 +18,14 @@ api.interceptors.request.use(config => {
 api.interceptors.response.use(
   res => res.data,
   err => {
-    // 静默失败，各页面自行处理 Demo 数据或错误
+    if (err.response?.status === 401) {
+      // token 过期，清除状态并跳转登录
+      try {
+        const auth = useAuthStore()
+        auth.logout()
+        router.push('/login')
+      } catch {}
+    }
     return Promise.reject(err)
   }
 )
