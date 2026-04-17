@@ -5,50 +5,72 @@
     <div class="filter-bar">
       <el-input v-model="keyword" placeholder="搜索甲方名称" clearable style="width:200px" @change="loadData" />
       <el-select v-model="tenantFilter" placeholder="全部租户" clearable style="width:180px" @change="loadData">
-        <el-option label="盛世文化传媒有限公司" value="盛世文化传媒有限公司" />
-        <el-option label="华艺广告制作有限公司" value="华艺广告制作有限公司" />
-        <el-option label="博视标识设计工程公司" value="博视标识设计工程公司" />
-        <el-option label="瑞达展示展览有限公司" value="瑞达展示展览有限公司" />
+        <el-option
+          v-for="t in tenantList"
+          :key="t.id"
+          :label="t.name"
+          :value="t.id"
+        />
       </el-select>
     </div>
 
     <el-tabs v-model="activeTab">
       <el-tab-pane label="甲方列表" name="clients">
-        <el-table :data="clientList" stripe>
+        <el-table :data="clientList" stripe v-loading="loading">
           <el-table-column prop="name" label="甲方名称" min-width="200" />
           <el-table-column prop="tenant_name" label="所属租户" min-width="200" />
-          <el-table-column prop="contact" label="联系人" width="100" />
-          <el-table-column prop="work_order_count" label="工单数" width="80" align="center" />
+          <el-table-column prop="contact_name" label="联系人" width="100" />
+          <el-table-column prop="contact_phone" label="联系电话" width="140" />
+          <el-table-column label="状态" width="90" align="center">
+            <template #default="{ row }">
+              <el-tag size="small" :type="row.status === 'active' ? 'success' : 'danger'">
+                {{ row.status === 'active' ? '正常' : '已暂停' }}
+              </el-tag>
+            </template>
+          </el-table-column>
           <el-table-column label="操作" width="80">
             <template #default="{ row }">
               <el-button link type="primary" size="small" @click="showClientDetail(row)">查看</el-button>
             </template>
           </el-table-column>
         </el-table>
+        <div class="pagination-wrap" v-if="clientPagination.total > 0">
+          <el-pagination
+            v-model:current-page="clientPage"
+            v-model:page-size="clientPageSize"
+            :total="clientPagination.total"
+            :page-sizes="[10, 20, 50]"
+            layout="total, sizes, prev, pager, next"
+            @current-change="loadData"
+            @size-change="clientPage = 1; loadData()"
+          />
+        </div>
       </el-tab-pane>
 
       <el-tab-pane label="申报监控" name="declarations">
-        <el-table :data="declarationList" stripe>
+        <el-table :data="declarationList" stripe v-loading="loading">
           <el-table-column prop="client_name" label="甲方名称" width="180" />
           <el-table-column prop="tenant_name" label="所属租户" width="180" />
           <el-table-column prop="work_order_no" label="工单号" width="140" />
           <el-table-column prop="title" label="项目名称" min-width="150" />
           <el-table-column prop="current_stage" label="当前环节" width="100">
             <template #default="{ row }">
-              <el-tag size="small" :type="stageType(row.current_stage)">{{ row.current_stage }}</el-tag>
-            </template>
-          </el-table-column>
-          <el-table-column label="流转状态" width="200">
-            <template #default="{ row }">
-              <el-steps :active="flowStep(row.flow)" size="small" simple>
-                <el-step title="申报" />
-                <el-step title="审批" />
-                <el-step title="推送" />
-              </el-steps>
+              <el-tag size="small" :type="stageType(row.current_stage)">{{ stageLabels[row.current_stage] || row.current_stage }}</el-tag>
             </template>
           </el-table-column>
           <el-table-column prop="created_at" label="提交时间" width="160" />
         </el-table>
+        <div class="pagination-wrap" v-if="declPagination.total > 0">
+          <el-pagination
+            v-model:current-page="declPage"
+            v-model:page-size="declPageSize"
+            :total="declPagination.total"
+            :page-sizes="[10, 20, 50]"
+            layout="total, sizes, prev, pager, next"
+            @current-change="loadData"
+            @size-change="declPage = 1; loadData()"
+          />
+        </div>
       </el-tab-pane>
     </el-tabs>
 
@@ -56,75 +78,136 @@
       <el-descriptions :column="1" border v-if="currentClient">
         <el-descriptions-item label="甲方名称">{{ currentClient.name }}</el-descriptions-item>
         <el-descriptions-item label="所属租户">{{ currentClient.tenant_name }}</el-descriptions-item>
-        <el-descriptions-item label="联系人">{{ currentClient.contact }}</el-descriptions-item>
-        <el-descriptions-item label="联系电话">{{ currentClient.phone }}</el-descriptions-item>
-        <el-descriptions-item label="工单总数">{{ currentClient.work_order_count }}</el-descriptions-item>
+        <el-descriptions-item label="联系人">{{ currentClient.contact_name }}</el-descriptions-item>
+        <el-descriptions-item label="联系电话">{{ currentClient.contact_phone }}</el-descriptions-item>
+        <el-descriptions-item label="状态">
+          <el-tag size="small" :type="currentClient.status === 'active' ? 'success' : 'danger'">
+            {{ currentClient.status === 'active' ? '正常' : '已暂停' }}
+          </el-tag>
+        </el-descriptions-item>
       </el-descriptions>
     </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
+import { ElMessage } from 'element-plus'
+import { getClients, getDeclarations, getTenantList } from '../api/tenants'
 
 const activeTab = ref('clients')
 const keyword = ref('')
 const tenantFilter = ref('')
 const showDialog = ref(false)
 const currentClient = ref(null)
+const loading = ref(false)
 
 const clientList = ref([])
 const declarationList = ref([])
+const tenantList = ref([])
 
-function loadData() {
-  let clients = [
-    { id: 1, name: '北京华贸置业有限公司', tenant_name: '盛世文化传媒有限公司', contact: '张总', phone: '138****1001', work_order_count: 12 },
-    { id: 2, name: '广州天河城百货有限公司', tenant_name: '盛世文化传媒有限公司', contact: '李总', phone: '139****2002', work_order_count: 8 },
-    { id: 3, name: '上海申通地铁广告有限公司', tenant_name: '华艺广告制作有限公司', contact: '王总', phone: '137****3003', work_order_count: 15 },
-    { id: 4, name: '深圳市高速公路广告有限公司', tenant_name: '博视标识设计工程公司', contact: '赵总', phone: '136****4004', work_order_count: 6 },
-    { id: 5, name: '杭州西湖风景名胜区管委会', tenant_name: '瑞达展示展览有限公司', contact: '孙总', phone: '135****5005', work_order_count: 3 }
-  ]
+const clientPage = ref(1)
+const clientPageSize = ref(20)
+const clientPagination = reactive({ total: 0 })
 
-  if (tenantFilter.value) clients = clients.filter(c => c.tenant_name === tenantFilter.value)
-  if (keyword.value) {
-    const kw = keyword.value.toLowerCase()
-    clients = clients.filter(c => c.name.toLowerCase().includes(kw))
-  }
-  clientList.value = clients
+const declPage = ref(1)
+const declPageSize = ref(20)
+const declPagination = reactive({ total: 0 })
 
-  let decls = [
-    { id: 1, client_name: '北京华贸置业有限公司', tenant_name: '盛世文化传媒有限公司', work_order_no: 'WO-2026-0001', title: '北京CBD户外LED大屏', current_stage: '设计审核', flow: 2, created_at: '2026-04-10 09:30' },
-    { id: 2, client_name: '上海申通地铁广告有限公司', tenant_name: '华艺广告制作有限公司', work_order_no: 'WO-2026-0002', title: '上海陆家嘴地铁站灯箱广告', current_stage: '现场测量', flow: 2, created_at: '2026-04-09 14:20' },
-    { id: 3, client_name: '广州天河城百货有限公司', tenant_name: '盛世文化传媒有限公司', work_order_no: 'WO-2026-0003', title: '广州天河城商场导视系统', current_stage: '施工阶段', flow: 3, created_at: '2026-04-08 11:00' },
-    { id: 4, client_name: '深圳市高速公路广告有限公司', tenant_name: '博视标识设计工程公司', work_order_no: 'WO-2026-0004', title: '深圳南山区高速广告牌', current_stage: '已完工', flow: 3, created_at: '2026-04-05 16:45' },
-    { id: 5, client_name: '杭州西湖风景名胜区管委会', tenant_name: '瑞达展示展览有限公司', work_order_no: 'WO-2026-0005', title: '杭州西湖景区指示牌改造', current_stage: '方案确认', flow: 1, created_at: '2026-04-07 08:15' },
-    { id: 6, client_name: '北京华贸置业有限公司', tenant_name: '盛世文化传媒有限公司', work_order_no: 'WO-2026-0006', title: '华贸中心电梯海报', current_stage: '待分配', flow: 1, created_at: '2026-04-11 10:30' }
-  ]
-
-  if (tenantFilter.value) decls = decls.filter(d => d.tenant_name === tenantFilter.value)
-  if (keyword.value) {
-    const kw = keyword.value.toLowerCase()
-    decls = decls.filter(d => d.client_name.toLowerCase().includes(kw) || d.title.toLowerCase().includes(kw))
-  }
-  declarationList.value = decls
+const stageLabels = {
+  declaration: '申报',
+  approval: '审批',
+  assignment: '待分配',
+  measurement: '现场测量',
+  design: '设计审核',
+  production: '制作',
+  construction: '施工阶段',
+  finance: '财务',
+  archive: '已完工',
+  aftersale: '售后'
 }
 
 function stageType(s) {
-  const map = { '方案确认': 'warning', '现场测量': '', '设计审核': '', '施工阶段': 'success', '已完工': 'info', '待分配': 'info' }
+  const map = {
+    construction: 'success',
+    archive: 'info',
+    assignment: 'info',
+    declaration: 'warning',
+    design: '',
+    measurement: ''
+  }
   return map[s] || 'info'
 }
 
-function flowStep(f) { return f }
+async function loadTenants() {
+  try {
+    const res = await getTenantList({ limit: 100 })
+    tenantList.value = res.data?.list || res.data || []
+  } catch {
+    tenantList.value = []
+  }
+}
+
+async function loadData() {
+  loading.value = true
+  try {
+    if (activeTab.value === 'clients') {
+      const res = await getClients({
+        keyword: keyword.value || undefined,
+        tenant_id: tenantFilter.value || undefined,
+        page: clientPage.value,
+        limit: clientPageSize.value
+      })
+      const list = res.data?.list || res.data || []
+      clientList.value = list.map(c => ({
+        id: c.id,
+        name: c.name,
+        tenant_name: c.tenant?.name || '',
+        contact_name: c.contact_name,
+        contact_phone: c.contact_phone,
+        status: c.status
+      }))
+      clientPagination.total = res.data?.total || res.pagination?.total || 0
+    } else {
+      const res = await getDeclarations({
+        page: declPage.value,
+        limit: declPageSize.value
+      })
+      const list = res.data?.list || res.data || []
+      declarationList.value = list.map(d => {
+        const wo = d.work_order || {}
+        return {
+          id: d.id,
+          client_name: wo.client?.name || '',
+          tenant_name: wo.tenant?.name || '',
+          work_order_no: wo.work_order_no || '',
+          title: wo.title || '',
+          current_stage: wo.current_stage || '',
+          created_at: d.created_at
+        }
+      })
+      declPagination.total = res.data?.total || res.pagination?.total || 0
+    }
+  } catch (err) {
+    ElMessage.error('加载数据失败')
+  } finally {
+    loading.value = false
+  }
+}
 
 function showClientDetail(row) {
   currentClient.value = row
   showDialog.value = true
 }
 
-onMounted(() => loadData())
+onMounted(async () => {
+  await loadTenants()
+  loadData()
+})
 </script>
 
 <style scoped>
 .page-title { font-size: 20px; font-weight: 600; color: #1a1a1a; margin-bottom: 16px; }
 .filter-bar { display: flex; gap: 12px; margin-bottom: 16px; }
+.pagination-wrap { display: flex; justify-content: flex-end; margin-top: 16px; }
 </style>

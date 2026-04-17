@@ -54,6 +54,9 @@
         <router-link to="/settings" class="menu-item" active-class="active">
           <el-icon><Setting /></el-icon><span>系统配置</span>
         </router-link>
+        <router-link to="/system-settings" class="menu-item" active-class="active">
+          <el-icon><Tools /></el-icon><span>全局设置</span>
+        </router-link>
       </aside>
 
       <main class="main-content">
@@ -72,7 +75,7 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../store/auth'
 import {
-  Bell, DataBoard, OfficeBuilding, Search, User, Setting
+  Bell, DataBoard, OfficeBuilding, Search, User, Setting, Tools
 } from '@element-plus/icons-vue'
 
 const router = useRouter()

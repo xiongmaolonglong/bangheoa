@@ -4,20 +4,20 @@
 
     <div class="stat-grid">
       <el-card shadow="hover" class="stat-card">
-        <div class="stat-value">23</div>
+        <div class="stat-value">{{ dashboard.total_tenants || 0 }}</div>
         <div class="stat-label">租户数</div>
       </el-card>
       <el-card shadow="hover" class="stat-card">
-        <div class="stat-value primary">1,234</div>
+        <div class="stat-value primary">{{ dashboard.total_orders || 0 }}</div>
         <div class="stat-label">工单总量</div>
       </el-card>
       <el-card shadow="hover" class="stat-card">
-        <div class="stat-value warning">456</div>
-        <div class="stat-label">进行中</div>
+        <div class="stat-value warning">{{ dashboard.active_clients || 0 }}</div>
+        <div class="stat-label">活跃甲方</div>
       </el-card>
       <el-card shadow="hover" class="stat-card">
-        <div class="stat-value success">18</div>
-        <div class="stat-label">今日新增</div>
+        <div class="stat-value success">{{ dashboard.active_tenants || 0 }}</div>
+        <div class="stat-label">活跃租户</div>
       </el-card>
     </div>
 
@@ -38,10 +38,12 @@
 
     <el-card class="mt-16">
       <template #header><span>最近活跃的租户</span></template>
-      <el-table :data="activeTenants" stripe>
+      <el-table :data="activeTenants" stripe v-loading="loading">
         <el-table-column prop="name" label="租户名称" min-width="200" />
-        <el-table-column prop="region" label="地区" width="180" />
-        <el-table-column prop="todayOrders" label="今日工单" width="100" align="center" />
+        <el-table-column prop="contact_phone" label="联系电话" width="140" />
+        <el-table-column label="工单数" width="100" align="center">
+          <template #default="{ row }">{{ row.stats?.order_count || 0 }}</template>
+        </el-table-column>
         <el-table-column label="状态" width="100" align="center">
           <template #default="{ row }">
             <el-tag size="small" :type="row.status === 'active' ? 'success' : 'danger'">
@@ -62,61 +64,53 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
 import * as echarts from 'echarts'
+import { getDashboard, getDashboardTrend, getTenantList } from '../api/tenants'
 
 const lineChartRef = ref()
 const barChartRef = ref()
 let lineChart, barChart
 
-const activeTenants = ref([
-  { id: 1, name: '盛世文化传媒有限公司', region: '广东省-深圳市', todayOrders: 8, status: 'active' },
-  { id: 2, name: '华艺广告制作有限公司', region: '广东省-广州市', todayOrders: 5, status: 'active' },
-  { id: 3, name: '博视标识设计工程公司', region: '广东省-东莞市', todayOrders: 3, status: 'active' },
-  { id: 4, name: '瑞达展示展览有限公司', region: '广东省-佛山市', todayOrders: 2, status: 'active' },
-  { id: 5, name: '天合美陈广告有限公司', region: '广东省-珠海市', todayOrders: 1, status: 'active' }
-])
+const loading = ref(true)
+const dashboard = ref({})
+const activeTenants = ref([])
 
-function initCharts() {
-  // Line chart
+function initCharts(trendData, topAdvertisers) {
   lineChart = echarts.init(lineChartRef.value)
-  const days = Array.from({ length: 30 }, (_, i) => {
-    const d = new Date()
-    d.setDate(d.getDate() - 29 + i)
-    return `${d.getMonth() + 1}/${d.getDate()}`
-  })
+  const days = trendData?.map(d => d.date) || []
+  const created = trendData?.map(d => d.created) || []
+  const completed = trendData?.map(d => d.completed) || []
+
   lineChart.setOption({
     tooltip: { trigger: 'axis' },
-    grid: { left: 50, right: 20, top: 20, bottom: 30 },
-    xAxis: { type: 'category', data: days, axisLabel: { fontSize: 11 } },
+    legend: { data: ['新建', '完成'], bottom: 0 },
+    grid: { left: 50, right: 20, top: 20, bottom: 40 },
+    xAxis: { type: 'category', data: days, axisLabel: { fontSize: 11, rotate: 30 } },
     yAxis: { type: 'value' },
-    series: [{
-      type: 'line',
-      data: [12,19,15,22,18,25,20,28,24,30,26,35,32,28,33,40,38,42,36,45,43,50,48,52,47,55,53,58,56,62],
-      smooth: true,
-      areaStyle: {
-        color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-          { offset: 0, color: 'rgba(114,46,209,0.3)' },
-          { offset: 1, color: 'rgba(114,46,209,0.02)' }
-        ])
+    series: [
+      {
+        name: '新建', type: 'line', data: created, smooth: true,
+        areaStyle: { color: 'rgba(114,46,209,0.15)' },
+        lineStyle: { color: '#722ed1' }, itemStyle: { color: '#722ed1' }
       },
-      lineStyle: { color: '#722ed1', width: 2 },
-      itemStyle: { color: '#722ed1' }
-    }]
+      {
+        name: '完成', type: 'line', data: completed, smooth: true,
+        areaStyle: { color: 'rgba(103,194,58,0.15)' },
+        lineStyle: { color: '#67c23a' }, itemStyle: { color: '#67c23a' }
+      }
+    ]
   })
 
-  // Bar chart
   barChart = echarts.init(barChartRef.value)
+  const names = topAdvertisers?.map(t => t.name) || []
+  const counts = topAdvertisers?.map(t => t.order_count) || []
+
   barChart.setOption({
     tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
     grid: { left: 100, right: 30, top: 10, bottom: 30 },
     xAxis: { type: 'value' },
-    yAxis: {
-      type: 'category',
-      data: ['天合美陈', '瑞达展示', '博视标识', '华艺广告', '盛世传媒', '亮点传媒', '创意视觉', '信达广告', '宏远标识', '万通传媒'],
-      axisLabel: { fontSize: 11 }
-    },
+    yAxis: { type: 'category', data: names, axisLabel: { fontSize: 11 } },
     series: [{
-      type: 'bar',
-      data: [31, 54, 73, 96, 128, 87, 65, 52, 48, 41],
+      type: 'bar', data: counts,
       itemStyle: {
         color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [
           { offset: 0, color: '#722ed1' },
@@ -129,8 +123,26 @@ function initCharts() {
   })
 }
 
-onMounted(() => {
-  setTimeout(() => initCharts(), 100)
+onMounted(async () => {
+  try {
+    const [dashRes, trendRes, tenantRes] = await Promise.all([
+      getDashboard(),
+      getDashboardTrend('day'),
+      getTenantList({ limit: 10 })
+    ])
+    dashboard.value = dashRes.data || {}
+    activeTenants.value = (tenantRes.data?.list || tenantRes.data || []).slice(0, 5)
+
+    const trendData = trendRes.data?.trend || []
+    const topAdvertisers = dashRes.data?.top_advertisers || []
+
+    setTimeout(() => initCharts(trendData, topAdvertisers), 100)
+  } catch (err) {
+    console.error('Dashboard load error:', err)
+  } finally {
+    loading.value = false
+  }
+
   window.addEventListener('resize', () => {
     lineChart?.resize()
     barChart?.resize()

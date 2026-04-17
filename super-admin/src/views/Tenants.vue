@@ -1,13 +1,15 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Search } from '@element-plus/icons-vue'
-import { getTenantList, createTenant } from '@/api/tenants'
+import { getTenantList, createTenant, updateTenantStatus } from '@/api/tenants'
+
+const router = useRouter()
 
 // --- Filter & pagination ---
 const filters = reactive({
   status: '',
-  region: '',
   keyword: ''
 })
 
@@ -15,7 +17,7 @@ const loading = ref(false)
 const tableData = ref([])
 const pagination = reactive({
   current: 1,
-  pageSize: 10,
+  pageSize: 20,
   total: 0
 })
 
@@ -25,22 +27,16 @@ const submitting = ref(false)
 const formRef = ref(null)
 const form = reactive({
   name: '',
-  contact: '',
-  phone: '',
+  contact_name: '',
+  contact_phone: '',
   email: '',
-  province: '',
-  city: '',
-  district: '',
-  street: '',
-  maxUsers: 50,
-  workOrderPrefix: '',
-  initialPassword: ''
+  order_code_prefix: ''
 })
 
 const formRules = {
   name: [{ required: true, message: '请输入租户名称', trigger: 'blur' }],
-  contact: [{ required: true, message: '请输入联系人', trigger: 'blur' }],
-  phone: [
+  contact_name: [{ required: true, message: '请输入联系人', trigger: 'blur' }],
+  contact_phone: [
     { required: true, message: '请输入联系电话', trigger: 'blur' },
     { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号', trigger: 'blur' }
   ],
@@ -48,101 +44,36 @@ const formRules = {
     { required: true, message: '请输入邮箱', trigger: 'blur' },
     { type: 'email', message: '请输入正确的邮箱格式', trigger: 'blur' }
   ],
-  province: [{ required: true, message: '请选择省份', trigger: 'change' }],
-  maxUsers: [{ required: true, message: '请输入最大用户数', trigger: 'blur' }],
-  workOrderPrefix: [{ required: true, message: '请输入工单编号前缀', trigger: 'blur' }],
-  initialPassword: [{ required: true, message: '请输入初始密码', trigger: 'blur' }]
+  order_code_prefix: [{ required: true, message: '请输入工单编号前缀', trigger: 'blur' }]
 }
-
-// --- Demo data ---
-const demoData = [
-  {
-    id: 1,
-    name: '盛世文化传媒有限公司',
-    contact: '王建国',
-    phone: '13800138001',
-    region: '广东省-深圳市-南山区',
-    userCount: 45,
-    workOrderCount: 128,
-    status: 'active',
-    createdAt: '2025-06-15'
-  },
-  {
-    id: 2,
-    name: '华艺广告制作有限公司',
-    contact: '李明华',
-    phone: '13900139002',
-    region: '广东省-广州市-天河区',
-    userCount: 32,
-    workOrderCount: 96,
-    status: 'active',
-    createdAt: '2025-08-22'
-  },
-  {
-    id: 3,
-    name: '博视标识设计工程公司',
-    contact: '张晓峰',
-    phone: '13700137003',
-    region: '广东省-东莞市-南城区',
-    userCount: 18,
-    workOrderCount: 54,
-    status: 'active',
-    createdAt: '2025-09-10'
-  },
-  {
-    id: 4,
-    name: '瑞达展示展览有限公司',
-    contact: '陈思远',
-    phone: '13600136004',
-    region: '广东省-佛山市-顺德区',
-    userCount: 27,
-    workOrderCount: 73,
-    status: 'paused',
-    createdAt: '2025-07-03'
-  },
-  {
-    id: 5,
-    name: '天合美陈广告有限公司',
-    contact: '赵雨晴',
-    phone: '13500135005',
-    region: '广东省-珠海市-香洲区',
-    userCount: 12,
-    workOrderCount: 31,
-    status: 'active',
-    createdAt: '2025-11-18'
-  }
-]
 
 // --- Methods ---
 async function fetchData() {
   loading.value = true
   try {
     const res = await getTenantList({
-      ...filters,
+      status: filters.status || undefined,
+      keyword: filters.keyword || undefined,
       page: pagination.current,
-      pageSize: pagination.pageSize
+      limit: pagination.pageSize
     })
-    tableData.value = res.data?.list || res.data || []
-    pagination.total = res.data?.total || tableData.value.length
-  } catch {
-    let data = [...demoData]
-    if (filters.status) {
-      data = data.filter((t) => t.status === filters.status)
-    }
-    if (filters.keyword) {
-      const kw = filters.keyword.toLowerCase()
-      data = data.filter(
-        (t) =>
-          t.name.toLowerCase().includes(kw) ||
-          t.contact.toLowerCase().includes(kw) ||
-          t.phone.includes(kw)
-      )
-    }
-    if (filters.region) {
-      data = data.filter((t) => t.region.includes(filters.region))
-    }
-    tableData.value = data
-    pagination.total = data.length
+    const list = res.data?.list || res.data || []
+    tableData.value = list.map(t => ({
+      id: t.id,
+      name: t.name,
+      contact: t.contact_name,
+      phone: t.contact_phone,
+      email: t.contact_email,
+      region: '',
+      userCount: t.stats?.user_count || 0,
+      workOrderCount: t.stats?.order_count || 0,
+      clientCount: t.stats?.client_count || 0,
+      status: t.status,
+      createdAt: t.created_at
+    }))
+    pagination.total = res.data?.total || res.pagination?.total || 0
+  } catch (err) {
+    ElMessage.error('获取租户列表失败')
   } finally {
     loading.value = false
   }
@@ -155,7 +86,6 @@ function handleSearch() {
 
 function handleReset() {
   filters.status = ''
-  filters.region = ''
   filters.keyword = ''
   handleSearch()
 }
@@ -172,26 +102,24 @@ function handleSizeChange(size) {
 }
 
 function handleView(row) {
-  window.location.hash = `/tenants/${row.id}`
+  router.push(`/tenants/${row.id}`)
 }
 
 async function handlePause(row) {
   const action = row.status === 'active' ? '暂停' : '恢复'
+  const newStatus = row.status === 'active' ? 'suspended' : 'active'
   try {
     await ElMessageBox.confirm(
       `确定要${action}租户「${row.name}」吗？`,
       `确认${action}`,
       { type: 'warning' }
     )
-    row.status = row.status === 'active' ? 'paused' : 'active'
+    await updateTenantStatus(row.id, newStatus)
+    row.status = newStatus
     ElMessage.success(`${action}成功`)
   } catch {
-    // cancelled
+    // cancelled or error
   }
-}
-
-function handleConfig(row) {
-  ElMessage.info(`配置功能开发中：${row.name}`)
 }
 
 async function handleSubmit() {
@@ -201,13 +129,10 @@ async function handleSubmit() {
     submitting.value = true
     const payload = {
       name: form.name,
-      contact: form.contact,
-      phone: form.phone,
+      contact_name: form.contact_name,
+      contact_phone: form.contact_phone,
       email: form.email,
-      region: `${form.province}-${form.city}-${form.district}-${form.street}`,
-      maxUsers: form.maxUsers,
-      workOrderPrefix: form.workOrderPrefix,
-      initialPassword: form.initialPassword
+      order_code_prefix: form.order_code_prefix
     }
     await createTenant(payload)
     ElMessage.success('租户开通成功')
@@ -216,21 +141,7 @@ async function handleSubmit() {
     fetchData()
   } catch (err) {
     if (err !== false) {
-      ElMessage.success('租户开通成功（演示模式）')
-      tableData.value.unshift({
-        id: Date.now(),
-        name: form.name,
-        contact: form.contact,
-        phone: form.phone,
-        region: `${form.province}-${form.city}-${form.district}-${form.street}`,
-        userCount: 0,
-        workOrderCount: 0,
-        status: 'active',
-        createdAt: new Date().toISOString().slice(0, 10)
-      })
-      pagination.total = tableData.value.length
-      dialogVisible.value = false
-      resetForm()
+      ElMessage.error(err.response?.data?.error || '开通失败，请重试')
     }
   } finally {
     submitting.value = false
@@ -239,16 +150,10 @@ async function handleSubmit() {
 
 function resetForm() {
   form.name = ''
-  form.contact = ''
-  form.phone = ''
+  form.contact_name = ''
+  form.contact_phone = ''
   form.email = ''
-  form.province = ''
-  form.city = ''
-  form.district = ''
-  form.street = ''
-  form.maxUsers = 50
-  form.workOrderPrefix = ''
-  form.initialPassword = ''
+  form.order_code_prefix = ''
 }
 
 function handleDialogClose() {
@@ -281,22 +186,7 @@ onMounted(() => {
             style="width: 140px"
           >
             <el-option label="正常" value="active" />
-            <el-option label="已暂停" value="paused" />
-          </el-select>
-        </el-form-item>
-
-        <el-form-item label="地区">
-          <el-select
-            v-model="filters.region"
-            placeholder="全部地区"
-            clearable
-            style="width: 160px"
-          >
-            <el-option label="深圳市" value="深圳市" />
-            <el-option label="广州市" value="广州市" />
-            <el-option label="东莞市" value="东莞市" />
-            <el-option label="佛山市" value="佛山市" />
-            <el-option label="珠海市" value="珠海市" />
+            <el-option label="已暂停" value="suspended" />
           </el-select>
         </el-form-item>
 
@@ -327,9 +217,9 @@ onMounted(() => {
         <el-table-column prop="name" label="租户名称" min-width="200" show-overflow-tooltip />
         <el-table-column prop="contact" label="联系人" width="120" />
         <el-table-column prop="phone" label="电话" width="140" />
-        <el-table-column prop="region" label="地区" min-width="180" show-overflow-tooltip />
         <el-table-column prop="userCount" label="用户数" width="90" align="center" />
         <el-table-column prop="workOrderCount" label="工单数" width="90" align="center" />
+        <el-table-column prop="clientCount" label="甲方数" width="90" align="center" />
         <el-table-column prop="status" label="状态" width="90" align="center">
           <template #default="{ row }">
             <el-tag :type="row.status === 'active' ? 'success' : 'danger'">
@@ -349,9 +239,6 @@ onMounted(() => {
               @click="handlePause(row)"
             >
               {{ row.status === 'active' ? '暂停' : '恢复' }}
-            </el-button>
-            <el-button link type="info" size="small" @click="handleConfig(row)">
-              配置
             </el-button>
           </template>
         </el-table-column>
@@ -390,13 +277,13 @@ onMounted(() => {
 
         <el-row :gutter="16">
           <el-col :span="12">
-            <el-form-item label="联系人" prop="contact">
-              <el-input v-model="form.contact" placeholder="请输入联系人" />
+            <el-form-item label="联系人" prop="contact_name">
+              <el-input v-model="form.contact_name" placeholder="请输入联系人" />
             </el-form-item>
           </el-col>
           <el-col :span="12">
-            <el-form-item label="联系电话" prop="phone">
-              <el-input v-model="form.phone" placeholder="请输入联系电话" />
+            <el-form-item label="联系电话" prop="contact_phone">
+              <el-input v-model="form.contact_phone" placeholder="请输入联系电话" />
             </el-form-item>
           </el-col>
         </el-row>
@@ -405,62 +292,9 @@ onMounted(() => {
           <el-input v-model="form.email" placeholder="请输入邮箱地址" />
         </el-form-item>
 
-        <el-form-item label="负责区域">
-          <el-row :gutter="8">
-            <el-col :span="6">
-              <el-form-item prop="province">
-                <el-select v-model="form.province" placeholder="省" style="width: 100%">
-                  <el-option label="广东省" value="广东省" />
-                </el-select>
-              </el-form-item>
-            </el-col>
-            <el-col :span="6">
-              <el-form-item>
-                <el-select v-model="form.city" placeholder="市" style="width: 100%">
-                  <el-option label="深圳市" value="深圳市" />
-                  <el-option label="广州市" value="广州市" />
-                  <el-option label="东莞市" value="东莞市" />
-                  <el-option label="佛山市" value="佛山市" />
-                  <el-option label="珠海市" value="珠海市" />
-                </el-select>
-              </el-form-item>
-            </el-col>
-            <el-col :span="6">
-              <el-form-item>
-                <el-select v-model="form.district" placeholder="区" style="width: 100%">
-                  <el-option label="南山区" value="南山区" />
-                  <el-option label="天河区" value="天河区" />
-                  <el-option label="南城区" value="南城区" />
-                  <el-option label="顺德区" value="顺德区" />
-                  <el-option label="香洲区" value="香洲区" />
-                </el-select>
-              </el-form-item>
-            </el-col>
-            <el-col :span="6">
-              <el-form-item>
-                <el-input v-model="form.street" placeholder="街道" />
-              </el-form-item>
-            </el-col>
-          </el-row>
+        <el-form-item label="工单前缀" prop="order_code_prefix">
+          <el-input v-model="form.order_code_prefix" placeholder="如: SSWH" style="width: 200px" />
         </el-form-item>
-
-        <el-row :gutter="16">
-          <el-col :span="8">
-            <el-form-item label="最大用户数" prop="maxUsers">
-              <el-input-number v-model="form.maxUsers" :min="1" :max="9999" style="width: 100%" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="8">
-            <el-form-item label="工单前缀" prop="workOrderPrefix">
-              <el-input v-model="form.workOrderPrefix" placeholder="如: SSWH" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="8">
-            <el-form-item label="初始密码" prop="initialPassword">
-              <el-input v-model="form.initialPassword" placeholder="初始登录密码" />
-            </el-form-item>
-          </el-col>
-        </el-row>
       </el-form>
 
       <template #footer>

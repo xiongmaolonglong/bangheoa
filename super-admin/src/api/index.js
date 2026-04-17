@@ -17,7 +17,14 @@ api.interceptors.request.use(config => {
 
 api.interceptors.response.use(
   res => res.data,
-  err => Promise.reject(err)
+  err => {
+    if (err.response?.status === 401) {
+      const auth = useAuthStore()
+      auth.logout()
+      router.push('/login')
+    }
+    return Promise.reject(err)
+  }
 )
 
 export default api
