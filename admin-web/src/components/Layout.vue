@@ -91,9 +91,9 @@
 
         <div class="menu-section">
           <div class="menu-section-title">系统</div>
-          <router-link to="/clients" class="menu-item" active-class="active">
+          <a href="https://localhost:3002" target="_blank" class="menu-item">
             <el-icon><Avatar /></el-icon><span>甲方管理</span>
-          </router-link>
+          </a>
           <router-link to="/organization" class="menu-item" active-class="active">
             <el-icon><OfficeBuilding /></el-icon><span>组织架构</span>
           </router-link>
