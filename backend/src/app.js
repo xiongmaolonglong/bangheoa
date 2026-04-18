@@ -17,7 +17,7 @@ app.use(helmet());
 // CORS 白名单配置
 const corsWhitelist = process.env.CORS_ORIGINS
   ? process.env.CORS_ORIGINS.split(',').map(s => s.trim())
-  : ['http://localhost:5173', 'http://localhost:3002', 'http://127.0.0.1:5173'];
+  : ['http://localhost:5173', 'http://localhost:3002', 'http://127.0.0.1:5173', 'https://bh.fsbhgg.com', 'https://bh.fsbhgg.com:3002', 'https://bh.fsbhgg.com:3003'];
 
 app.use(cors({
   origin: (origin, callback) => {
