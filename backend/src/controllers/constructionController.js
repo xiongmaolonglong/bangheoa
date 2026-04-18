@@ -129,7 +129,7 @@ async function getTask(req, res) {
     return error(res, '工单不存在', 404);
   }
 
-  const constructions = await WoConstruction.findAll({
+  let constructions = await WoConstruction.findAll({
     where: { work_order_id: workOrder.id },
     include: [
       {
@@ -141,6 +141,30 @@ async function getTask(req, res) {
     ],
     order: [['created_at', 'DESC']],
   });
+
+  // 工单在施工阶段但没有施工记录，自动创建一条
+  if (constructions.length === 0 && workOrder.current_stage === 'construction') {
+    const newConstruction = await WoConstruction.create({
+      work_order_id: workOrder.id,
+      constructor_id: workOrder.constructor_id || null,
+      before_photos: [],
+      during_photos: [],
+      after_photos: [],
+      status: 'scheduled',
+    });
+    // 重新查询以包含 constructor 关联
+    constructions = await WoConstruction.findAll({
+      where: { id: newConstruction.id },
+      include: [
+        {
+          model: TenantUser,
+          as: 'constructor',
+          attributes: ['id', 'real_name', 'phone'],
+          required: false,
+        },
+      ],
+    });
+  }
 
   const result = {
     work_order: {
