@@ -283,7 +283,12 @@ async function getTenantDeclarations(req, res) {
 
     const where = { '$work_order.client.tenant_id$': req.user.tenant_id, created_by: { [Sequelize.Op.ne]: null } };
     if (status) where['$work_order.status$'] = status;
-    if (stage) where['$work_order.current_stage$'] = stage;
+    // 如果传了 stage 参数按该阶段筛选，否则默认排除审批中的申报
+    if (stage) {
+      where['$work_order.current_stage$'] = stage;
+    } else {
+      where['$work_order.current_stage$'] = { [Sequelize.Op.notIn]: ['approval'] };
+    }
 
     const { count, rows } = await WoDeclaration.findAndCountAll({
       where,
@@ -610,6 +615,9 @@ async function receiveDeclaration(req, res) {
     }
 
     const wo = declaration.work_order;
+    if (wo.current_stage === 'approval') {
+      return error(res, '该申报尚在审批中，无法接收', 400);
+    }
     if (!['declaration', 'assignment'].includes(wo.current_stage)) {
       return error(res, '工单当前状态不允许接收', 400);
     }

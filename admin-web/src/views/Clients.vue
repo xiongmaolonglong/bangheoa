@@ -30,6 +30,13 @@
     <!-- 甲方企业列表 -->
     <el-table :data="clients" stripe v-loading="loading" class="mb-20">
       <el-table-column prop="name" label="企业名称" min-width="180" />
+      <el-table-column label="审批" width="80">
+        <template #default="{ row }">
+          <el-tag size="small" :type="row.approval_enabled ? 'success' : 'info'">
+            {{ row.approval_enabled ? '需审批' : '无需' }}
+          </el-tag>
+        </template>
+      </el-table-column>
       <el-table-column prop="contact_name" label="联系人" width="100" />
       <el-table-column prop="contact_phone" label="联系电话" width="130" />
       <el-table-column label="登录链接" width="200">
@@ -63,6 +70,10 @@
         </el-form-item>
         <el-form-item label="邮箱">
           <el-input v-model="clientForm.contact_email" placeholder="邮箱地址" />
+        </el-form-item>
+        <el-form-item label="启用审批">
+          <el-switch v-model="clientForm.approval_enabled" active-text="需审批" inactive-text="无需审批" />
+          <div class="form-hint">启用后，甲方申报需内部审批通过才流转到派单环节</div>
         </el-form-item>
       </el-form>
 
@@ -195,7 +206,7 @@ const clients = ref([])
 // 甲方登录地址
 const clientLoginUrl = computed(() => {
   const host = window.location.hostname
-  return `http://${host}:3002`
+  return `https://${host}:3002`
 })
 
 function copyLoginLink(row) {
@@ -247,7 +258,7 @@ async function loadClientOptions() {
 
 const showAddClient = ref(false)
 const editingClient = ref(null)
-const clientForm = reactive({ name: '', contact_name: '', contact_phone: '', contact_email: '' })
+const clientForm = reactive({ name: '', contact_name: '', contact_phone: '', contact_email: '', approval_enabled: false })
 const accountForm = reactive({ name: '', phone: '', password: '' })
 const clientFormRef = ref(null)
 const clientRules = {
@@ -290,7 +301,7 @@ async function loadClients() {
 
 function editClient(row) {
   editingClient.value = row
-  Object.assign(clientForm, { name: row.name, contact_name: row.contact_name || '', contact_phone: row.contact_phone || '', contact_email: row.contact_email || '' })
+  Object.assign(clientForm, { name: row.name, contact_name: row.contact_name || '', contact_phone: row.contact_phone || '', contact_email: row.contact_email || '', approval_enabled: row.approval_enabled || false })
   Object.assign(accountForm, { name: '', phone: '', password: '' })
   // 加载该甲方的现有登录账号
   loadClientAccount(row.id)
@@ -358,7 +369,7 @@ async function saveClient() {
 
 function resetClientForm() {
   editingClient.value = null
-  Object.assign(clientForm, { name: '', contact_name: '', contact_phone: '', contact_email: '' })
+  Object.assign(clientForm, { name: '', contact_name: '', contact_phone: '', contact_email: '', approval_enabled: false })
   Object.assign(accountForm, { name: '', phone: '', password: '' })
 }
 
@@ -483,4 +494,5 @@ onMounted(() => {
 .default-client-desc { font-size: var(--font-size-xs); color: var(--color-text-tertiary); margin-top: var(--space-1); }
 .default-client-controls { display: flex; align-items: center; }
 .login-link-cell { display: flex; align-items: center; gap: 8px; }
+.form-hint { font-size: 12px; color: var(--color-text-tertiary); margin-top: 4px; }
 </style>
