@@ -272,15 +272,34 @@ async function internalVerify(req, res) {
   }
 
   if (verified) {
+    // 更新施工记录状态
     await construction.update({
-      status: 'internally_verified',
+      status: 'accepted',
       internal_verified_at: new Date().toISOString().slice(0, 10),
+      client_verified_at: new Date().toISOString().slice(0, 10),
     });
 
-    await createLog(workOrder.id, req.user, 'internal_verified', 'construction',
-      `内部验收通过${notes ? ': ' + notes : ''}`);
+    // 工单流转到归档环节
+    await workOrder.update({
+      current_stage: 'archive',
+      status: 'archiving',
+    });
 
-    return success(res, construction, '内部验收通过，已推送甲方验收');
+    // 自动创建归档记录
+    const { WoArchive } = require('../models');
+    const existingArchive = await WoArchive.findOne({ where: { work_order_id: workOrder.id } });
+    if (!existingArchive) {
+      await WoArchive.create({
+        work_order_id: workOrder.id,
+        archive_files: [],
+        status: 'pending',
+      });
+    }
+
+    await createLog(workOrder.id, req.user, 'construction_accepted', 'archive',
+      `施工验收通过，流转至归档环节${notes ? ': ' + notes : ''}`);
+
+    return success(res, construction, '施工验收通过，已流转至归档环节');
   } else {
     // 未通过，退回施工
     await construction.update({
