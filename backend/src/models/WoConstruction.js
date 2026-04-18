@@ -4,7 +4,7 @@ const sequelize = require('../config/database');
 module.exports = sequelize.define('WoConstruction', {
   id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
   work_order_id: { type: DataTypes.INTEGER, allowNull: false },
-  constructor_id: { type: DataTypes.INTEGER, allowNull: false },
+  constructor_id: { type: DataTypes.INTEGER, allowNull: true },
   before_photos: { type: DataTypes.JSON },
   during_photos: { type: DataTypes.JSON },
   after_photos: { type: DataTypes.JSON },
