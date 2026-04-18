@@ -186,6 +186,7 @@
 import { ref, reactive, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '../api'
+import clientApi from '../api/clientApi'
 import { logger } from '../utils/logger'
 
 const loading = ref(false)
@@ -214,7 +215,7 @@ const defaultClientEnabled = ref(false)
 
 async function loadDefaultClient() {
   try {
-    const res = await api.get('/clients/default')
+    const res = await clientApi.get('/clients/default')
     if (res.code === 0 && res.data) {
       defaultClientId.value = res.data.default_client_id || null
       defaultClientEnabled.value = !!res.data.default_client_id
@@ -227,7 +228,7 @@ async function loadDefaultClient() {
 async function saveDefaultClient() {
   try {
     const clientId = defaultClientEnabled.value ? defaultClientId.value : null
-    await api.put('/clients/default', { client_id: clientId })
+    await clientApi.put('/clients/default', { client_id: clientId })
     ElMessage.success('默认甲方设置已保存')
   } catch (e) {
     ElMessage.error(e.response?.data?.error || '设置失败')
@@ -237,7 +238,7 @@ async function saveDefaultClient() {
 
 async function loadClientOptions() {
   try {
-    const res = await api.get('/clients')
+    const res = await clientApi.get('/clients')
     const payload = res.data || {}
     clientOptions.value = Array.isArray(payload) ? payload : (payload.list || [])
   } catch (e) {
@@ -278,7 +279,7 @@ const newPassword = ref('')
 async function loadClients() {
   loading.value = true
   try {
-    const res = await api.get('/clients')
+    const res = await clientApi.get('/clients')
     const payload = res.data || {}
     clients.value = Array.isArray(payload) ? payload : (payload.list || [])
   } catch (e) {
@@ -299,7 +300,7 @@ function editClient(row) {
 
 async function loadClientAccount(clientId) {
   try {
-    const res = await api.get(`/clients/${clientId}/users`)
+    const res = await clientApi.get(`/clients/${clientId}/users`)
     const users = res.data || []
     const list = Array.isArray(users) ? users : (users.list || [])
     if (list.length > 0) {
@@ -318,22 +319,22 @@ async function saveClient() {
   saving.value = true
   try {
     if (editingClient.value) {
-      await api.put(`/clients/${editingClient.value.id}`, clientForm)
+      await clientApi.put(`/clients/${editingClient.value.id}`, clientForm)
       // 同步保存登录账号
       if (accountForm.phone || accountForm.password) {
-        const res = await api.get(`/clients/${editingClient.value.id}/users`)
+        const res = await clientApi.get(`/clients/${editingClient.value.id}/users`)
         const users = res.data || []
         const list = Array.isArray(users) ? users : (users.list || [])
         if (list.length > 0) {
           // 更新已有账号
-          await api.put(`/clients/${editingClient.value.id}/users/${list[0].id}`, {
+          await clientApi.put(`/clients/${editingClient.value.id}/users/${list[0].id}`, {
             name: accountForm.name || list[0].name,
             phone: accountForm.phone || list[0].phone,
             ...(accountForm.password ? { password: accountForm.password } : {}),
           })
         } else {
           // 创建新账号
-          await api.post(`/clients/${editingClient.value.id}/users`, {
+          await clientApi.post(`/clients/${editingClient.value.id}/users`, {
             name: accountForm.name || clientForm.contact_name || clientForm.name,
             phone: accountForm.phone,
             password: accountForm.password,
@@ -343,7 +344,7 @@ async function saveClient() {
       }
       ElMessage.success('编辑成功')
     } else {
-      await api.post('/clients', clientForm)
+      await clientApi.post('/clients', clientForm)
       ElMessage.success('创建成功')
     }
     showAddClient.value = false
@@ -365,7 +366,7 @@ function resetClientForm() {
 async function deleteClient(row) {
   try {
     await ElMessageBox.confirm(`确定删除甲方企业「${row.name}」吗？`, '提示', { type: 'warning' })
-    await api.delete(`/clients/${row.id}`)
+    await clientApi.delete(`/clients/${row.id}`)
     ElMessage.success('已删除')
     loadClients()
   } catch {
@@ -378,8 +379,8 @@ async function openDepartments(row) {
   showDeptDialog.value = true
   try {
     const [deptRes, userRes] = await Promise.all([
-      api.get(`/clients/${row.id}/departments`),
-      api.get(`/clients/${row.id}/users`)
+      clientApi.get(`/clients/${row.id}/departments`),
+      clientApi.get(`/clients/${row.id}/users`)
     ])
     const dp = deptRes.data || {}
     depts.value = Array.isArray(dp) ? dp : (dp.list || [])
@@ -397,7 +398,7 @@ function getUsersForDept(dept) {
 async function createDept() {
   if (!newDeptName.value) return ElMessage.warning('部门名称不能为空')
   try {
-    await api.post(`/clients/${selectedClient.value.id}/departments`, { name: newDeptName.value })
+    await clientApi.post(`/clients/${selectedClient.value.id}/departments`, { name: newDeptName.value })
     ElMessage.success('部门已创建')
     showAddDept.value = false
     newDeptName.value = ''
@@ -410,7 +411,7 @@ async function createDept() {
 async function deleteDept(dept) {
   try {
     await ElMessageBox.confirm(`确定删除部门「${dept.name}」吗？`, '提示', { type: 'warning' })
-    await api.delete(`/clients/${selectedClient.value.id}/departments/${dept.id}`)
+    await clientApi.delete(`/clients/${selectedClient.value.id}/departments/${dept.id}`)
     ElMessage.success('已删除')
     openDepartments(selectedClient.value)
   } catch (e) {
@@ -422,7 +423,7 @@ async function createUser() {
   const valid = await userFormRef.value.validate().catch(() => false)
   if (!valid) return
   try {
-    await api.post(`/clients/${selectedClient.value.id}/users`, { ...userForm })
+    await clientApi.post(`/clients/${selectedClient.value.id}/users`, { ...userForm })
     ElMessage.success('人员已添加')
     showAddUser.value = false
     Object.assign(userForm, { name: '', phone: '', password: '', email: '', role: 'staff' })
@@ -435,7 +436,7 @@ async function createUser() {
 async function deleteUser(row) {
   try {
     await ElMessageBox.confirm(`确定删除人员「${row.name}」吗？`, '提示', { type: 'warning' })
-    await api.delete(`/clients/${selectedClient.value.id}/users/${row.id}`)
+    await clientApi.delete(`/clients/${selectedClient.value.id}/users/${row.id}`)
     ElMessage.success('已删除')
     openDepartments(selectedClient.value)
   } catch (e) {
@@ -452,7 +453,7 @@ function resetUserPassword(row) {
 async function submitResetPassword() {
   if (!newPassword.value) return ElMessage.warning('密码不能为空')
   try {
-    await api.put(`/clients/${selectedClient.value.id}/users/${resetTarget.value.id}`, { password: newPassword.value })
+    await clientApi.put(`/clients/${selectedClient.value.id}/users/${resetTarget.value.id}`, { password: newPassword.value })
     ElMessage.success(`「${resetTarget.value.name}」的密码已重置为「${newPassword.value}」`)
     showResetPwd.value = false
   } catch (e) {
