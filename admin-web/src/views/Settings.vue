@@ -130,99 +130,103 @@
 
             <!-- 广告类型列表 -->
             <div v-for="(adType, aIdx) in tmpl.ad_types" :key="adType.key || aIdx" class="ad-type-card">
-              <div class="ad-type-header">
+              <div class="ad-type-header" @click="toggleAdTypeExpand(tmpl.id, adType.key)">
                 <div class="ad-type-title-row">
-                  <el-input v-model="adType.label" size="small" style="width: 180px" placeholder="广告类型名称" />
+                  <el-icon class="expand-icon" :class="{ 'is-expanded': isAdTypeExpanded(tmpl.id, adType.key) }"><ArrowRight /></el-icon>
+                  <el-input v-model="adType.label" size="small" style="width: 180px" placeholder="广告类型名称" @click.stop />
                   <span class="ad-type-key-label">key: {{ adType.key }}</span>
+                  <el-tag size="small" type="info" class="field-count">{{ adType.face_fields?.length || 0 }} 个字段</el-tag>
                 </div>
-                <div>
-                  <el-button size="small" type="primary" plain @click="addFaceFieldToAdType(tmpl, aIdx)">+ 添加面字段</el-button>
-                  <el-button size="small" type="danger" plain @click="removeAdTypeFromTemplate(tmpl, aIdx)">删除</el-button>
+                <div class="ad-type-actions">
+                  <el-button size="small" type="primary" link @click.stop="addFaceFieldToAdType(tmpl, aIdx)">+字段</el-button>
+                  <el-button size="small" type="danger" link @click.stop="removeAdTypeFromTemplate(tmpl, aIdx)">删除</el-button>
                 </div>
               </div>
 
               <!-- 面字段列表 -->
-              <el-table :data="adType.face_fields" border size="small" class="face-field-table">
-                <el-table-column label="排序" width="80" align="center">
-                  <template #default="{ $index: fIdx }">
-                    <el-button size="small" :disabled="fIdx === 0" @click="moveFaceField(tmpl, adType, fIdx, -1)" link>↑</el-button>
-                    <el-button size="small" :disabled="fIdx === adType.face_fields.length - 1" @click="moveFaceField(tmpl, adType, fIdx, 1)" link>↓</el-button>
-                  </template>
-                </el-table-column>
-
-                <el-table-column label="字段标签" width="160">
-                  <template #default="{ row }">
-                    <el-input v-model="row.field_label" size="small" placeholder="如：长(m)" />
-                  </template>
-                </el-table-column>
-
-                <el-table-column label="类型" width="130">
-                  <template #default="{ row }">
-                    <el-select v-model="row.field_type" size="small">
-                      <el-option label="数字" value="number" />
-                      <el-option label="文本" value="text" />
-                      <el-option label="多行文本" value="textarea" />
-                      <el-option label="下拉选择" value="select" />
-                      <el-option label="图片上传" value="image" />
-                      <el-option label="日期" value="date" />
-                    </el-select>
-                  </template>
-                </el-table-column>
-
-                <el-table-column label="单位" width="110" align="center">
-                  <template #default="{ row }">
-                    <el-select v-if="row.field_type === 'number'" v-model="row.field_unit" size="small" placeholder="选单位" clearable>
-                      <el-option label="米" value="m" />
-                      <el-option label="厘米" value="cm" />
-                      <el-option label="毫米" value="mm" />
-                    </el-select>
-                    <span v-else class="text-muted">-</span>
-                  </template>
-                </el-table-column>
-
-                <el-table-column label="字段角色" width="120" align="center">
-                  <template #default="{ row }">
-                    <el-select v-model="row.field_role" size="small" placeholder="选角色" clearable>
-                      <el-option label="宽度" value="width" />
-                      <el-option label="高度" value="height" />
-                      <el-option label="面标签" value="label" />
-                      <el-option label="额外字段" value="extra" />
-                    </el-select>
-                  </template>
-                </el-table-column>
-
-                <el-table-column label="必填" width="70" align="center">
-                  <template #default="{ row }">
-                    <el-switch v-model="row.required" size="small" />
-                  </template>
-                </el-table-column>
-
-                <el-table-column label="占位提示" min-width="160">
-                  <template #default="{ row }">
-                    <el-input v-model="row.placeholder" size="small" placeholder="可选" />
-                  </template>
-                </el-table-column>
-
-                <el-table-column label="下拉选项" min-width="200">
-                  <template #default="{ row }">
-                    <template v-if="row.field_type === 'select'">
-                      <div class="option-tags">
-                        <el-tag v-for="(opt, oIdx) in (row.options || [])" :key="oIdx" closable @close="row.options.splice(oIdx, 1)"
-                          size="small" style="margin: 2px 4px 2px 0">{{ opt.label }}</el-tag>
-                        <el-input v-model="row._optInput" size="small" placeholder="回车添加" style="width: 90px; display: inline-block;"
-                          @keyup.enter="addFaceFieldOption(row)" @blur="addFaceFieldOption(row)" />
-                      </div>
+              <div v-show="isAdTypeExpanded(tmpl.id, adType.key)" class="ad-type-content">
+                <el-table :data="adType.face_fields" border size="small" class="face-field-table">
+                  <el-table-column label="排序" width="70" align="center">
+                    <template #default="{ $index: fIdx }">
+                      <el-button size="small" :disabled="fIdx === 0" @click="moveFaceField(tmpl, adType, fIdx, -1)" link>↑</el-button>
+                      <el-button size="small" :disabled="fIdx === adType.face_fields.length - 1" @click="moveFaceField(tmpl, adType, fIdx, 1)" link>↓</el-button>
                     </template>
-                    <span v-else class="text-muted">-</span>
-                  </template>
-                </el-table-column>
+                  </el-table-column>
 
-                <el-table-column label="操作" width="70" align="center">
-                  <template #default="{ $index: fIdx }">
-                    <el-button size="small" type="danger" link @click="removeFaceField(tmpl, adType, fIdx)">删除</el-button>
-                  </template>
-                </el-table-column>
-              </el-table>
+                  <el-table-column label="字段名" width="130">
+                    <template #default="{ row }">
+                      <el-input v-model="row.field_label" size="small" placeholder="如：长(m)" />
+                    </template>
+                  </el-table-column>
+
+                  <el-table-column label="类型" width="100">
+                    <template #default="{ row }">
+                      <el-select v-model="row.field_type" size="small">
+                        <el-option label="数字" value="number" />
+                        <el-option label="文本" value="text" />
+                        <el-option label="多行" value="textarea" />
+                        <el-option label="下拉" value="select" />
+                        <el-option label="图片" value="image" />
+                        <el-option label="日期" value="date" />
+                      </el-select>
+                    </template>
+                  </el-table-column>
+
+                  <el-table-column label="单位" width="80" align="center">
+                    <template #default="{ row }">
+                      <el-select v-if="row.field_type === 'number'" v-model="row.field_unit" size="small" clearable>
+                        <el-option label="m" value="m" />
+                        <el-option label="cm" value="cm" />
+                        <el-option label="mm" value="mm" />
+                      </el-select>
+                      <span v-else class="text-muted">-</span>
+                    </template>
+                  </el-table-column>
+
+                  <el-table-column label="角色" width="90" align="center">
+                    <template #default="{ row }">
+                      <el-select v-model="row.field_role" size="small" clearable>
+                        <el-option label="宽" value="width" />
+                        <el-option label="高" value="height" />
+                        <el-option label="面" value="label" />
+                        <el-option label="其他" value="extra" />
+                      </el-select>
+                    </template>
+                  </el-table-column>
+
+                  <el-table-column label="必" width="50" align="center">
+                    <template #default="{ row }">
+                      <el-switch v-model="row.required" size="small" />
+                    </template>
+                  </el-table-column>
+
+                  <el-table-column label="占位提示" min-width="120">
+                    <template #default="{ row }">
+                      <el-input v-model="row.placeholder" size="small" placeholder="可选" />
+                    </template>
+                  </el-table-column>
+
+                  <el-table-column label="下拉选项" min-width="140">
+                    <template #default="{ row }">
+                      <template v-if="row.field_type === 'select'">
+                        <div class="option-tags compact">
+                          <el-tag v-for="(opt, oIdx) in (row.options || [])" :key="oIdx" closable @close="row.options.splice(oIdx, 1)"
+                            size="small">{{ opt.label }}</el-tag>
+                          <el-input v-model="row._optInput" size="small" placeholder="+回车" style="width: 60px;"
+                            @keyup.enter="addFaceFieldOption(row)" @blur="addFaceFieldOption(row)" />
+                        </div>
+                      </template>
+                      <span v-else class="text-muted">-</span>
+                    </template>
+                  </el-table-column>
+
+                  <el-table-column label="操作" width="60" align="center">
+                    <template #default="{ $index: fIdx }">
+                      <el-button size="small" type="danger" link @click="removeFaceField(tmpl, adType, fIdx)">删</el-button>
+                    </template>
+                  </el-table-column>
+                </el-table>
+              </div>
             </div>
           </div>
 
@@ -535,6 +539,7 @@
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { ArrowRight } from '@element-plus/icons-vue'
 import api from '../api'
 import { logger } from '../utils/logger'
 
@@ -780,6 +785,22 @@ function onSubfieldTypeChange(row) {
 // ==================== 项目模板 ====================
 const projectTemplates = ref([])
 const templateSaving = ref(false)
+
+// 广告类型展开状态管理
+const expandedAdTypes = ref(new Set())
+
+function isAdTypeExpanded(tmplId, adTypeKey) {
+  return expandedAdTypes.value.has(`${tmplId}_${adTypeKey}`)
+}
+
+function toggleAdTypeExpand(tmplId, adTypeKey) {
+  const key = `${tmplId}_${adTypeKey}`
+  if (expandedAdTypes.value.has(key)) {
+    expandedAdTypes.value.delete(key)
+  } else {
+    expandedAdTypes.value.add(key)
+  }
+}
 
 const defaultTemplates = [
   {
@@ -1106,10 +1127,20 @@ onMounted(() => {
 .tmpl-index { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 50%; background: var(--color-primary); color: #fff; font-size: 12px; font-weight: 600; flex-shrink: 0; }
 .tmpl-id-label { font-size: 12px; color: var(--color-text-placeholder); }
 
-.ad-type-card { margin-bottom: 12px; border: 1px solid #e0e0e0; border-radius: 6px; padding: 12px; background: #fff; }
-.ad-type-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-.ad-type-title-row { display: flex; align-items: center; gap: var(--space-2); }
+.ad-type-card { margin-bottom: 8px; border: 1px solid #e0e0e0; border-radius: 6px; background: #fff; overflow: hidden; }
+.ad-type-header { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; cursor: pointer; transition: background-color 0.2s; }
+.ad-type-header:hover { background: #f5f7fa; }
+.ad-type-title-row { display: flex; align-items: center; gap: var(--space-2); flex: 1; }
 .ad-type-key-label { font-size: 12px; color: var(--color-text-placeholder); }
+.ad-type-actions { display: flex; align-items: center; gap: 4px; opacity: 0; transition: opacity 0.2s; }
+.ad-type-card:hover .ad-type-actions { opacity: 1; }
+.ad-type-content { padding: 0 12px 12px; border-top: 1px solid #f0f0f0; }
 
-.face-field-table { margin-bottom: 8px; }
+.expand-icon { font-size: 12px; color: var(--color-text-tertiary); transition: transform 0.2s; }
+.expand-icon.is-expanded { transform: rotate(90deg); }
+.field-count { margin-left: 8px; font-size: 11px; }
+
+.face-field-table { margin-top: 10px; }
+.option-tags.compact { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+.option-tags.compact .el-tag { margin: 0; padding: 0 4px; height: 22px; line-height: 20px; font-size: 11px; }
 </style>

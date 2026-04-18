@@ -38,9 +38,8 @@
               <span v-else class="text-muted">未指派</span>
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="200">
+          <el-table-column label="操作" width="120">
             <template #default="{ row }">
-              <el-button v-if="!row.designer_id" type="warning" size="small" @click.stop="openAssignDialog(row)">指派</el-button>
               <el-button type="primary" size="small" @click.stop="goDesign(row)">上传设计</el-button>
             </template>
           </el-table-column>
@@ -117,30 +116,6 @@
         </div>
       </div>
     </el-drawer>
-
-    <!-- 指派设计师对话框 -->
-    <el-dialog v-model="showAssignDialog" title="指派设计师" width="420px">
-      <el-descriptions :column="1" border class="mb-16">
-        <el-descriptions-item label="工单号">{{ assigningWO?.work_order_no }}</el-descriptions-item>
-        <el-descriptions-item label="店铺名字">{{ assigningWO?.title }}</el-descriptions-item>
-      </el-descriptions>
-      <el-form>
-        <el-form-item label="选择设计师" required>
-          <el-select v-model="selectedDesignerId" placeholder="请选择设计师" style="width: 100%">
-            <el-option
-              v-for="d in designers"
-              :key="d.id"
-              :label="d.name"
-              :value="d.id"
-            />
-          </el-select>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="showAssignDialog = false">取消</el-button>
-        <el-button type="primary" @click="confirmAssign" :loading="submitting">确认指派</el-button>
-      </template>
-    </el-dialog>
   </div>
 </template>
 
@@ -249,39 +224,6 @@ async function fetchData() {
 
 function goDesign(row) {
   router.push(`/designs/${row.id}`)
-}
-
-// 指派设计师
-const showAssignDialog = ref(false)
-const assigningWO = ref(null)
-const selectedDesignerId = ref(null)
-const designers = ref([])
-
-async function openAssignDialog(row) {
-  assigningWO.value = row
-  selectedDesignerId.value = null
-  try {
-    const res = await api.get('/designs/designers')
-    designers.value = res.data || []
-  } catch {
-    designers.value = []
-  }
-  showAssignDialog.value = true
-}
-
-async function confirmAssign() {
-  if (!selectedDesignerId.value) return ElMessage.warning('请选择设计师')
-  submitting.value = true
-  try {
-    await api.post(`/designs/${assigningWO.value.id}/assign`, { designer_id: selectedDesignerId.value })
-    ElMessage.success('指派成功')
-    showAssignDialog.value = false
-    await fetchData()
-  } catch (e) {
-    ElMessage.error(e.response?.data?.error || '指派失败')
-  } finally {
-    submitting.value = false
-  }
 }
 
 onMounted(() => {

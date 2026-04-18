@@ -58,6 +58,10 @@
                     <span class="face-name">{{ face.label }}</span>
                     <span class="face-dim">{{ Number(face.width||0).toFixed(2) }}×{{ Number(face.height||0).toFixed(2) }}</span>
                     <span class="face-area">{{ face.area.toFixed(2) }}m²</span>
+                    <!-- 显示额外字段 -->
+                    <span v-for="ef in getFaceExtraFields(face)" :key="ef.key" class="face-extra">
+                      {{ ef.value }}{{ ef.label }}
+                    </span>
                     <div v-if="face.photos?.length" class="face-photos">
                       <el-image v-for="(url, pi) in face.photos.slice(0, 3)" :key="pi"
                         :src="url" :preview-src-list="face.photos" fit="cover" class="face-photo-thumb" />
@@ -137,8 +141,8 @@
                     <el-image v-for="(url, di) in getGroupDesignImages(mat.type, gi)" :key="di"
                       :src="url" :preview-src-list="getGroupDesignImages(mat.type, gi)" fit="cover" class="design-img" />
                   </div>
-                  <!-- 上传区 -->
-                  <div class="card-upload">
+                  <!-- 上传区（驳回状态或待设计时显示） -->
+                  <div v-if="!isDesignLocked" class="card-upload">
                     <FileUpload v-model="designForm.unified_images[mat.type + '_' + gi]" :limit="3" />
                   </div>
                   <div class="card-check" :class="{ 'checked': isGroupUploaded(mat.type, gi) || getGroupDesignImages(mat.type, gi).length }">
@@ -172,8 +176,8 @@
                       <el-image v-for="(url, di) in getFaceDesignImages(face.label)" :key="di"
                         :src="url" :preview-src-list="getFaceDesignImages(face.label)" fit="cover" class="design-img" />
                     </div>
-                    <!-- 上传区 -->
-                    <div class="card-upload">
+                    <!-- 上传区（驳回状态或待设计时显示） -->
+                    <div v-if="!isDesignLocked" class="card-upload">
                       <FileUpload v-model="designForm.face_images[face.label]" :limit="3" :key="'face-' + face.label" />
                     </div>
                     <div class="card-check" :class="{ 'checked': isFaceUploaded(face.label) || getFaceDesignImages(face.label).length }">
@@ -201,27 +205,46 @@
             <!-- 源文件 -->
             <div class="sidebar-section">
               <div class="section-label">源文件（可选）</div>
-              <FileUpload v-model="designForm.source_files" :limit="5" accept=".psd,.ai,.cdr,.sketch,.fig,.pdf" list-type="text" />
+              <!-- 已保存的源文件 -->
+              <div v-if="savedSourceFiles.length" class="saved-files">
+                <div v-for="(file, idx) in savedSourceFiles" :key="idx" class="saved-file-item">
+                  <el-icon><Document /></el-icon>
+                  <span class="file-name">{{ getFileName(file) }}</span>
+                </div>
+              </div>
+              <!-- 上传组件（锁定状态时隐藏） -->
+              <FileUpload
+                v-if="!isDesignLocked"
+                v-model="designForm.source_files"
+                :limit="5"
+                accept=".psd,.ai,.cdr,.sketch,.fig,.pdf"
+                list-type="text"
+              />
             </div>
 
             <!-- 设计说明 -->
             <div class="sidebar-section">
               <div class="section-label">设计说明</div>
-              <el-input v-model="designForm.notes" type="textarea" :rows="3" placeholder="输入设计说明或备注..." />
+              <div v-if="data.design?.internal_notes && isDesignLocked" class="saved-notes">{{ data.design.internal_notes }}</div>
+              <el-input v-else v-model="designForm.notes" type="textarea" :rows="3" placeholder="输入设计说明或备注..." />
             </div>
 
-            <!-- 提交按钮 -->
+            <!-- 提交按钮（锁定状态隐藏） -->
             <el-button
+              v-if="!isDesignLocked"
               type="primary"
               class="submit-btn"
               @click="submitDesign"
               :loading="submitting"
-              :disabled="data.design?.status === 'reviewing' || data.design?.status === 'approved' || data.design?.status === 'confirmed'">
+              :disabled="!isAllUploaded || !hasSourceFiles">
               提交设计稿
             </el-button>
+            <div v-if="(!isAllUploaded || !hasSourceFiles) && !isDesignLocked" class="upload-warning">
+              {{ !isAllUploaded ? '请先上传所有面的效果图' : '请先上传源文件' }}再提交
+            </div>
 
-            <!-- 上传进度 -->
-            <div class="progress-section">
+            <!-- 上传进度（锁定状态隐藏） -->
+            <div v-if="!isDesignLocked" class="progress-section">
               <span class="progress-label">上传进度</span>
               <div class="progress-bar-wrapper">
                 <div class="progress-bar">
@@ -231,13 +254,13 @@
               <span class="progress-text">已上传 {{ uploadedCount }}/{{ totalFaceCount }} 面</span>
             </div>
 
-            <!-- 审核操作 -->
+            <!-- 审核状态提示 -->
             <template v-if="data.design?.status === 'reviewing'">
               <el-divider />
-              <div class="review-actions">
-                <el-button type="success" @click="handleReview('approve')" :loading="submitting">审核通过</el-button>
-                <el-button type="danger" @click="showRejectDialog = true">驳回</el-button>
-              </div>
+              <el-alert type="info" :closable="false" show-icon style="margin-bottom: 12px;">
+                设计稿审核中，请等待管理员审核
+              </el-alert>
+              <el-button type="warning" @click="handleWithdraw" :loading="submitting" style="width: 100%;">撤回修改</el-button>
             </template>
 
             <template v-if="data.design?.status === 'approved'">
@@ -312,7 +335,7 @@
 import { ref, reactive, computed, onMounted, watch, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { ArrowLeft, Box, Picture, Check, User, CopyDocument, WarningFilled } from '@element-plus/icons-vue'
+import { ArrowLeft, Box, Picture, Check, User, CopyDocument, WarningFilled, Document } from '@element-plus/icons-vue'
 import api from '../api'
 import FileUpload from '../components/FileUpload.vue'
 
@@ -407,6 +430,29 @@ const uploadedCount = computed(() => {
 const uploadProgress = computed(() => {
   if (totalFaceCount.value === 0) return 0
   return (uploadedCount.value / totalFaceCount.value) * 100
+})
+
+// 是否所有面都已上传
+const isAllUploaded = computed(() => {
+  return totalFaceCount.value > 0 && uploadedCount.value >= totalFaceCount.value
+})
+
+// 是否已上传源文件
+const hasSourceFiles = computed(() => {
+  return designForm.source_files?.length > 0 || savedSourceFiles.value.length > 0
+})
+
+// 已保存的源文件（从数据库读取的）
+const savedSourceFiles = computed(() => {
+  if (!data.design?.source_files) return []
+  const files = Array.isArray(data.design.source_files) ? data.design.source_files : []
+  return files.map(getFullUrl).filter(Boolean)
+})
+
+// 设计稿是否锁定（不可编辑）
+const isDesignLocked = computed(() => {
+  const status = data.design?.status
+  return status === 'reviewing' || status === 'approved' || status === 'confirmed'
 })
 
 // 预定义颜色类名数组
@@ -534,8 +580,9 @@ const BUILTIN_LABELS = {
 // 表单字段标签映射（从表单配置 API 获取）
 const fieldLabels = reactive({})
 const fieldTypes = reactive({})
+const qtyFieldKeys = reactive(new Set()) // 动态收集的张数字段 key
 
-// 加载表单配置（独立调用，失败不影响页面）
+// 加载表单配置和项目模板（独立调用，失败不影响页面）
 async function loadFormConfig() {
   try {
     const res = await api.get('/tenant/form-config/work_order_create')
@@ -544,11 +591,50 @@ async function loadFormConfig() {
       for (const f of list) {
         fieldLabels[f.field_key] = f.field_label
         fieldTypes[f.field_key] = f.field_type
+        // 识别张数字段：label 包含"张"或"数量"
+        if (f.field_label && (f.field_label.includes('张') || f.field_label.includes('数量'))) {
+          qtyFieldKeys.add(f.field_key)
+        }
         if (f.subform_template?.children) walkFields(f.subform_template.children)
       }
     }
     walkFields(fields)
   } catch { /* 静默，使用原始字段名 */ }
+
+  // 同时加载项目模板配置（测量表单字段标签）
+  try {
+    const res = await api.get('/tenant/settings/project-templates')
+    const templates = res.data?.templates || []
+    for (const tmpl of templates) {
+      for (const adType of (tmpl.ad_types || [])) {
+        // 遍历分组和面的字段
+        for (const group of (adType.groups || [])) {
+          for (const face of (group.faces || [])) {
+            for (const f of (face.fields || [])) {
+              if (f.field_key) {
+                fieldLabels[f.field_key] = f.field_label
+                fieldTypes[f.field_key] = f.field_type
+                // 识别张数字段
+                if (f.field_label && (f.field_label.includes('张') || f.field_label.includes('数量'))) {
+                  qtyFieldKeys.add(f.field_key)
+                }
+              }
+            }
+          }
+        }
+        // 兼容旧格式的 face_fields
+        for (const f of (adType.face_fields || [])) {
+          if (f.field_key) {
+            fieldLabels[f.field_key] = f.field_label
+            fieldTypes[f.field_key] = f.field_type
+            if (f.field_label && (f.field_label.includes('张') || f.field_label.includes('数量'))) {
+              qtyFieldKeys.add(f.field_key)
+            }
+          }
+        }
+      }
+    }
+  } catch { /* 静默 */ }
 }
 
 const supplementInfo = computed(() => {
@@ -850,6 +936,8 @@ const groupedMaterials = computed(() => {
           area,
           photos: (face.photos || []).map(getFullUrl).filter(Boolean),
           notes: face.notes || '',
+          // 保留所有额外字段（张数、单价等）
+          ...face,
         })
         map[type].totalArea += area
       }
@@ -880,10 +968,58 @@ function buildGroupInfo(mat, group) {
   // 一体广告：显示总宽×总高
   const totalW = group.faces.reduce((s, f) => s + (f.width || 0), 0)
   const totalH = group.faces.reduce((s, f) => s + (f.height || 0), 0)
-  const sizeInfo = `${totalW.toFixed(2)}×${totalH.toFixed(2)}`
+  let sizeInfo = `${totalW.toFixed(2)}×${totalH.toFixed(2)}`
+
+  // 查找张数
+  for (const face of group.faces) {
+    const qty = findQtyValue(face)
+    if (qty && Number(qty) > 0) {
+      sizeInfo += `-${qty}张`
+      break
+    }
+  }
 
   return `${woNo} · ${shopName} · ${brand} · ${matName} · ${sizeInfo}`
 }
+
+// 查找张数字段值（使用动态识别的张数字段）
+function findQtyValue(face) {
+  // 静态兜底字段
+  const staticQtyKeys = ['quantity', 'qty', '张', '张数', '数量', 'field_6']
+  // 合并动态识别的字段
+  const allQtyKeys = [...staticQtyKeys, ...qtyFieldKeys]
+  for (const key of allQtyKeys) {
+    const val = face[key]
+    const num = Number(val)
+    if (!isNaN(num) && num > 0 && Number.isFinite(num)) {
+      return val
+    }
+  }
+  return null
+}
+
+  // 获取面的额外字段（只显示有实际意义的字段）
+  function getFaceExtraFields(face) {
+    const standardKeys = ['label', 'width', 'height', 'area', 'photos', 'notes', 'group_name', 'is_unified', 'special_flag', '_widthM', '_heightM', 'id', 'created_at', 'updated_at', 'unit', 'direction', 'face_name', 'template_id']
+    const defaultLabels = {
+      quantity: '张',
+      qty: '张',
+      张: '张',
+      张数: '张',
+      数量: '张',
+    }
+    const result = []
+    for (const [key, val] of Object.entries(face)) {
+      if (standardKeys.includes(key)) continue
+      if (key.endsWith('_meter')) continue
+      if (val === null || val === undefined || val === '') continue
+      // field_ 开头的字段：有配置标签则显示，没有则隐藏
+      if (key.startsWith('field_') && !fieldLabels[key]) continue
+      const label = defaultLabels[key] || fieldLabels[key] || key
+      result.push({ key, label, value: val })
+    }
+    return result
+  }
 
 // 构建单个独立面的信息条文本
 function buildFaceInfo(mat, face) {
@@ -891,7 +1027,13 @@ function buildFaceInfo(mat, face) {
   const shopName = data.work_order?.title || ''
   const brand = data.declaration?.project_type || ''
   const matName = materialTypeLabel(mat.type)
-  const sizeInfo = `${face.label}:${Number(face.width||0).toFixed(2)}×${Number(face.height||0).toFixed(2)}`
+  let sizeInfo = `${face.label}:${Number(face.width||0).toFixed(2)}×${Number(face.height||0).toFixed(2)}`
+
+  // 添加张数
+  const qty = findQtyValue(face)
+  if (qty && Number(qty) > 0) {
+    sizeInfo += `-${qty}张`
+  }
 
   return `${woNo} · ${shopName} · ${brand} · ${matName} · ${sizeInfo}`
 }
@@ -1449,6 +1591,29 @@ async function submitDesignReview() {
   }
 }
 
+// 撤回设计稿
+async function handleWithdraw() {
+  try {
+    await ElMessageBox.confirm('撤回后可以重新修改设计稿再提交，是否撤回？', '撤回确认', {
+      type: 'warning',
+      confirmButtonText: '确认撤回',
+      cancelButtonText: '取消',
+    })
+  } catch {
+    return
+  }
+  submitting.value = true
+  try {
+    await api.post(`/designs/${workOrderId}/withdraw`)
+    ElMessage.success('已撤回，可重新修改')
+    await fetchData()
+  } catch (e) {
+    ElMessage.error(e.response?.data?.error || '撤回失败')
+  } finally {
+    submitting.value = false
+  }
+}
+
 // 审核
 const showRejectDialog = ref(false)
 const rejectReason = ref('')
@@ -1587,7 +1752,7 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   height: 100%;
-  background: #f3f4f6;
+  background: var(--color-bg-page);
 }
 
 /* 顶栏 */
@@ -1595,10 +1760,10 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 24px;
+  padding: 0 var(--space-6);
   height: 56px;
-  background: #fff;
-  border-bottom: 1px solid #e5e7eb;
+  background: var(--color-bg-card);
+  border-bottom: 1px solid var(--color-border-light);
 }
 
 .header-left {
@@ -1614,64 +1779,64 @@ onMounted(() => {
 }
 
 .wo-badge {
-  background: #2563eb;
-  color: #fff;
-  padding: 4px 10px;
-  border-radius: 6px;
-  font-size: 13px;
+  background: var(--color-primary);
+  color: var(--color-bg-card);
+  padding: var(--space-1) 10px;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
 }
 
 .page-title {
   font-size: 17px;
-  font-weight: 700;
-  color: #111827;
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
   margin: 0;
 }
 
 .unified-tag {
   display: flex;
   align-items: center;
-  gap: 6px;
-  background: #8b5cf6;
-  border-color: #8b5cf6;
-  padding: 4px 10px;
+  gap: var(--space-2);
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  padding: var(--space-1) 10px;
   border-radius: 12px;
 }
 
 .status-tag {
-  font-size: 12px;
-  padding: 4px 10px;
+  font-size: var(--font-size-xs);
+  padding: var(--space-1) 10px;
   border-radius: 12px;
-  background: #fef3c7;
-  color: #92400e;
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
   border-color: transparent;
 }
 
 .progress-tag {
-  font-size: 12px;
-  padding: 4px 10px;
+  font-size: var(--font-size-xs);
+  padding: var(--space-1) 10px;
   border-radius: 12px;
-  background: #fef3c7;
-  color: #92400e;
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
   border-color: transparent;
 }
 
 .designer-tag {
-  font-size: 13px;
+  font-size: var(--font-size-sm);
   display: flex;
   align-items: center;
-  gap: 8px;
-  background: #eff6ff;
-  border-color: #dbeafe;
-  color: #2563eb;
+  gap: var(--space-2);
+  background: var(--color-primary-bg);
+  border-color: var(--color-primary-border);
+  color: var(--color-primary);
 }
 
 /* 主内容区 */
 .main-content {
   display: flex;
   flex: 1;
-  padding: 16px;
-  gap: 16px;
+  padding: var(--space-4);
+  gap: var(--space-4);
   overflow: hidden;
 }
 
@@ -1679,9 +1844,9 @@ onMounted(() => {
 .measure-panel {
   width: 340px;
   flex-shrink: 0;
-  background: #fff;
-  border-radius: 12px;
-  border: 1px solid #e5e7eb;
+  background: var(--color-bg-card);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border-light);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -1692,66 +1857,66 @@ onMounted(() => {
   align-items: center;
   justify-content: space-between;
   height: 50px;
-  padding: 0 16px;
-  background: #f9fafb;
-  border-bottom: 1px solid #e5e7eb;
+  padding: 0 var(--space-4);
+  background: var(--color-bg-page);
+  border-bottom: 1px solid var(--color-border-light);
 }
 
 .panel-title {
-  font-size: 14px;
-  font-weight: 600;
-  color: #374151;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-secondary);
 }
 
 .panel-count {
-  font-size: 12px;
-  color: #6b7280;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
 }
 
 .panel-body {
   flex: 1;
   overflow-y: auto;
-  padding: 12px;
+  padding: var(--space-3);
 }
 
 /* 材料分组 */
 .mat-group {
-  border-radius: 8px;
+  border-radius: var(--radius-base);
   margin-bottom: 10px;
   border: 1px solid;
 }
 
 .mat-group.mat-blue {
-  background: #eff6ff;
-  border-color: #dbeafe;
+  background: var(--color-primary-bg);
+  border-color: var(--color-primary-border);
 }
 
 .mat-group.mat-green {
-  background: #f0fdf4;
-  border-color: #bbf7d0;
+  background: var(--color-success-bg);
+  border-color: var(--color-success-border);
 }
 
 .mat-group.mat-yellow {
-  background: #fefce8;
-  border-color: #fef08a;
+  background: var(--color-warning-bg);
+  border-color: var(--color-warning-border);
 }
 
 .mat-group.mat-gray {
-  background: #f9fafb;
-  border-color: #e5e7eb;
+  background: var(--color-bg-page);
+  border-color: var(--color-border-light);
 }
 
 .mat-head {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 10px 12px;
+  gap: var(--space-2);
+  padding: 10px var(--space-3);
 }
 
-.mat-group.mat-blue .mat-head { background: #dbeafe; }
-.mat-group.mat-green .mat-head { background: #bbf7d0; }
-.mat-group.mat-yellow .mat-head { background: #fef08a; }
-.mat-group.mat-gray .mat-head { background: #f3f4f6; }
+.mat-group.mat-blue .mat-head { background: var(--color-primary-border); }
+.mat-group.mat-green .mat-head { background: var(--color-success-border); }
+.mat-group.mat-yellow .mat-head { background: var(--color-warning-border); }
+.mat-group.mat-gray .mat-head { background: var(--color-border-light); }
 
 .mat-dot {
   width: 8px;
@@ -1759,50 +1924,50 @@ onMounted(() => {
   border-radius: 50%;
 }
 
-.mat-dot.mat-blue { background: #2563eb; }
-.mat-dot.mat-green { background: #16a34a; }
-.mat-dot.mat-yellow { background: #ca8a04; }
-.mat-dot.mat-gray { background: #6b7280; }
+.mat-dot.mat-blue { background: var(--color-primary); }
+.mat-dot.mat-green { background: var(--color-success); }
+.mat-dot.mat-yellow { background: var(--color-warning); }
+.mat-dot.mat-gray { background: var(--color-text-tertiary); }
 
 .mat-name {
-  font-size: 13px;
-  font-weight: 700;
-  color: #374151;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-secondary);
   flex: 1;
 }
 
 .mat-element {
-  font-size: 13px;
+  font-size: var(--font-size-sm);
   color: var(--color-primary);
   margin-left: 2px;
 }
 
 .mat-area {
-  font-size: 12px;
-  color: #2563eb;
+  font-size: var(--font-size-xs);
+  color: var(--color-primary);
 }
 
 .mat-info-bar {
-  margin: 8px 12px;
-  padding: 8px 10px;
-  background: #f8fafc;
-  border-radius: 6px;
-  font-size: 12px;
-  color: #475569;
+  margin: var(--space-2) var(--space-3);
+  padding: var(--space-2) 10px;
+  background: var(--color-info-bg);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  transition: background 0.2s;
+  transition: background var(--transition-fast);
 }
 
 .mat-info-bar:hover {
-  background: #e2e8f0;
+  background: var(--color-info-border);
 }
 
 .mat-info-bar .copy-icon {
   opacity: 0;
-  transition: opacity 0.2s;
+  transition: opacity var(--transition-fast);
 }
 
 .mat-info-bar:hover .copy-icon {
@@ -1811,26 +1976,26 @@ onMounted(() => {
 
 /* 独立面每面下面的复制条 */
 .face-info-bar {
-  margin-top: 6px;
-  padding: 6px 8px;
-  background: #f8fafc;
+  margin-top: var(--space-2);
+  padding: var(--space-2) var(--space-2);
+  background: var(--color-info-bg);
   border-radius: 4px;
   font-size: 11px;
-  color: #475569;
+  color: var(--color-text-secondary);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  transition: background 0.2s;
+  transition: background var(--transition-fast);
 }
 
 .face-info-bar:hover {
-  background: #e2e8f0;
+  background: var(--color-info-border);
 }
 
 .face-info-bar .copy-icon {
   opacity: 0;
-  transition: opacity 0.2s;
+  transition: opacity var(--transition-fast);
 }
 
 .face-info-bar:hover .copy-icon {
@@ -1839,17 +2004,17 @@ onMounted(() => {
 
 /* 一体组合 */
 .unified-group {
-  padding: 4px 12px 12px;
+  padding: var(--space-1) var(--space-3) var(--space-3);
 }
 
 .unified-header {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px;
-  background: #fff;
-  border-radius: 6px;
-  margin-bottom: 8px;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  background: var(--color-bg-card);
+  border-radius: var(--radius-sm);
+  margin-bottom: var(--space-2);
 }
 
 .unified-badge {
@@ -1857,14 +2022,14 @@ onMounted(() => {
 }
 
 .unified-name {
-  font-size: 12px;
-  font-weight: 600;
-  color: #374151;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-secondary);
 }
 
 .unified-size {
   font-size: 11px;
-  color: #6b7280;
+  color: var(--color-text-tertiary);
   margin-left: auto;
 }
 
@@ -1876,46 +2041,52 @@ onMounted(() => {
 }
 
 .face-item {
-  padding: 6px 8px;
-  background: #fff;
+  padding: var(--space-2) var(--space-2);
+  background: var(--color-bg-card);
   border-radius: 4px;
 }
 
 .face-row {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-2);
   flex-wrap: wrap;
 }
 
 .face-name {
-  font-size: 12px;
-  font-weight: 500;
-  color: #374151;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
   width: 50px;
 }
 
 .face-dim {
   font-size: 11px;
-  color: #6b7280;
+  color: var(--color-text-tertiary);
 }
 
 .face-area {
   font-size: 11px;
-  color: #2563eb;
+  color: var(--color-primary);
+}
+
+.face-extra {
+  font-size: 11px;
+  color: var(--color-warning);
+  margin-left: 4px;
 }
 
 .face-notes {
   font-size: 11px;
   color: var(--color-danger);
-  margin-top: 4px;
+  margin-top: var(--space-1);
   padding-left: 0;
   line-height: 1.4;
 }
 
 .face-photos {
   display: flex;
-  gap: 4px;
+  gap: var(--space-1);
   margin-left: auto;
 }
 
@@ -1929,9 +2100,9 @@ onMounted(() => {
 /* 右侧工作区 */
 .work-panel {
   flex: 1;
-  background: #fff;
-  border-radius: 12px;
-  border: 1px solid #e5e7eb;
+  background: var(--color-bg-card);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border-light);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -1940,37 +2111,37 @@ onMounted(() => {
 .work-header {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-3);
   height: 50px;
-  padding: 0 16px;
-  background: #eff6ff;
-  border-bottom: 1px solid #dbeafe;
-  color: #2563eb;
+  padding: 0 var(--space-4);
+  background: var(--color-primary-bg);
+  border-bottom: 1px solid var(--color-primary-border);
+  color: var(--color-primary);
 }
 
 .work-title {
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
 }
 
 .work-hint {
-  font-size: 12px;
-  color: #6b7280;
-  font-weight: 400;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+  font-weight: var(--font-weight-regular);
   margin-left: auto;
 }
 
 /* 驳回提示 */
 .rejected-banner {
-  padding: 12px 16px;
-  background: #fef2f2;
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-danger-bg);
 }
 
 .work-body {
   flex: 1;
   display: flex;
-  padding: 12px;
-  gap: 12px;
+  padding: var(--space-3);
+  gap: var(--space-3);
   overflow: hidden;
 }
 
@@ -1987,22 +2158,22 @@ onMounted(() => {
 .upload-card {
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 16px;
-  background: #f9fafb;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  transition: all 0.2s;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  background: var(--color-bg-page);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-md);
+  transition: all var(--transition-fast);
 }
 
 .upload-card:hover {
-  border-color: #2563eb;
-  background: #fff;
+  border-color: var(--color-primary);
+  background: var(--color-bg-card);
 }
 
 .upload-card.uploaded {
-  background: #f0fdf4;
-  border-color: #86efac;
+  background: var(--color-success-bg);
+  border-color: var(--color-success-border);
 }
 
 .card-info {
@@ -2013,35 +2184,35 @@ onMounted(() => {
 .card-mat {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-1);
   font-size: 15px;
-  font-weight: 700;
-  color: #2563eb;
-  margin-bottom: 4px;
+  font-weight: var(--font-weight-bold);
+  color: var(--color-primary);
+  margin-bottom: var(--space-1);
 }
 
 .card-header {
   display: flex;
   align-items: center;
-  gap: 6px;
-  margin-bottom: 4px;
+  gap: var(--space-2);
+  margin-bottom: var(--space-1);
 }
 
 .card-name {
-  font-size: 14px;
-  font-weight: 700;
-  color: #374151;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-secondary);
 }
 
 .card-size {
-  font-size: 14px;
-  font-weight: 600;
-  color: #7c3aed;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-primary);
 }
 
 .card-meta {
   font-size: 11px;
-  color: #6b7280;
+  color: var(--color-text-tertiary);
 }
 
 /* 预览区 */
@@ -2058,15 +2229,15 @@ onMounted(() => {
   justify-content: center;
   border-radius: 4px;
   font-size: 10px;
-  color: #374151;
-  background: #eff6ff;
-  border: 1px solid #2563eb;
+  color: var(--color-text-secondary);
+  background: var(--color-primary-bg);
+  border: 1px solid var(--color-primary);
 }
 
 /* 现场照片 */
 .card-photos {
   display: flex;
-  gap: 4px;
+  gap: var(--space-1);
 }
 
 .photo-thumb {
@@ -2078,7 +2249,7 @@ onMounted(() => {
 
 .no-photo {
   font-size: 11px;
-  color: #9ca3af;
+  color: var(--color-text-tertiary);
 }
 
 /* 上传区 */
@@ -2091,12 +2262,12 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  padding: 12px;
-  background: #dcfce7;
-  border-radius: 8px;
-  color: #16a34a;
-  font-size: 13px;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  background: var(--color-success-bg);
+  border-radius: var(--radius-base);
+  color: var(--color-success);
+  font-size: var(--font-size-sm);
 }
 
 /* 勾选标记 */
@@ -2104,7 +2275,7 @@ onMounted(() => {
   width: 24px;
   height: 24px;
   border-radius: 50%;
-  background: #e5e7eb;
+  background: var(--color-border-light);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2112,23 +2283,23 @@ onMounted(() => {
 }
 
 .card-check.checked {
-  background: #16a34a;
-  color: #fff;
+  background: var(--color-success);
+  color: var(--color-bg-card);
 }
 
 /* 已上传的设计稿图片 */
 .card-design-images {
   display: flex;
-  gap: 4px;
-  padding: 8px;
-  background: #dcfce7;
-  border-radius: 8px;
+  gap: var(--space-1);
+  padding: var(--space-2);
+  background: var(--color-success-bg);
+  border-radius: var(--radius-base);
 }
 
 .design-img {
   width: 80px;
   height: 80px;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
 }
 
@@ -2136,76 +2307,109 @@ onMounted(() => {
 .action-sidebar {
   width: 200px;
   flex-shrink: 0;
-  background: #f9fafb;
-  border-radius: 8px;
-  padding: 12px;
+  background: var(--color-bg-page);
+  border-radius: var(--radius-base);
+  padding: var(--space-3);
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 .sidebar-title {
-  font-size: 14px;
-  font-weight: 600;
-  color: #374151;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-secondary);
 }
 
 .color-requirement-box {
-  background: #fffbeb;
-  border: 1px solid #fcd34d;
-  border-radius: 8px;
-  padding: 12px;
-  margin-bottom: 16px;
+  background: var(--color-warning-bg);
+  border: 1px solid var(--color-warning-border);
+  border-radius: var(--radius-base);
+  padding: var(--space-3);
+  margin-bottom: var(--space-4);
 }
 
 .color-req-header {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 13px;
-  font-weight: 600;
-  color: #b45309;
-  margin-bottom: 6px;
+  gap: var(--space-2);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-warning);
+  margin-bottom: var(--space-2);
 }
 
 .color-req-content {
-  font-size: 13px;
-  color: #78350f;
+  font-size: var(--font-size-sm);
+  color: var(--color-warning);
   line-height: 1.5;
 }
 
 .sidebar-section {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-2);
+}
+
+.saved-files {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.saved-file-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+  background: var(--color-bg-card);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  word-break: break-all;
+}
+
+.saved-file-item .el-icon {
+  color: var(--color-primary);
+  flex-shrink: 0;
+}
+
+.saved-notes {
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-bg-card);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+  word-break: break-all;
 }
 
 .section-label {
-  font-size: 12px;
-  color: #6b7280;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
 }
 
 .submit-btn {
   width: 100%;
   height: 50px;
   font-size: 15px;
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
   border-radius: 10px;
 }
 
 /* 上传进度 */
 .progress-section {
-  background: #fff;
-  border-radius: 8px;
-  padding: 12px;
+  background: var(--color-bg-card);
+  border-radius: var(--radius-base);
+  padding: var(--space-3);
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .progress-label {
-  font-size: 12px;
-  color: #6b7280;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
 }
 
 .progress-bar-wrapper {
@@ -2215,27 +2419,34 @@ onMounted(() => {
 .progress-bar {
   flex: 1;
   height: 8px;
-  background: #e5e7eb;
+  background: var(--color-border-light);
   border-radius: 4px;
   overflow: hidden;
 }
 
 .progress-fill {
   height: 100%;
-  background: #16a34a;
+  background: var(--color-success);
   border-radius: 4px;
-  transition: width 0.3s;
+  transition: width var(--transition-slow);
 }
 
 .progress-text {
-  font-size: 13px;
-  color: #374151;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.upload-warning {
+  font-size: var(--font-size-xs);
+  color: var(--color-danger);
+  text-align: center;
+  line-height: 1.4;
 }
 
 .review-actions {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 /* 响应式 */
@@ -2259,20 +2470,20 @@ onMounted(() => {
   width: 100px !important;
   height: 100px !important;
   border-radius: 10px !important;
-  border: 2px dashed #d1d5db !important;
-  background: #f9fafb !important;
-  transition: all 0.2s !important;
+  border: 2px dashed var(--color-border-light) !important;
+  background: var(--color-bg-page) !important;
+  transition: all var(--transition-fast) !important;
 }
 [class*="design-detail-page"] .el-upload--picture-card:hover {
   border-color: var(--color-primary) !important;
-  background: #eff6ff !important;
+  background: var(--color-primary-bg) !important;
 }
 
 /* 文件上传组件 - 删除按钮始终可见 */
 [class*="design-detail-page"] .upload-container {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: var(--space-2);
 }
 [class*="design-detail-page"] .uploaded-item {
   position: relative !important;
@@ -2284,7 +2495,7 @@ onMounted(() => {
   right: 0 !important;
   width: 24px !important;
   height: 24px !important;
-  background: #dc2626 !important;
+  background: var(--color-danger) !important;
   border-radius: 0 8px 0 8px !important;
   align-items: center !important;
   justify-content: center !important;
@@ -2292,22 +2503,22 @@ onMounted(() => {
   z-index: 10 !important;
 }
 [class*="design-detail-page"] .delete-icon {
-  color: #fff !important;
+  color: var(--color-bg-card) !important;
   font-size: 14px !important;
 }
 
 /* 源文件上传按钮 */
 [class*="design-detail-page"] .source-upload .el-button--primary {
-  background: #f9fafb !important;
-  color: var(--color-text-secondary) !important;
-  border: 2px dashed #d1d5db !important;
+  background: var(--color-bg-page) !important;
+  color: var(--color-text-tertiary) !important;
+  border: 2px dashed var(--color-border-light) !important;
   border-radius: 10px !important;
-  font-size: 13px !important;
+  font-size: var(--font-size-sm) !important;
   padding: 10px 20px !important;
-  transition: all 0.2s !important;
+  transition: all var(--transition-fast) !important;
 }
 [class*="design-detail-page"] .source-upload .el-button--primary:hover {
-  background: #eff6ff !important;
+  background: var(--color-primary-bg) !important;
   color: var(--color-primary) !important;
   border-color: var(--color-primary) !important;
 }
@@ -2317,6 +2528,6 @@ onMounted(() => {
   border-radius: 10px !important;
   height: 44px !important;
   font-size: 15px !important;
-  font-weight: 600 !important;
+  font-weight: var(--font-weight-semibold) !important;
 }
 </style>

@@ -12,6 +12,7 @@
         draggable="true"
         @dragstart="$emit('dragstart', $event)">
         <div class="card-tags">
+          <el-tag v-if="dispatchNeeded" size="small" type="danger" effect="dark" class="dispatch-tag">{{ dispatchNeeded }}</el-tag>
           <el-tag size="small" type="primary" effect="plain">{{ wo.client_name }}</el-tag>
           <el-tag v-if="wo.activity_name" size="small" type="warning" effect="plain">{{ activityLabel }}</el-tag>
           <el-tag v-if="wo.project_type" size="small" effect="plain">{{ adTypeLabel }}</el-tag>
@@ -72,6 +73,23 @@ const adTypeLabel = computed(() => {
 const activityLabel = computed(() => {
   const item = props.activities.find(t => t.value === props.wo.activity_name)
   return item ? item.label : props.wo.activity_name || ''
+})
+
+// 判断是否需要派单
+const dispatchNeeded = computed(() => {
+  const wo = props.wo
+  const stage = wo.current_stage
+
+  if (stage === 'assignment' && !wo.assigned_tenant_user_id) {
+    return '待派测量'
+  }
+  if ((stage === 'design' || stage === 'production') && !wo.designer_id) {
+    return '待派设计'
+  }
+  if (stage === 'construction' && !wo.constructor_id) {
+    return '待派施工'
+  }
+  return ''
 })
 </script>
 

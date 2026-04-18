@@ -523,6 +523,34 @@ async function submitReview(req, res) {
   return success(res, design, '已提交审核');
 }
 
+// ==================== 撤回设计稿 ====================
+
+/**
+ * POST /api/v1/designs/:workOrderId/withdraw
+ * 设计师撤回审核中的设计稿，回到可修改状态
+ */
+async function withdrawDesign(req, res) {
+  const workOrderId = parseInt(req.params.workOrderId, 10);
+
+  const design = await WoDesign.findOne({
+    where: { work_order_id: workOrderId },
+    order: [['version', 'DESC']],
+  });
+  if (!design) {
+    return error(res, '设计稿不存在', 404);
+  }
+
+  if (design.status !== 'reviewing') {
+    return error(res, '只有审核中的设计稿才能撤回', 400);
+  }
+
+  await design.update({ status: 'rejected' });
+
+  await createLog(workOrderId, req.user, 'design_withdraw', 'design', `撤回设计稿 v${design.version}，回到修改状态`);
+
+  return success(res, design, '已撤回，可重新修改');
+}
+
 // ==================== 材料清单变更 ====================
 
 /**
@@ -834,6 +862,7 @@ module.exports = {
   reviewDesign,
   updateDesign,
   submitReview,
+  withdrawDesign,
   updateMaterials,
   exportDesignReport,
   getDesigners,

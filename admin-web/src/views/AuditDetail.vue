@@ -49,41 +49,32 @@
             <span class="card-title">测量数据</span>
             <el-tag size="small" type="success" style="margin-left:8px">测量员: {{ measurementData.measurer_name || '—' }}</el-tag>
           </template>
-          <div v-for="mat in groupedMaterials" :key="mat.type" class="material-block">
-            <div class="material-header">
-              <span class="material-name">{{ materialTypeLabel(mat.type) }}</span>
-              <span class="material-area">合计: {{ mat.totalArea.toFixed(2) }}m²</span>
+          <div v-for="(mat, mi) in measurementMaterials" :key="mi" class="material-section">
+            <div class="mat-header">
+              <span>{{ materialTypeLabel(mat.material_type || mat.type) }} — {{ mat.faces?.length || 0 }}面
+                <el-tag size="small" type="primary">合计 {{ matTotalArea(mat.faces) }}m²</el-tag>
+              </span>
             </div>
-            <table class="face-table">
-              <thead>
-                <tr><th>面</th><th>宽(cm)</th><th>高(cm)</th><th>面积(m²)</th><th>照片</th></tr>
-              </thead>
-              <tbody>
-                <template v-for="g in mat.groupedFaces" :key="g.key">
-                  <tr v-for="(face, idx) in g.faces" :key="face.label + '-' + idx"
-                    :class="{ 'unified-row': g.isUnified }">
-                    <td class="unified-cell" :class="{ 'is-unified': g.isUnified }">
-                      <span v-if="g.isUnified && idx === 0" class="unified-tag">一体</span>
-                      {{ face.label }}
-                    </td>
-                    <td>{{ face.width }}</td>
-                    <td>{{ face.height }}</td>
-                    <td class="area-cell">{{ face.area.toFixed(2) }}</td>
-                    <td>
-                      <el-image v-if="face.photos?.length"
-                        :src="getFullUrl(face.photos[0])"
-                        :preview-src-list="face.photos.map(getFullUrl)"
-                        fit="cover"
-                        class="face-photo-thumb"
-                      />
-                      <span v-else class="text-muted">—</span>
-                    </td>
-                  </tr>
-                </template>
-              </tbody>
-            </table>
+            <div class="mat-body">
+              <div class="face-header">
+                <span>面位</span><span>宽度(cm)</span><span>高度(cm)</span><span>面积(m²)</span><span>备注</span><span>照片</span>
+              </div>
+              <div class="face-row" v-for="(face, fi) in mat.faces" :key="fi">
+                <span class="face-label">{{ face.label || face.face_name || face.direction || '未知面' }}</span>
+                <span>{{ (face._widthM ? face._widthM * 100 : face.width || 0).toFixed(2) }}</span>
+                <span>{{ (face._heightM ? face._heightM * 100 : face.height || 0).toFixed(2) }}</span>
+                <span class="face-area">{{ (face.area || 0).toFixed(2) }}m²</span>
+                <span>
+                  <el-tag v-if="face.is_unified || face.isUnified" size="small" type="warning">一体</el-tag>
+                  {{ face.notes || '' }}
+                </span>
+                <span class="action-link" @click="previewFacePhotos(face.photos || [])">
+                  {{ face.photos?.length || 0 }}张
+                </span>
+              </div>
+            </div>
           </div>
-          <el-empty v-if="!groupedMaterials.length" description="暂无测量数据" />
+          <el-empty v-if="!measurementMaterials.length" description="暂无测量数据" />
         </el-card>
       </template>
 
@@ -113,46 +104,52 @@
               </a>
             </div>
           </div>
-          <!-- 照片对比：现场照片 vs 设计效果图 -->
-          <div v-if="sitePhotos.length || designImages.length" class="compare-section">
+          <!-- 照片对比：按面分组，现场照片 vs 设计效果图 -->
+          <div v-if="compareGroups.length" class="compare-section">
             <h4 class="section-label">现场照片 vs 设计效果图</h4>
-            <div class="compare-grid">
-              <!-- 现场照片列 -->
-              <div class="compare-column">
-                <div class="column-header">
-                  <el-tag type="warning" effect="plain" size="small">现场照片</el-tag>
-                  <span class="column-count">{{ sitePhotos.length }}张</span>
+            <div class="compare-list">
+              <div v-for="(group, gi) in compareGroups" :key="gi" class="compare-group">
+                <div class="compare-group-header">
+                  <span class="compare-group-name">{{ group.name }}</span>
+                  <el-tag v-if="group.isUnified" type="warning" effect="dark" size="small">一体</el-tag>
+                  <span class="compare-group-size">{{ group.sizeText }}</span>
                 </div>
-                <div class="column-body">
-                  <el-image
-                    v-for="(url, i) in sitePhotos"
-                    :key="'site' + i"
-                    :src="url"
-                    :preview-src-list="sitePhotos"
-                    :initial-index="i"
-                    fit="cover"
-                    class="compare-image"
-                  />
-                  <el-empty v-if="!sitePhotos.length" description="无现场照片" :image-size="40" />
-                </div>
-              </div>
-              <!-- 设计效果图列 -->
-              <div class="compare-column">
-                <div class="column-header">
-                  <el-tag type="success" effect="plain" size="small">设计效果图</el-tag>
-                  <span class="column-count">{{ designImages.length }}张</span>
-                </div>
-                <div class="column-body">
-                  <el-image
-                    v-for="(url, i) in designImages"
-                    :key="'design' + i"
-                    :src="url"
-                    :preview-src-list="designImages"
-                    :initial-index="i"
-                    fit="cover"
-                    class="compare-image"
-                  />
-                  <el-empty v-if="!designImages.length" description="无效果图" :image-size="40" />
+                <div class="compare-pair" v-for="(pair, pi) in group.pairs" :key="pi">
+                  <div class="compare-side">
+                    <div class="compare-label">
+                      <el-tag type="warning" effect="plain" size="small">现场照片</el-tag>
+                      <span class="compare-face-name">{{ pair.faceLabel }}</span>
+                    </div>
+                    <div class="compare-photos">
+                      <el-image
+                        v-for="(url, ui) in pair.sitePhotos"
+                        :key="'s'+ui"
+                        :src="url"
+                        :preview-src-list="pair.sitePhotos"
+                        fit="cover"
+                        class="compare-image"
+                      />
+                      <span v-if="!pair.sitePhotos.length" class="no-photo-text">无照片</span>
+                    </div>
+                  </div>
+                  <div class="compare-arrow">→</div>
+                  <div class="compare-side">
+                    <div class="compare-label">
+                      <el-tag type="success" effect="plain" size="small">设计效果图</el-tag>
+                      <span class="compare-face-name">{{ pair.faceLabel }}</span>
+                    </div>
+                    <div class="compare-photos">
+                      <el-image
+                        v-for="(url, di) in pair.designImages"
+                        :key="'d'+di"
+                        :src="url"
+                        :preview-src-list="pair.designImages"
+                        fit="cover"
+                        class="compare-image"
+                      />
+                      <span v-if="!pair.designImages.length" class="no-photo-text">未上传</span>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -160,28 +157,27 @@
           <!-- 测量数据参考 -->
           <div v-if="measureRef.length" class="ref-section">
             <h4 class="section-label">测量数据（参考）</h4>
-            <div v-for="mat in designGroupedMaterials" :key="mat.type" class="material-block">
-              <div class="material-header">
-                <span>{{ materialTypeLabel(mat.type) }}</span>
-                <span>{{ mat.totalArea.toFixed(2) }}m²</span>
+            <div v-for="(mat, mi) in designMeasurementMaterials" :key="mi" class="material-section">
+              <div class="mat-header">
+                <span>{{ materialTypeLabel(mat.material_type || mat.type) }} — {{ mat.faces?.length || 0 }}面
+                  <el-tag size="small" type="primary">合计 {{ matTotalArea(mat.faces) }}m²</el-tag>
+                </span>
               </div>
-              <table class="face-table">
-                <thead><tr><th>面</th><th>宽(cm)</th><th>高(cm)</th><th>面积(m²)</th></tr></thead>
-                <tbody>
-                  <template v-for="g in mat.groupedFaces" :key="g.key">
-                    <tr v-for="(face, idx) in g.faces" :key="face.label + '-' + idx"
-                      :class="{ 'unified-row': g.isUnified }">
-                      <td class="unified-cell" :class="{ 'is-unified': g.isUnified }">
-                        <span v-if="g.isUnified && idx === 0" class="unified-tag">一体</span>
-                        {{ face.label }}
-                      </td>
-                      <td>{{ Number(face.width||0).toFixed(2) }}</td>
-                      <td>{{ Number(face.height||0).toFixed(2) }}</td>
-                      <td class="area-cell">{{ face.area.toFixed(2) }}</td>
-                    </tr>
-                  </template>
-                </tbody>
-              </table>
+              <div class="mat-body">
+                <div class="face-header face-header-5col">
+                  <span>面位</span><span>宽度(cm)</span><span>高度(cm)</span><span>面积(m²)</span><span>备注</span>
+                </div>
+                <div class="face-row face-row-5col" v-for="(face, fi) in mat.faces" :key="fi">
+                  <span class="face-label">{{ face.label || face.face_name || face.direction || '未知面' }}</span>
+                  <span>{{ (face._widthM ? face._widthM * 100 : face.width || 0).toFixed(2) }}</span>
+                  <span>{{ (face._heightM ? face._heightM * 100 : face.height || 0).toFixed(2) }}</span>
+                  <span class="face-area">{{ (face.area || 0).toFixed(2) }}m²</span>
+                  <span>
+                    <el-tag v-if="face.is_unified || face.isUnified" size="small" type="warning">一体</el-tag>
+                    {{ face.notes || '' }}
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
           <!-- 甲方照片 -->
@@ -265,8 +261,17 @@
       </template>
     </el-dialog>
 
-    <!-- 打印预览对话框 -->
-    <el-dialog v-model="showPrintDialog" title="打印预览" width="720px" top="5vh" class="print-dialog">
+    <!-- 打印预览对话框（可调整宽度） -->
+    <el-dialog v-model="showPrintDialog" title="打印预览" :width="printDialogWidth" top="5vh" class="print-dialog" :close-on-click-modal="false">
+      <div class="print-width-control">
+        <span>预览宽度：</span>
+        <el-slider v-model="printDialogWidthNum" :min="500" :max="1200" :step="50" :format-tooltip="v => v + 'px'" style="width: 200px" />
+        <el-button-group>
+          <el-button size="small" @click="printDialogWidthNum = 720">默认</el-button>
+          <el-button size="small" @click="printDialogWidthNum = 900">宽屏</el-button>
+          <el-button size="small" @click="printDialogWidthNum = 1100">最大</el-button>
+        </el-button-group>
+      </div>
       <div class="print-preview-content" id="printArea">
         <!-- 基本信息区 -->
         <div class="print-header">
@@ -285,8 +290,8 @@
           <h3>设计效果图</h3>
           <div class="design-images-print">
             <div v-for="(item, i) in designImagesWithInfo" :key="i" class="design-image-item" :class="{ 'full-width': designImages.length === 1, 'half-width': designImages.length === 2 }">
-              <div class="image-info-tag">{{ item.faceLabel || item.materialName }} {{ item.size }}</div>
-              <img :src="item.url" :alt="(item.faceLabel || item.materialName) + ' ' + item.size" />
+              <div class="image-above-label">{{ item.materialName }} {{ item.size }}</div>
+              <img :src="item.url" :alt="item.materialName + ' ' + item.size" />
             </div>
           </div>
         </div>
@@ -308,8 +313,22 @@
       </div>
       <template #footer>
         <el-button @click="showPrintDialog = false">关闭</el-button>
-        <el-button type="primary" @click="doPrint">
-          <el-icon><Printer /></el-icon> 打印
+        <el-dropdown @command="handleCaptureAction">
+          <el-button type="info" :loading="capturing">
+            📷 截图 <el-icon class="el-icon--right"><ArrowDown /></el-icon>
+          </el-button>
+          <template #dropdown>
+            <el-dropdown-menu>
+              <el-dropdown-item command="copy">复制到剪贴板</el-dropdown-item>
+              <el-dropdown-item command="save">保存为图片</el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
+        <el-button type="primary" @click="previewPdf" :loading="pdfGenerating">
+          预览PDF
+        </el-button>
+        <el-button type="success" @click="doPrint" :loading="pdfGenerating">
+          <el-icon><Printer /></el-icon> 下载PDF
         </el-button>
       </template>
     </el-dialog>
@@ -320,7 +339,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { ArrowLeft, Check, Close, Document, Printer } from '@element-plus/icons-vue'
+import { ArrowLeft, Check, Close, Document, Printer, ArrowDown } from '@element-plus/icons-vue'
 import api from '../api'
 
 const route = useRoute()
@@ -334,6 +353,9 @@ const showRejectDialog = ref(false)
 const rejectReason = ref('')
 const logs = ref([])
 const showPrintDialog = ref(false)
+const pdfGenerating = ref(false)
+const printDialogWidthNum = ref(720)
+const capturing = ref(false)
 
 // Detail data
 const measurementData = ref(null)
@@ -345,6 +367,8 @@ const declarationPhotos = ref([])
 const constructionPhotos = ref([])
 const sitePhotos = ref([]) // 现场照片（从测量数据提取）
 const designPdfs = ref([]) // 设计 PDF 文件
+
+const printDialogWidth = computed(() => printDialogWidthNum.value + 'px')
 
 const STAGE_MAP = {
   declaration: '申报接收', approval: '待审批', assignment: '待派单',
@@ -421,6 +445,125 @@ function groupMaterials(materials) {
 const groupedMaterials = computed(() => groupMaterials(measurementData.value ? [measurementData.value] : []))
 
 const designGroupedMaterials = computed(() => groupMaterials(measureRef.value))
+
+// 测量材料数据（直接解析，用于测量审核）
+const measurementMaterials = computed(() => {
+  if (!measurementData.value) return []
+  let mats = measurementData.value.materials || []
+  if (typeof mats === 'string') { try { mats = JSON.parse(mats) } catch { mats = [] } }
+  return mats
+})
+
+// 设计审核中的测量材料数据
+const designMeasurementMaterials = computed(() => {
+  if (!measureRef.value || !measureRef.value.length) return []
+  let mats = measureRef.value[0]?.materials || []
+  if (typeof mats === 'string') { try { mats = JSON.parse(mats) } catch { mats = [] } }
+  return mats
+})
+
+// 计算材料总面积
+function matTotalArea(faces) {
+  if (!faces || !Array.isArray(faces)) return '0.00'
+  return faces.reduce((s, f) => s + (f.area || 0), 0).toFixed(2)
+}
+
+// 照片预览
+function previewFacePhotos(photos) {
+  if (!photos.length) return
+  previewPhotos.value = photos.map(getFullUrl)
+  showPhotoPreview.value = true
+}
+
+const showPhotoPreview = ref(false)
+const previewPhotos = ref([])
+
+// 按面对应的对比数据：现场照片 vs 设计效果图
+const compareGroups = computed(() => {
+  if (!measurementData.value) return []
+  let mats = measurementData.value.materials || []
+  if (typeof mats === 'string') { try { mats = JSON.parse(mats) } catch { mats = [] } }
+  const mapping = designData.value?.face_mapping || []
+
+  // 构建设计图映射
+  const unifiedDesignMap = {}  // material_type_group_index -> [urls]
+  const faceDesignMap = {}     // face_label -> [urls]
+  for (const item of mapping) {
+    const imgUrl = getFullUrl(item.image_url)
+    if (!imgUrl) continue
+    if (item.face_labels && Array.isArray(item.face_labels) && item.group_index !== undefined && item.group_index >= 0) {
+      const key = (item.material_type || '') + '_' + item.group_index
+      if (!unifiedDesignMap[key]) unifiedDesignMap[key] = { faceLabels: item.face_labels, urls: [] }
+      unifiedDesignMap[key].urls.push(imgUrl)
+    } else if (item.face_label) {
+      if (!faceDesignMap[item.face_label]) faceDesignMap[item.face_label] = []
+      faceDesignMap[item.face_label].push(imgUrl)
+    }
+  }
+
+  const groups = []
+  // 遍历每个材料（保留顺序，不合并同名材料）
+  for (let mi = 0; mi < mats.length; mi++) {
+    const mat = mats[mi]
+    const matType = mat.material_type || mat.type || '未分类'
+    const faces = mat.faces || []
+    if (!faces.length) continue
+
+    // 同一材料内按 group_name 分组，分配 groupIdx（跟设计提交时一致）
+    const subGroups = {}
+    for (const face of faces) {
+      const groupName = face.group_name || ''
+      const isUnified = face.is_unified || face.isUnified || false
+      if (!subGroups[groupName]) subGroups[groupName] = { groupName, isUnified, faces: [] }
+      subGroups[groupName].faces.push(face)
+    }
+    const subGroupList = Object.values(subGroups)
+    let gIdx = 0
+    for (const g of subGroupList) g.groupIdx = gIdx++
+
+    for (const g of subGroupList) {
+      const matName = materialTypeLabel(matType)
+      const displayName = g.groupName ? matName + ' - ' + g.groupName : matName
+      const pairs = []
+
+      if (g.isUnified) {
+        const designKey = matType + '_' + g.groupIdx
+        const designUrls = unifiedDesignMap[designKey]?.urls || []
+        const sitePhotos = []
+        const faceLabels = []
+        let totalW = 0, maxH = 0
+        for (const face of g.faces) {
+          const label = face.label || face.face_name || '未知面'
+          faceLabels.push(label)
+          for (const p of (face.photos || [])) {
+            const url = getFullUrl(p)
+            if (url) sitePhotos.push(url)
+          }
+          const w = face._widthM ? face._widthM * 100 : (face.width || 0)
+          const h = face._heightM ? face._heightM * 100 : (face.height || 0)
+          totalW += w
+          maxH = Math.max(maxH, h)
+        }
+        pairs.push({
+          faceLabel: faceLabels.join(' + '),
+          sitePhotos,
+          designImages: [...new Set(designUrls)],
+        })
+        groups.push({ name: displayName, isUnified: true, sizeText: totalW > 0 ? `${totalW.toFixed(0)}×${maxH.toFixed(0)}cm` : '', pairs })
+      } else {
+        for (const face of g.faces) {
+          const label = face.label || face.face_name || '未知面'
+          const sitePhotos = (face.photos || []).map(getFullUrl).filter(Boolean)
+          const designUrls = faceDesignMap[label] || []
+          pairs.push({ faceLabel: label, sitePhotos, designImages: [...new Set(designUrls)] })
+        }
+        groups.push({ name: displayName, isUnified: false, sizeText: '', pairs })
+      }
+    }
+  }
+
+  return groups
+})
 
 // 设计图片带尺寸和材料信息
 const designImagesWithInfo = computed(() => {
@@ -684,41 +827,97 @@ function printPreview() {
   showPrintDialog.value = true
 }
 
-function doPrint() {
+async function doPrint() {
   const printContent = document.getElementById('printArea')
   if (!printContent) return
-  const printWindow = window.open('', '_blank')
-  printWindow.document.write(`
-    <html>
-    <head>
-      <title>打印 - ${data.value?.work_order_no || '设计审核单'}</title>
-      <style>
-        body { font-family: 'Microsoft YaHei', sans-serif; padding: 20px; margin: 0; }
-        .print-header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #333; padding-bottom: 15px; }
-        .print-header h2 { margin: 0 0 15px 0; font-size: 20px; }
-        .print-info { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; text-align: left; }
-        .info-row { font-size: 13px; }
-        .info-row .label { color: #666; margin-right: 8px; }
-        .print-designs { margin: 20px 0; }
-        .print-designs h3 { font-size: 14px; margin-bottom: 12px; border-left: 3px solid #2563eb; padding-left: 8px; }
-        .design-images-print { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
-        .design-image-item { text-align: center; max-width: 600px; page-break-inside: avoid; }
-        .design-image-item.full-width { grid-column: 1 / -1; max-width: 600px; margin: 0 auto; }
-        .design-image-item img { width: 100%; max-width: 600px; max-height: 700px; height: auto; object-fit: contain; border: 1px solid #ddd; background: #fafafa; }
-        .image-no { margin-top: 4px; font-size: 12px; color: #666; }
-        .print-signature { margin-top: 30px; display: flex; justify-content: space-between; padding-top: 20px; border-top: 1px solid #eee; }
-        .signature-item { display: flex; align-items: center; gap: 8px; font-size: 13px; }
-        .signature-line { width: 120px; border-bottom: 1px solid #333; height: 1px; }
-        @media print { .design-image-item { page-break-inside: avoid; } }
-      </style>
-    </head>
-    <body>${printContent.innerHTML}</body>
-    </html>
-  `)
-  printWindow.document.close()
-  printWindow.onload = () => {
-    printWindow.print()
-    printWindow.close()
+
+  pdfGenerating.value = true
+  try {
+    const html2pdf = (await import('html2pdf.js')).default
+    const opt = {
+      margin: 10,
+      filename: `${data.value?.work_order_no || '设计审核单'}_设计稿.pdf`,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true, logging: false },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+      pagebreak: { mode: 'avoid-all' }
+    }
+    await html2pdf().set(opt).from(printContent).save()
+    ElMessage.success('PDF已下载')
+  } catch (e) {
+    console.error('PDF生成失败:', e)
+    ElMessage.error('PDF生成失败，请重试')
+  } finally {
+    pdfGenerating.value = false
+  }
+}
+
+async function previewPdf() {
+  const printContent = document.getElementById('printArea')
+  if (!printContent) return
+
+  pdfGenerating.value = true
+  try {
+    const html2pdf = (await import('html2pdf.js')).default
+    const opt = {
+      margin: 10,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true, logging: false },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+      pagebreak: { mode: 'avoid-all' }
+    }
+    const pdf = await html2pdf().set(opt).from(printContent).outputPdf('blob')
+    const url = URL.createObjectURL(pdf)
+    window.open(url, '_blank')
+  } catch (e) {
+    console.error('PDF预览失败:', e)
+    ElMessage.error('PDF预览失败，请重试')
+  } finally {
+    pdfGenerating.value = false
+  }
+}
+
+function handleCaptureAction(command) {
+  captureScreenshot(command)
+}
+
+async function captureScreenshot(mode = 'save') {
+  const printContent = document.getElementById('printArea')
+  if (!printContent) return
+
+  capturing.value = true
+  try {
+    const html2canvas = (await import('html2canvas')).default
+    const canvas = await html2canvas(printContent, {
+      scale: 2,
+      useCORS: true,
+      backgroundColor: '#ffffff',
+      logging: false
+    })
+
+    if (mode === 'copy') {
+      canvas.toBlob(async (blob) => {
+        try {
+          await navigator.clipboard.write([
+            new ClipboardItem({ 'image/png': blob })
+          ])
+          ElMessage.success('截图已复制到剪贴板')
+        } catch {
+          ElMessage.error('复制失败，请尝试保存为图片')
+        }
+      }, 'image/png')
+    } else {
+      const link = document.createElement('a')
+      link.download = `${data.value?.work_order_no || '设计审核单'}_截图.png`
+      link.href = canvas.toDataURL('image/png')
+      link.click()
+      ElMessage.success('截图已保存')
+    }
+  } catch (e) {
+    console.error('截图失败:', e)
+    ElMessage.error('截图失败，请重试')
+  } finally {
+    capturing.value = false
   }
 }
 
@@ -735,19 +934,17 @@ onMounted(() => loadData())
 .card-title { font-weight: var(--font-weight-semibold); font-size: var(--font-size-sm); }
 .log-user { color: var(--color-text-secondary); font-size: 12px; }
 
-/* Material tables */
-.material-block { margin-bottom: 16px; border: 1px solid var(--color-border-light); border-radius: 8px; overflow: hidden; }
-.material-header {
-  display: flex; justify-content: space-between;
-  font-size: 13px; font-weight: 700;
-  padding: 8px 12px; background: #f5f7fa;
-}
-.material-name { color: #374151; }
-.material-area { color: var(--color-primary); font-weight: 700; }
-.face-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-.face-table th, .face-table td { padding: 6px 12px; border-top: 1px solid #f0f0f0; text-align: left; }
-.face-table th { background: #fafafa; font-weight: 600; color: #6b7280; }
-.area-cell { color: var(--color-primary); font-weight: 600; text-align: right; }
+/* Material sections - same as MeasureReview */
+.material-section { border: 1px solid var(--color-border-light); border-radius: var(--radius-sm); margin-bottom: var(--space-3); overflow: hidden; }
+.mat-header { background: var(--color-bg-page); padding: var(--space-3) var(--space-4); font-weight: var(--font-weight-medium); font-size: var(--font-size-sm); }
+.mat-body { padding: 0 var(--space-4); }
+.face-header { display: grid; grid-template-columns: 100px 100px 100px 100px 1fr 80px; gap: var(--space-2); padding: var(--space-2) 0 var(--space-1); font-size: var(--font-size-xs); color: var(--color-text-tertiary); border-bottom: 1px solid var(--color-border-light); }
+.face-row { display: grid; grid-template-columns: 100px 100px 100px 100px 1fr 80px; gap: var(--space-2); padding: var(--space-2) 0; border-bottom: 1px solid var(--color-border-light); font-size: var(--font-size-xs); align-items: center; }
+.face-row:last-child { border-bottom: none; }
+.face-header-5col, .face-row-5col { grid-template-columns: 100px 100px 100px 100px 1fr; }
+.face-label { color: var(--color-text-secondary); }
+.face-area { color: var(--color-primary); font-weight: var(--font-weight-medium); }
+.action-link { color: var(--color-primary); cursor: pointer; }
 
 /* Photos */
 .photo-section, .design-section, .ref-section { margin-top: 16px; }
@@ -773,12 +970,26 @@ onMounted(() => loadData())
 
 /* Compare section */
 .compare-section { margin-top: 16px; border: 1px solid var(--color-border-light); border-radius: 8px; padding: 16px; }
-.compare-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-.compare-column { background: #fafafa; border-radius: 6px; padding: 12px; }
-.column-header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
-.column-count { font-size: 12px; color: var(--color-text-secondary); }
-.column-body { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; min-height: 100px; }
-.compare-image { width: 100%; height: 120px; border-radius: 6px; cursor: pointer; border: 1px solid #e5e7eb; }
+.compare-list { display: flex; flex-direction: column; gap: 16px; }
+.compare-group { border: 1px solid var(--color-border-light); border-radius: 8px; overflow: hidden; }
+.compare-group-header {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 12px; background: #f5f7fa;
+  font-size: 13px; font-weight: 700;
+}
+.compare-group-name { color: #374151; }
+.compare-group-size { margin-left: auto; font-size: 12px; color: var(--color-text-tertiary); font-weight: 400; }
+.compare-pair {
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: 12px; border-top: 1px solid #f0f0f0;
+}
+.compare-side { flex: 1; min-width: 0; }
+.compare-label { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
+.compare-face-name { font-size: 12px; color: var(--color-text-secondary); font-weight: 500; }
+.compare-photos { display: flex; flex-wrap: wrap; gap: 6px; }
+.compare-image { width: 120px; height: 120px; border-radius: 6px; cursor: pointer; border: 1px solid #e5e7eb; }
+.compare-arrow { font-size: 18px; color: var(--color-text-tertiary); align-self: center; padding: 0 4px; flex-shrink: 0; }
+.no-photo-text { font-size: 12px; color: var(--color-text-tertiary); line-height: 120px; text-align: center; }
 
 /* Print preview styles */
 .print-preview-content { padding: 20px; background: #fff; }
@@ -789,40 +1000,40 @@ onMounted(() => loadData())
 .info-row .label { color: #666; margin-right: 8px; }
 .print-designs { margin: 20px 0; }
 .print-designs h3 { font-size: 14px; margin-bottom: 12px; border-left: 3px solid var(--color-primary); padding-left: 8px; }
-.design-images-print { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
-.design-image-item { text-align: center; max-width: 600px; position: relative; }
-.design-image-item.full-width { grid-column: 1 / -1; max-width: 600px; margin: 0 auto; }
-.design-image-item.half-width { max-width: 100%; }
-.design-image-item img { width: 100%; max-width: 600px; max-height: 700px; height: auto; object-fit: contain; border: 1px solid #ddd; background: #fafafa; }
-.image-info-tag {
-  position: absolute;
-  top: 0;
-  left: 0;
-  background: rgba(0, 0, 0, 0.7);
-  color: #fff;
-  padding: 4px 10px;
-  font-size: 12px;
-  font-weight: 500;
-  border-radius: 0 0 4px 0;
-  z-index: 10;
-}
+.design-images-print { display: flex; flex-direction: column; gap: 24px; }
+.design-image-item { text-align: center; page-break-inside: avoid; }
+.design-image-item.full-width { max-width: 100%; }
+.design-image-item img { max-width: 100%; height: auto; max-height: 500px; object-fit: contain; border: 1px solid #ddd; background: #fafafa; }
+.image-above-label { font-size: 14px; font-weight: 600; color: #333; margin-bottom: 8px; text-align: center; }
+.print-width-control { display: flex; align-items: center; gap: 12px; padding: 8px 12px; margin-bottom: 12px; background: #f5f7fa; border-radius: 6px; font-size: 13px; color: #666; }
+.print-width-control .el-slider { flex: 1; max-width: 200px; }
 .print-signature { margin-top: 30px; display: flex; justify-content: space-between; padding-top: 20px; border-top: 1px solid #eee; }
 .signature-item { display: flex; align-items: center; gap: 8px; font-size: 13px; }
 .signature-line { width: 120px; border-bottom: 1px solid #333; height: 1px; }
 
 /* 一体标识 */
+.unified-row { background: #fff7ed; }
+.unified-row + .unified-row td { border-top: none; }
 .unified-cell { position: relative; }
-.unified-cell.is-unified { padding-top: 14px; }
+.unified-cell.is-unified { padding-left: 28px; }
+.unified-bar {
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 3px;
+  background: var(--color-warning);
+}
+.unified-cell.is-first .unified-bar { border-radius: 2px 2px 0 0; }
+.unified-cell.is-last .unified-bar { border-radius: 0 0 2px 2px; }
 .unified-tag {
   position: absolute;
-  top: 2px;
-  left: 2px;
+  left: 6px; top: 50%;
+  transform: translateY(-50%);
   background: var(--color-warning);
   color: #fff;
-  padding: 1px 5px;
-  border-radius: 2px;
+  padding: 2px 6px;
+  border-radius: 3px;
   font-size: 10px;
   font-weight: 700;
-  line-height: 1.3;
+  white-space: nowrap;
 }
 </style>

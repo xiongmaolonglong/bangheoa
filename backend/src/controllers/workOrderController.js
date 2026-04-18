@@ -301,6 +301,13 @@ async function listWorkOrders(req, res) {
         required: false,
         attributes: ['id', 'work_order_id', 'material_type', 'status'],
       },
+      {
+        model: WoConstruction,
+        as: 'constructions',
+        required: false,
+        attributes: ['id', 'work_order_id', 'constructor_id', 'status'],
+        include: [{ model: TenantUser, as: 'constructor', attributes: ['id', 'name'] }],
+      },
     ],
     order: [['created_at', 'DESC']],
     limit: pageSize,

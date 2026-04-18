@@ -10,6 +10,7 @@ const {
 } = require('../models');
 const { success, error, paginate } = require('../utils/response');
 const sequelize = require('../config/database');
+const { getDefaultTenantSettings } = require('../utils/defaultSettings');
 
 // ============================================================
 // 租户管理
@@ -126,7 +127,7 @@ async function createTenant(req, res) {
 
   const transaction = await sequelize.transaction();
   try {
-    // 1. 创建租户
+    // 1. 创建租户（带默认配置）
     const tenant = await Tenant.create({
       name,
       contact_name: contact_name || '',
@@ -134,6 +135,7 @@ async function createTenant(req, res) {
       contact_email: email || '',
       order_code_prefix: order_code_prefix || 'GG',
       status: 'active',
+      settings: getDefaultTenantSettings(),
     }, { transaction });
 
     // 2. 创建地区关联（如果有）

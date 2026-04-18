@@ -52,7 +52,9 @@
                             inactive-text="独立"
                             size="small"
                             class="ml-12"
+                            @change="onUnifiedChange(bi, gi)"
                           />
+                          <span v-if="group.isUnified && group.faces.length < 2" class="unified-hint">需≥2面</span>
                         </div>
                         <el-button v-if="!isEditMode && block.groups.length > 1" size="small" type="danger" link @click="removeGroupFromBlock(bi, gi)">删除此组</el-button>
                       </div>
@@ -98,6 +100,7 @@
                                 :placeholder="field.placeholder || '请选择'"
                                 size="small"
                                 style="width: 100%"
+                                :class="{ 'warning-select': field.required && !face[field.field_key] }"
                               >
                                 <el-option v-for="opt in (field.options || [])" :key="opt.value" :label="opt.label" :value="opt.value" />
                               </el-select>
@@ -259,13 +262,20 @@ function onBlockTypeChange(bi) {
       }
     }
   }
+  // 广告类型切换后更新所有分组名称
+  const adTypeLabel = currentAdTypeMap.value[block.adTypeKey] || block.adTypeKey
+  block.groups.forEach((group, gi) => {
+    const unifiedTag = group.isUnified ? '一体' : '独立'
+    group.name = `${adTypeLabel}${gi + 1}-${unifiedTag}`
+  })
 }
 
 function addAdTypeBlock() {
   const firstAdTypeKey = selectedTemplate.value?.ad_types?.[0]?.key || ''
+  const adTypeLabel = currentAdTypeMap.value[firstAdTypeKey] || firstAdTypeKey
   adTypeBlocks.value.push({
     adTypeKey: firstAdTypeKey,
-    groups: [{ name: '分组1', isUnified: false, faces: [createBlockFace(firstAdTypeKey)] }],
+    groups: [{ name: `${adTypeLabel}1-独立`, isUnified: false, faces: [createBlockFace(firstAdTypeKey)] }],
   })
 }
 
@@ -284,8 +294,20 @@ function removeAdTypeBlock(bi) {
 function addGroupToBlock(bi) {
   const block = adTypeBlocks.value[bi]
   if (!block) return
+  const adTypeLabel = currentAdTypeMap.value[block.adTypeKey] || block.adTypeKey
   const idx = block.groups.length + 1
-  block.groups.push({ name: '分组' + idx, isUnified: false, faces: [createBlockFace(block.adTypeKey)] })
+  block.groups.push({ name: `${adTypeLabel}${idx}-独立`, isUnified: false, faces: [createBlockFace(block.adTypeKey)] })
+}
+
+function onUnifiedChange(bi, gi) {
+  const block = adTypeBlocks.value[bi]
+  if (!block) return
+  const group = block.groups[gi]
+  if (!group) return
+  // 开启一体时，自动更新分组名标识
+  const adTypeLabel = currentAdTypeMap.value[block.adTypeKey] || block.adTypeKey || ''
+  const unifiedTag = group.isUnified ? '一体' : '独立'
+  group.name = `${adTypeLabel}${gi + 1}-${unifiedTag}`
 }
 
 function removeGroupFromBlock(bi, gi) {
@@ -308,6 +330,18 @@ function addFaceToBlock(bi, gi) {
   if (!block) return
   const group = block.groups[gi]
   if (!group) return
+  // 检查当前组内的面是否都已选择测量面
+  const fields = getFaceFields(block.adTypeKey)
+  const labelField = fields.find(f => f.field_role === 'label' && f.field_type === 'select')
+  if (labelField) {
+    for (let fi = 0; fi < group.faces.length; fi++) {
+      const face = group.faces[fi]
+      if (!face[labelField.field_key]) {
+        ElMessage.warning(`第 ${fi + 1} 面的测量面未选择，请先选择后再添加新面`)
+        return
+      }
+    }
+  }
   group.faces.push(createBlockFace(block.adTypeKey))
 }
 
@@ -317,6 +351,7 @@ function removeFaceFromBlock(bi, gi, fi) {
   const group = block.groups[gi]
   if (!group) return
   group.faces.splice(fi, 1)
+  // 删除面后如果标记为一体但不足2面，不自动切回——用户可能还要加面
   if (!blockUploadFiles.value[bi]) return
   if (!blockUploadFiles.value[bi][gi]) return
   delete blockUploadFiles.value[bi][gi][fi]
@@ -391,14 +426,33 @@ function populateFromExistingData() {
     const adTypeKey = mat.material_type || mat.type
     const fields = getFaceFields(adTypeKey)
 
-    // 按 group_name 分组
+    // 按 group_name 分组，空名时按一体/独立自动区分
     const groupMap = {}
+    let autoGroupCounter = 0
     for (const face of (mat.faces || [])) {
-      const groupName = face.group_name || ''
+      let groupName = face.group_name || ''
+      // 空 group_name 处理：独立面各成一组，一体连续面合为一组
+      if (!groupName) {
+        if (!face.is_unified) {
+          autoGroupCounter++
+          groupName = `__indep_${autoGroupCounter}`
+        } else {
+          // 一体面：尝试与前一个一体空名组合并
+          const keys = Object.keys(groupMap)
+          const lastKey = keys.length > 0 ? keys[keys.length - 1] : null
+          if (lastKey && groupMap[lastKey].isUnified && !groupMap[lastKey]._hasRealName) {
+            groupName = lastKey
+          } else {
+            autoGroupCounter++
+            groupName = `__unified_${autoGroupCounter}`
+          }
+        }
+      }
       if (!groupMap[groupName]) {
         groupMap[groupName] = {
-          name: groupName,
+          name: face.group_name || '',
           isUnified: !!face.is_unified,
+          _hasRealName: !!face.group_name,
           faces: []
         }
       }
@@ -439,9 +493,21 @@ function populateFromExistingData() {
       groupMap[groupName].faces.push(formFace)
     }
 
+    // 补全空名分组的显示名
+    const adTypeLabel = currentAdTypeMap.value[adTypeKey] || adTypeKey
+    let groupIdx = 0
+    const groups = Object.values(groupMap).map(g => {
+      groupIdx++
+      if (!g.name) {
+        const unifiedTag = g.isUnified ? '一体' : '独立'
+        g.name = `${adTypeLabel}${groupIdx}-${unifiedTag}`
+      }
+      delete g._hasRealName
+      return g
+    })
     blocks.push({
       adTypeKey,
-      groups: Object.values(groupMap)
+      groups
     })
   }
 
@@ -480,12 +546,45 @@ async function submitProxyMeasurement() {
       ElMessage.warning('请选择广告类型')
       return
     }
+    // 获取字段定义
+    const fields = getFaceFields(block.adTypeKey)
+    if (!fields.length) {
+      ElMessage.warning(`配置错误：未找到「${currentAdTypeMap.value[block.adTypeKey]}」的字段定义`)
+      return
+    }
+
     for (const group of block.groups) {
-      const fields = getFaceFields(block.adTypeKey)
       for (let fi = 0; fi < group.faces.length; fi++) {
         for (const field of fields) {
-          if (field.required && !group.faces[fi][field.field_key]) {
-            ElMessage.warning(`${currentAdTypeMap.value[block.adTypeKey]} 的第 ${fi + 1} 面的「${field.field_label}」为必填`)
+          // 确保 required 是布尔值（可能是字符串 "true"/"false"）
+          const isRequired = field.required === true || field.required === 'true' || field.required === 1
+          if (!isRequired) continue
+
+          const value = group.faces[fi][field.field_key]
+          let isEmpty = false
+
+          // 根据字段类型判断空值
+          if (field.field_type === 'number') {
+            // 数字字段：null、undefined 或空字符串视为空，但 0 是有效值
+            isEmpty = value === null || value === undefined || value === ''
+          } else if (field.field_type === 'image') {
+            // 图片字段：检查数组是否为空
+            isEmpty = !Array.isArray(value) || value.length === 0
+          } else if (field.field_type === 'select') {
+            // 下拉选择：null、undefined 或空字符串视为空
+            isEmpty = value === null || value === undefined || value === ''
+          } else {
+            // 文本/多行文本等其他字段
+            isEmpty = value === null || value === undefined || String(value).trim() === ''
+          }
+
+          if (isEmpty) {
+            // 测量面字段特殊提示
+            if (field.field_role === 'label') {
+              ElMessage.warning(`【测量面未选择】${currentAdTypeMap.value[block.adTypeKey]} 的第 ${fi + 1} 面请选择测量面`, 5000)
+            } else {
+              ElMessage.warning(`${currentAdTypeMap.value[block.adTypeKey]} 的第 ${fi + 1} 面的「${field.field_label}」为必填`)
+            }
             return
           }
         }
@@ -570,13 +669,19 @@ async function submitProxyMeasurement() {
 
     const materials = adTypeBlocks.value
       .filter(b => b.adTypeKey && b.groups.some(g => g.faces.length > 0))
-      .map(b => {
+      .map((b, bi) => {
         const faces = []
-        for (const group of b.groups) {
+        for (let gi = 0; gi < b.groups.length; gi++) {
+          const group = b.groups[gi]
           for (let fi = 0; fi < group.faces.length; fi++) {
             const face = normalizeFace(group.faces[fi], b.adTypeKey, fi)
-            face.group_name = group.name || ''
-            face.is_unified = group.isUnified || false
+            // 确保分组名唯一：广告类型+分组序号+一体/独立标识
+            const adTypeLabel = currentAdTypeMap.value[b.adTypeKey] || b.adTypeKey
+            // 1个面时自动降为独立
+            const actualUnified = group.isUnified && group.faces.length >= 2
+            const unifiedTag = actualUnified ? '一体' : '独立'
+            face.group_name = `${adTypeLabel}${gi + 1}-${unifiedTag}`
+            face.is_unified = actualUnified
             faces.push(face)
           }
         }
@@ -645,7 +750,17 @@ onMounted(() => {
 .group-unified { border: 1px solid #409eff; }
 .ml-12 { margin-left: 12px; }
 .mb-12 { margin-bottom: 12px; }
+.unified-hint { font-size: 11px; color: #909399; margin-left: 8px; }
 .proxy-footer { display: flex; justify-content: center; padding-top: 8px; border-top: 1px dashed #e5e7eb; }
 .text-muted { color: #909399; }
 .material-face-card { margin-bottom: 8px; }
+
+/* 必填但未选择的下拉框警告样式 */
+:deep(.warning-select) .el-input__wrapper {
+  border: 1px solid var(--color-danger);
+  box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.2);
+}
+:deep(.warning-select) .el-input__inner::placeholder {
+  color: var(--color-danger);
+}
 </style>

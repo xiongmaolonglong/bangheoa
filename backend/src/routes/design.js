@@ -35,6 +35,9 @@ router.post('/:workOrderId/review', requireTenant, designController.reviewDesign
 // POST /api/v1/designs/:workOrderId/submit-review - 提交设计审核（设计师）
 router.post('/:workOrderId/submit-review', requireTenant, injectTenant, designController.submitReview);
 
+// POST /api/v1/designs/:workOrderId/withdraw - 撤回设计稿（设计师）
+router.post('/:workOrderId/withdraw', requireTenant, injectTenant, designController.withdrawDesign);
+
 // POST /api/v1/designs/:workOrderId/assign - 指派设计师（必须在 :workOrderId 之前）
 router.post('/:workOrderId/assign', requireTenant, injectTenant, designController.assignDesigner);
 

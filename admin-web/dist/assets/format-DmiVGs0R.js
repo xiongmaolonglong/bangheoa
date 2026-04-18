@@ -1,0 +1,1 @@
+function n(t){return t==null?"¥0.00":`¥${Number(t).toLocaleString("zh-CN",{minimumFractionDigits:2})}`}function e(t){if(!t)return"—";const r=new Date(t);return`${r.getFullYear()}-${String(r.getMonth()+1).padStart(2,"0")}-${String(r.getDate()).padStart(2,"0")}`}export{n as a,e as f};

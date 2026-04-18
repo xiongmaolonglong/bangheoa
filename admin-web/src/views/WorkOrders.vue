@@ -165,6 +165,12 @@
               <el-tag size="small" :type="displayStageTagType(row)">{{ displayStageLabel(row) }}</el-tag>
             </template>
           </el-table-column>
+          <el-table-column label="待派单" width="100">
+            <template #default="{ row }">
+              <el-tag v-if="getDispatchNeeded(row)" size="small" type="danger" effect="dark">{{ getDispatchNeeded(row) }}</el-tag>
+              <span v-else class="text-muted">-</span>
+            </template>
+          </el-table-column>
           <el-table-column label="状态" width="80">
             <template #default="{ row }">
               <el-tag size="small" :type="row.is_timeout ? 'danger' : 'success'" effect="plain">
@@ -180,10 +186,7 @@
                 <router-link :to="`/work-orders/${row.id}`" class="action-link">
                   <el-icon><View /></el-icon>查看
                 </router-link>
-                <el-button v-if="row.current_stage === 'assignment'" link type="primary" size="small" @click="openDispatch(row)">
-                  <el-icon><Document /></el-icon>派单
-                </el-button>
-                <template v-if="row.current_stage === 'assignment' && !row.assigned_tenant_user_id">
+                                <template v-if="row.current_stage === 'assignment' && !row.assigned_tenant_user_id">
                   <el-button link type="info" size="small" @click.stop="openEdit(row)">
                     <el-icon><Edit /></el-icon>编辑
                   </el-button>
@@ -432,6 +435,15 @@ function displayStageTagType(row) {
   }
   const map = { declaration: '', assignment: 'info', measurement: 'warning', design: 'primary', production: 'success' }
   return map[row.current_stage] || 'info'
+}
+
+// 判断工单是否需要派单
+function getDispatchNeeded(row) {
+  const stage = row.current_stage
+  if (stage === 'assignment' && !row.assigned_tenant_user_id) return '待派测量'
+  if ((stage === 'design' || stage === 'production') && !row.designer_id) return '待派设计'
+  if (stage === 'construction' && !row.constructor_id) return '待派施工'
+  return ''
 }
 
 function adTypeLabel(v) {

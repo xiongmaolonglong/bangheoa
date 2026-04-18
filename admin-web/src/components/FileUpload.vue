@@ -1,5 +1,5 @@
 <template>
-  <div class="upload-container">
+  <div class="upload-container" :class="{ disabled }">
     <!-- 已上传文件 -->
     <div v-for="(file, index) in localFiles" :key="index" class="uploaded-item">
       <img v-if="isImageUrl(file)" :src="file" class="uploaded-img" @click="previewImage(file)" />
@@ -7,13 +7,13 @@
         <el-icon><Document /></el-icon>
         <span class="file-name">{{ getFileName(file) }}</span>
       </div>
-      <div class="delete-overlay" @click.stop="removeFile(index)">
+      <div v-if="!disabled" class="delete-overlay" @click.stop="removeFile(index)">
         <el-icon class="delete-icon"><Delete /></el-icon>
       </div>
     </div>
 
     <!-- 上传按钮 -->
-    <div class="upload-btn" @click="triggerUpload" v-if="localFiles.length < limit">
+    <div class="upload-btn" @click="triggerUpload" v-if="!disabled && localFiles.length < limit">
       <el-icon v-if="!uploading"><Plus /></el-icon>
       <el-icon v-else class="is-loading"><Loading /></el-icon>
     </div>
@@ -35,6 +35,7 @@ const props = defineProps({
   modelValue: { type: Array, default: () => [] },
   limit: { type: Number, default: 9 },
   accept: { type: String, default: 'image/*' },
+  disabled: { type: Boolean, default: false },
 })
 
 const emit = defineEmits(['update:modelValue'])
@@ -125,6 +126,11 @@ function previewImage(url) {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.upload-container.disabled {
+  opacity: 0.7;
+  pointer-events: none;
 }
 
 .uploaded-item {

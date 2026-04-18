@@ -204,7 +204,12 @@
                     <span class="face-label">{{ face.label }}</span>
                     <span>{{ Number(face.width||0).toFixed(2) }} × {{ Number(face.height||0).toFixed(2) }}cm</span>
                     <span class="face-area">{{ face.area || ((face.width * face.height) / 10000).toFixed(2) }}m²</span>
-                    <span class="text-muted">{{ face.notes || '—' }}</span>
+                    <span class="face-extra" v-if="getExtraFields(face).length">
+	                      <template v-for="ef in getExtraFields(face)" :key="ef.key">
+	                        <el-tag size="small" effect="plain" class="extra-tag">{{ ef.value }}{{ ef.label }}</el-tag>
+	                      </template>
+	                    </span>
+	                    <span class="text-muted" v-else>{{ face.notes || '—' }}</span>
                     <span class="face-photos" v-if="face.photos?.length">
                       <el-image
                         v-for="(url, pi) in face.photos.slice(0, 3)"
@@ -1197,6 +1202,50 @@ function resolveAdTypeLabel(mat) {
   return adTypeLabels.value[key] || key || '-'
 }
 
+// 提取测量面的额外字段（张、单价等）
+const extraFieldLabels = ref({})
+const defaultFieldLabels = {
+  quantity: '张',
+  unit: '单位',
+  unit_price: '单价',
+  price: '价格',
+  material: '材料',
+  thickness: '厚度',
+  color: '颜色',
+  remark: '备注',
+  position: '位置',
+  floor: '楼层',
+}
+function getExtraFields(face) {
+  const standardKeys = ['label', 'width', 'height', 'area', 'photos', 'notes', 'group_name', 'is_unified', 'special_flag', '_widthM', '_heightM', 'id', 'created_at', 'updated_at']
+  const result = []
+  for (const [key, val] of Object.entries(face)) {
+    if (standardKeys.includes(key)) continue
+    if (key.endsWith('_meter')) continue // 跳过单位转换字段
+    if (val === null || val === undefined || val === '') continue
+    // 跳过纯技术字段
+    if (['unit', 'id', 'createdAt', 'updatedAt'].includes(key)) continue
+    const label = extraFieldLabels.value[key] || defaultFieldLabels[key] || key
+    result.push({ key, label, value: val })
+  }
+  return result
+}
+
+async function loadExtraFieldLabels() {
+  try {
+    const res = await api.get('/tenant/settings/project-templates')
+    const map = {}
+    ;(res.data?.templates || []).forEach(tmpl => {
+      tmpl.ad_types?.forEach(ad => {
+        (ad.face_fields || []).forEach(f => {
+          map[f.field_key] = f.field_label
+        })
+      })
+    })
+    extraFieldLabels.value = map
+  } catch {}
+}
+
 function handlePrint() {
   if (detail.value) printWorkOrder(detail.value)
 }
@@ -1209,6 +1258,7 @@ function handleExport() {
 onMounted(async () => {
   loadTenantUsers()
   loadAdTypeLabels()
+  loadExtraFieldLabels()
   // 加载补录工单表单配置，用于解析 custom_data
   try {
     const formRes = await api.get('/tenant/form-config/work_order_create')
@@ -1336,6 +1386,8 @@ onMounted(async () => {
 .face-row:last-child { border-bottom: none; }
 .face-label { color: var(--color-text-tertiary); }
 .face-area { color: var(--color-primary); font-weight: var(--font-weight-medium); }
+.face-extra { display: flex; gap: 4px; flex-wrap: wrap; }
+.extra-tag { font-size: 11px; }
 .face-photos { display: flex; gap: 4px; align-items: center; }
 .face-thumb { width: 36px; height: 36px; border-radius: 4px; cursor: pointer; }
 .more-photos { font-size: 10px; color: var(--color-text-tertiary); }
