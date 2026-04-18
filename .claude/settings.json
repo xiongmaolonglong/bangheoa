@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '✓ 代码已修改，需要测试时说「测试」'"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,40 @@
+# Dependencies
+node_modules/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# MCP config (contains credentials)
+.mcp.json
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+.gstack/
+
+# Playwright
+tests/.auth/
+playwright-report/
+test-results/
+.playwright-mcp/
+
+# Temp files
+temp/
+*.tmp
+test.png
+tmp_resp.json
+
+# Generated docs
+PROJECT_HEALTH_REPORT.md
+TODO.md
+work-order-detail-snapshot.md
+
+# Claude local settings
+.claude/settings.local.json
+.claude/scheduled_tasks.lock

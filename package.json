@@ -1,0 +1,32 @@
+{
+  "name": "ad-workflow-monorepo",
+  "version": "0.1.0",
+  "private": true,
+  "description": "广告工程全流程管理系统 - 项目检查脚本",
+  "scripts": {
+    "check": "bash scripts/check.sh",
+    "check:backend": "cd backend && npm test",
+    "check:admin": "cd admin-web && npm run build",
+    "check:super-admin": "cd super-admin && npm run build",
+    "check:client": "cd client-web && npm run build",
+    "check:frontend": "bash scripts/check-frontend.sh",
+    "check:all": "bash scripts/check-all.sh",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:admin": "cd admin-web && npm run dev",
+    "dev:super-admin": "cd super-admin && npm run dev",
+    "dev:client": "cd client-web && npm run dev"
+  },
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "playwright": "^1.59.1"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.59.1"
+  }
+}
