@@ -57,8 +57,10 @@ const loginLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-// 信任反向代理（Nginx）
-app.set('trust proxy', 1);
+// 信任反向代理（生产环境用 Nginx）
+if (process.env.NODE_ENV === 'production') {
+  app.set('trust proxy', 1);
+}
 
 // 应用限流（排除静态资源）
 app.use('/api', apiLimiter);
