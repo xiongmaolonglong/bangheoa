@@ -186,7 +186,7 @@ async function getTask(req, res) {
  */
 async function submitConstruction(req, res) {
   const { workOrderId } = req.params;
-  const { before_photos, during_photos, after_photos, notes, duration_minutes, signature_path } = req.body;
+  const { before_photos, during_photos, after_photos, notes, duration_minutes, signature_path, status } = req.body;
 
   const tenantId = req.user.role === 'super_admin' ? undefined : (req.tenantId || req.user.tenant_id);
   const woWhere = { id: parseInt(workOrderId, 10) };
@@ -209,14 +209,21 @@ async function submitConstruction(req, res) {
     after_photos: after_photos !== undefined ? after_photos : construction?.after_photos || [],
   };
 
+  // 如果提交完成状态
+  if (status === 'completed') {
+    photoData.constructed_at = new Date().toISOString().slice(0, 10);
+  }
+
   if (construction) {
     // 更新现有记录
-    await construction.update({
+    const updateData = {
       ...photoData,
       notes: notes !== undefined ? notes : construction.notes,
       duration_minutes: duration_minutes !== undefined ? duration_minutes : construction.duration_minutes,
       signature_path: signature_path !== undefined ? signature_path : construction.signature_path,
-    });
+    };
+    if (status) updateData.status = status;
+    await construction.update(updateData);
   } else {
     // 创建新记录
     construction = await WoConstruction.create({
@@ -226,7 +233,8 @@ async function submitConstruction(req, res) {
       notes: notes || null,
       duration_minutes: duration_minutes || 0,
       signature_path: signature_path || null,
-      status: 'scheduled',
+      status: status || 'scheduled',
+      constructed_at: status === 'completed' ? new Date().toISOString().slice(0, 10) : null,
     });
   }
 
