@@ -1,483 +1,419 @@
 <template>
   <div v-loading="loading" class="construction-detail-page">
-    <!-- 顶部信息栏 -->
-    <div class="top-header">
-      <div class="header-left">
-        <el-button text @click="$router.back()" class="back-btn">
+    <!-- 顶部信息 -->
+    <div class="top-bar">
+      <div class="top-left">
+        <el-button text @click="$router.back()">
           <el-icon><ArrowLeft /></el-icon>
           返回
         </el-button>
-        <div class="wo-badge">{{ workOrder.work_order_no }}</div>
-        <h1 class="page-title">{{ workOrder.title }}</h1>
-        <el-tag :type="statusType(record.status)" effect="light">{{ statusLabel(record.status) }}</el-tag>
+        <span class="wo-badge">{{ workOrder.work_order_no }}</span>
+        <h1 class="title">{{ workOrder.title }}</h1>
+        <el-tag :type="statusType" effect="light">{{ statusLabel }}</el-tag>
       </div>
-      <div class="header-right">
-        <el-button v-if="record.status === 'completed'" type="success" @click="openVerifyDialog">验收</el-button>
-        <el-button v-if="record.status === 'scheduled'" type="warning" @click="startConstruction">开始施工</el-button>
+      <div class="top-right">
+        <template v-if="record.constructor_id">
+          <span class="constructor-info">
+            施工员: {{ record.constructor?.real_name || record.constructor_name || '-' }}
+          </span>
+          <span class="phone">{{ record.constructor?.phone || '' }}</span>
+        </template>
+        <el-button v-else type="primary" size="small" @click="assignDialogVisible = true">指派施工员</el-button>
       </div>
     </div>
 
-    <!-- 工单进度条 -->
-    <div class="progress-bar">
-      <el-steps :active="progressStep" finish-status="success" simple>
-        <el-step title="待施工" />
-        <el-step title="施工中" />
-        <el-step title="已完成" />
-        <el-step title="内部验收" />
-        <el-step title="甲方验收" />
-      </el-steps>
+    <!-- 安装内容 -->
+    <el-card class="install-card">
+      <template #header>
+        <span>安装内容</span>
+        <span class="total-area">共 {{ totalArea.toFixed(2) }} m²</span>
+      </template>
+      <div class="install-list">
+        <div v-for="mat in materials" :key="mat.type" class="install-item">
+          <div class="mat-header">
+            <span class="mat-type">{{ materialTypeLabel(mat.type) }}</span>
+            <span class="mat-area">{{ mat.totalArea.toFixed(2) }} m²</span>
+          </div>
+          <div class="mat-faces">
+            <span v-for="(face, i) in mat.faces" :key="i" class="face-tag">
+              {{ face.label }} {{ face.width }}×{{ face.height }}{{ face.unit || 'cm' }}
+            </span>
+            <span v-if="mat.isUnified" class="unified-tag">一体组合</span>
+          </div>
+        </div>
+        <el-empty v-if="!materials.length" description="暂无测量数据" :image-size="60" />
+      </div>
+    </el-card>
+
+    <!-- 照片上传 -->
+    <div class="photo-section">
+      <div class="photo-col">
+        <div class="photo-header">施工前照片</div>
+        <div class="photo-grid">
+          <div v-for="(url, i) in beforePhotos" :key="'b' + i" class="photo-item">
+            <el-image :src="url" :preview-src-list="beforePhotos" fit="cover" />
+            <el-icon v-if="!readonly" class="photo-delete" @click="removePhoto('before', i)"><Close /></el-icon>
+          </div>
+          <div v-if="beforePhotos.length < 3 && !readonly" class="photo-add" @click="triggerUpload('before')">
+            <el-icon><Plus /></el-icon>
+          </div>
+        </div>
+      </div>
+      <div class="photo-col">
+        <div class="photo-header">施工后照片</div>
+        <div class="photo-grid">
+          <div v-for="(url, i) in afterPhotos" :key="'a' + i" class="photo-item">
+            <el-image :src="url" :preview-src-list="afterPhotos" fit="cover" />
+            <el-icon v-if="!readonly" class="photo-delete" @click="removePhoto('after', i)"><Close /></el-icon>
+          </div>
+          <div v-if="afterPhotos.length < 3 && !readonly" class="photo-add" @click="triggerUpload('after')">
+            <el-icon><Plus /></el-icon>
+          </div>
+        </div>
+      </div>
     </div>
 
-    <!-- 主内容区 -->
-    <div class="main-content">
-      <!-- 左侧：工单信息 -->
-      <el-card class="info-card">
-        <template #header>
-          <span class="card-title">工单信息</span>
-        </template>
-        <el-descriptions :column="1" border size="small">
-          <el-descriptions-item label="项目">
-            <el-tag v-if="projectName" type="primary" effect="plain">{{ projectName }}</el-tag>
-            <span v-else class="text-muted">-</span>
-          </el-descriptions-item>
-          <el-descriptions-item label="施工员">{{ record.constructor?.real_name || record.constructor_name || '-' }}</el-descriptions-item>
-          <el-descriptions-item label="联系电话">{{ record.constructor?.phone || '-' }}</el-descriptions-item>
-          <el-descriptions-item label="施工日期">{{ record.constructed_at || '-' }}</el-descriptions-item>
-          <el-descriptions-item label="耗时">{{ record.duration_minutes ? record.duration_minutes + ' 分钟' : '-' }}</el-descriptions-item>
-          <el-descriptions-item label="施工说明">{{ record.notes || '—' }}</el-descriptions-item>
-        </el-descriptions>
+    <!-- 客户签名 -->
+    <el-card class="signature-card">
+      <template #header>客户签名</template>
+      <div class="signature-area">
+        <canvas v-if="!readonly && !signatureUrl" ref="signatureCanvas" class="signature-canvas" @mousedown="startDraw" @mousemove="drawing" @mouseup="endDraw" @mouseleave="endDraw" @touchstart.prevent="startDraw" @touchmove.prevent="drawing" @touchend="endDraw"></canvas>
+        <img v-else-if="signatureUrl" :src="signatureUrl" class="signature-img" />
+        <div v-else class="signature-placeholder">暂无签名</div>
+      </div>
+      <div v-if="!readonly && !signatureUrl" class="signature-actions">
+        <el-button size="small" @click="clearSignature">清除</el-button>
+        <el-button size="small" type="primary" @click="saveSignature">确认签名</el-button>
+      </div>
+    </el-card>
 
-        <!-- 验收信息 -->
-        <div v-if="showVerifyInfo" class="verify-section">
-          <div class="divider"></div>
-          <h4 class="section-subtitle">验收记录</h4>
-          <el-descriptions :column="1" border size="small">
-            <el-descriptions-item label="内部验收">
-              <el-tag v-if="record.status === 'internally_verified' || record.status === 'accepted'" type="success" size="small">通过</el-tag>
-              <span v-else class="text-muted">—</span>
-            </el-descriptions-item>
-            <el-descriptions-item label="验收日期">{{ record.internal_verified_at || '-' }}</el-descriptions-item>
-            <el-descriptions-item label="甲方验收">
-              <el-tag v-if="record.status === 'accepted'" type="success" size="small">通过</el-tag>
-              <span v-else class="text-muted">—</span>
-            </el-descriptions-item>
-            <el-descriptions-item label="验收日期">{{ record.client_verified_at || '-' }}</el-descriptions-item>
-          </el-descriptions>
-        </div>
-      </el-card>
-
-      <!-- 中间：现场照片 -->
-      <el-card class="photo-card">
-        <template #header>
-          <div class="card-header-flex">
-            <span class="card-title">现场照片</span>
-            <el-dropdown trigger="click" @command="handleAddPhoto">
-              <el-button type="primary" size="small">
-                <el-icon><Plus /></el-icon>
-                上传照片
-              </el-button>
-              <template #dropdown>
-                <el-dropdown-menu>
-                  <el-dropdown-item command="before">施工前</el-dropdown-item>
-                  <el-dropdown-item command="during">施工中</el-dropdown-item>
-                  <el-dropdown-item command="after">施工后</el-dropdown-item>
-                </el-dropdown-menu>
-              </template>
-            </el-dropdown>
-          </div>
-        </template>
-
-        <div class="photo-sections">
-          <div v-if="record.before_photos?.length" class="photo-section">
-            <div class="photo-section-header">
-              <span class="photo-section-title">施工前（{{ record.before_photos.length }}张）</span>
-            </div>
-            <div class="photo-grid">
-              <div v-for="(url, i) in record.before_photos" :key="'b' + i" class="photo-item-wrapper">
-                <el-image :src="url" :preview-src-list="record.before_photos" fit="cover" class="photo-item" />
-                <div class="photo-delete" @click="removePhoto('before', i)">
-                  <el-icon><Close /></el-icon>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div v-if="record.during_photos?.length" class="photo-section">
-            <div class="photo-section-header">
-              <span class="photo-section-title">施工中（{{ record.during_photos.length }}张）</span>
-            </div>
-            <div class="photo-grid">
-              <div v-for="(url, i) in record.during_photos" :key="'d' + i" class="photo-item-wrapper">
-                <el-image :src="url" :preview-src-list="record.during_photos" fit="cover" class="photo-item" />
-                <div class="photo-delete" @click="removePhoto('during', i)">
-                  <el-icon><Close /></el-icon>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div v-if="record.after_photos?.length" class="photo-section">
-            <div class="photo-section-header">
-              <span class="photo-section-title">施工后（{{ record.after_photos.length }}张）</span>
-            </div>
-            <div class="photo-grid">
-              <div v-for="(url, i) in record.after_photos" :key="'a' + i" class="photo-item-wrapper">
-                <el-image :src="url" :preview-src-list="record.after_photos" fit="cover" class="photo-item" />
-                <div class="photo-delete" @click="removePhoto('after', i)">
-                  <el-icon><Close /></el-icon>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <el-empty v-if="!hasPhotos" description="暂无现场照片" :image-size="80" />
-        </div>
-      </el-card>
-
-      <!-- 右侧：施工日志 -->
-      <el-card class="log-card">
-        <template #header>
-          <div class="card-header-flex">
-            <span class="card-title">施工日志</span>
-            <el-button type="primary" size="small" @click="openLogDialog">
-              <el-icon><Plus /></el-icon>
-              添加日志
-            </el-button>
-          </div>
-        </template>
-
-        <div class="log-list" v-if="logs.length">
-          <div v-for="log in logs" :key="log.id" class="log-item">
-            <div class="log-header">
-              <span class="log-date">{{ log.log_date }}</span>
-              <span v-if="log.weather" class="log-weather">{{ log.weather }}</span>
-              <div class="log-actions">
-                <el-button type="primary" link size="small" @click="editLog(log)">编辑</el-button>
-                <el-button type="danger" link size="small" @click="deleteLog(log.id)">删除</el-button>
-              </div>
-            </div>
-            <div v-if="log.content" class="log-content">{{ log.content }}</div>
-            <div v-if="log.labor_count || log.labor_hours" class="log-labor">
-              <span v-if="log.labor_count">人数: {{ log.labor_count }}人</span>
-              <span v-if="log.labor_hours">工时: {{ log.labor_hours }}小时</span>
-            </div>
-            <div v-if="log.problem_description" class="log-problem">
-              <el-tag type="warning" size="small">问题</el-tag>
-              {{ log.problem_description }}
-            </div>
-            <div v-if="log.photos?.length" class="log-photos">
-              <el-image v-for="(url, i) in log.photos" :key="i" :src="url" :preview-src-list="log.photos" fit="cover" class="log-photo" />
-            </div>
-          </div>
-        </div>
-        <el-empty v-else description="暂无施工日志" :image-size="80" />
-      </el-card>
+    <!-- 提交按钮 -->
+    <div v-if="!readonly" class="submit-bar">
+      <el-button type="primary" size="large" :loading="submitting" @click="submitComplete">
+        提交完成
+      </el-button>
     </div>
-
-    <!-- 添加/编辑日志对话框 -->
-    <el-dialog v-model="showLogDialog" :title="editingLog ? '编辑日志' : '添加日志'" width="560px" destroy-on-close>
-      <el-form :model="logForm" label-width="90px">
-        <el-form-item label="日期" required>
-          <el-date-picker v-model="logForm.log_date" type="date" placeholder="选择日期" value-format="YYYY-MM-DD" style="width: 100%" />
-        </el-form-item>
-        <el-form-item label="天气">
-          <el-select v-model="logForm.weather" placeholder="选择天气" clearable style="width: 100%">
-            <el-option label="晴" value="晴" />
-            <el-option label="多云" value="多云" />
-            <el-option label="阴" value="阴" />
-            <el-option label="小雨" value="小雨" />
-            <el-option label="大雨" value="大雨" />
-            <el-option label="雪" value="雪" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="施工内容">
-          <el-input v-model="logForm.content" type="textarea" :rows="3" placeholder="描述当天施工内容" />
-        </el-form-item>
-        <el-row :gutter="16">
-          <el-col :span="12">
-            <el-form-item label="人数">
-              <el-input-number v-model="logForm.labor_count" :min="1" :max="99" style="width: 100%" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="工时">
-              <el-input-number v-model="logForm.labor_hours" :min="0.5" :max="24" :step="0.5" :precision="1" style="width: 100%" />
-            </el-form-item>
-          </el-col>
-        </el-row>
-        <el-form-item label="问题描述">
-          <el-input v-model="logForm.problem_description" type="textarea" :rows="2" placeholder="遇到的问题或特殊情况" />
-        </el-form-item>
-        <el-form-item label="照片">
-          <FileUpload v-model="logForm.photos" :limit="9" accept="image/*" list-type="picture-card" />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="showLogDialog = false">取消</el-button>
-        <el-button type="primary" @click="saveLog" :loading="savingLog">保存</el-button>
-      </template>
-    </el-dialog>
-
-    <!-- 验收对话框 -->
-    <el-dialog v-model="showVerifyDialog" title="施工验收" width="480px">
-      <el-form :model="verifyForm" label-width="100px">
-        <el-form-item label="验收结果" required>
-          <el-radio-group v-model="verifyForm.result">
-            <el-radio :label="true">通过</el-radio>
-            <el-radio :label="false">不通过，退回整改</el-radio>
-          </el-radio-group>
-        </el-form-item>
-        <el-form-item label="验收说明">
-          <el-input v-model="verifyForm.notes" type="textarea" :rows="3" :placeholder="verifyForm.result ? '填写验收意见' : '填写整改要求'" />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="showVerifyDialog = false">取消</el-button>
-        <el-button :type="verifyForm.result ? 'success' : 'danger'" @click="submitVerify" :loading="submitting">
-          {{ verifyForm.result ? '确认通过' : '退回整改' }}
-        </el-button>
-      </template>
-    </el-dialog>
 
     <!-- 隐藏的文件上传 -->
-    <input ref="fileInput" type="file" accept="image/*" multiple style="display: none" @change="handleFileSelect" />
+    <input ref="fileInput" type="file" accept="image/*" style="display:none" @change="handleFileChange" />
+
+    <!-- 指派施工员对话框 -->
+    <el-dialog v-model="assignDialogVisible" title="指派施工员" width="400px">
+      <el-form label-width="80px">
+        <el-form-item label="施工员">
+          <el-select v-model="assignForm.constructor_id" placeholder="选择施工员" style="width:100%">
+            <el-option v-for="u in constructors" :key="u.id" :label="u.real_name || u.name" :value="u.id" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="施工日期">
+          <el-date-picker v-model="assignForm.date" type="daterange" start-placeholder="开始" end-placeholder="结束" value-format="YYYY-MM-DD" style="width:100%" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="assignDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="handleAssign">确认</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, reactive, nextTick } from 'vue'
+import { ref, computed, onMounted, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage } from 'element-plus'
 import { ArrowLeft, Plus, Close } from '@element-plus/icons-vue'
 import api from '../api'
-import FileUpload from '../components/FileUpload.vue'
 
 const route = useRoute()
 const loading = ref(true)
 const submitting = ref(false)
-const savingLog = ref(false)
-const fileInput = ref(null)
-const currentPhotoType = ref('before')
+const readonly = ref(false)
 
-const record = ref({})
 const workOrder = ref({})
-const logs = ref([])
+const record = ref({})
+const measurements = ref([])
 
-const projectName = computed(() => {
-  const cd = workOrder.value.custom_data
-  return (typeof cd === 'string' ? JSON.parse(cd).project_name : cd?.project_name) || null
-})
+// 照片
+const beforePhotos = ref([])
+const afterPhotos = ref([])
+const currentUploadType = ref('before')
+const fileInput = ref(null)
 
-const hasPhotos = computed(() => {
-  return (record.value.before_photos?.length || 0) +
-    (record.value.during_photos?.length || 0) +
-    (record.value.after_photos?.length || 0) > 0
-})
+// 签名
+const signatureCanvas = ref(null)
+const signatureUrl = ref('')
+let ctx = null
+let isDrawing = false
 
-const showVerifyInfo = computed(() => {
-  return !['scheduled', 'installing'].includes(record.value.status)
-})
+// 指派
+const assignDialogVisible = ref(false)
+const constructors = ref([])
+const assignForm = ref({ constructor_id: null, date: null })
 
-const progressStep = computed(() => {
-  const map = { scheduled: 0, installing: 1, completed: 2, internally_verified: 3, accepted: 4, rejected: 2 }
-  return map[record.value.status] ?? 0
-})
-
-const STATUS_MAP = {
-  scheduled: '待施工',
-  installing: '施工中',
-  completed: '已完成',
-  internally_verified: '内部验收通过',
-  accepted: '甲方已验收',
-  rejected: '退回整改',
+// 材料类型映射
+const MATERIAL_LABELS = {
+  signboard: '软膜灯箱',
+  led_screen: 'LED屏幕',
+  lightbox: '灯箱',
+  acryilic: '亚克力',
+  pvc: 'PVC板',
+  vinyl: '车贴',
+  other: '其他'
 }
 
-function statusLabel(s) { return STATUS_MAP[s] || s }
-function statusType(s) {
-  const map = { scheduled: 'info', installing: 'warning', completed: 'primary', internally_verified: 'success', accepted: 'success', rejected: 'danger' }
-  return map[s] || ''
+function materialTypeLabel(type) {
+  return MATERIAL_LABELS[type] || type || '未知'
 }
 
-// 日志表单
-const showLogDialog = ref(false)
-const editingLog = ref(null)
-const logForm = reactive({
-  log_date: '',
-  weather: '',
-  content: '',
-  labor_count: null,
-  labor_hours: null,
-  problem_description: '',
-  photos: [],
-})
-
-function openLogDialog() {
-  editingLog.value = null
-  Object.assign(logForm, { log_date: '', weather: '', content: '', labor_count: null, labor_hours: null, problem_description: '', photos: [] })
-  showLogDialog.value = true
-}
-
-function editLog(log) {
-  editingLog.value = log
-  Object.assign(logForm, {
-    log_date: log.log_date,
-    weather: log.weather || '',
-    content: log.content || '',
-    labor_count: log.labor_count,
-    labor_hours: log.labor_hours,
-    problem_description: log.problem_description || '',
-    photos: log.photos || [],
-  })
-  showLogDialog.value = true
-}
-
-async function saveLog() {
-  if (!logForm.log_date) {
-    return ElMessage.warning('请选择日期')
+// 从测量数据提取材料列表
+const materials = computed(() => {
+  const list = []
+  for (const mat of measurements.value) {
+    const faces = mat.faces || []
+    const totalArea = faces.reduce((sum, f) => sum + (f.area || 0), 0)
+    const isUnified = faces.some(f => f.is_unified)
+    list.push({
+      type: mat.material_type,
+      faces: faces.map(f => ({
+        label: f.label || f.direction || '',
+        width: f._widthM || f.width || 0,
+        height: f._heightM || f.height || 0,
+        unit: f.unit || 'm'
+      })),
+      totalArea,
+      isUnified
+    })
   }
-  savingLog.value = true
+  return list
+})
+
+const totalArea = computed(() => materials.value.reduce((sum, m) => sum + m.totalArea, 0))
+
+const statusLabel = computed(() => {
+  const map = { scheduled: '待施工', installing: '施工中', completed: '已完成', internally_verified: '内部验收', accepted: '甲方验收' }
+  return map[record.value.status] || '待施工'
+})
+
+const statusType = computed(() => {
+  const map = { scheduled: 'info', installing: 'warning', completed: 'primary', internally_verified: 'success', accepted: 'success' }
+  return map[record.value.status] || 'info'
+})
+
+// 加载数据
+async function fetchData() {
+  loading.value = true
   try {
-    if (editingLog.value) {
-      await api.put(`/construction/logs/${editingLog.value.id}`, logForm)
-      ElMessage.success('更新成功')
-    } else {
-      await api.post(`/construction/${route.params.workOrderId}/logs`, logForm)
-      ElMessage.success('添加成功')
+    const res = await api.get(`/construction/tasks/${route.params.workOrderId}`)
+    workOrder.value = res.data?.work_order || {}
+    record.value = res.data?.constructions?.[0] || {}
+
+    // 照片
+    beforePhotos.value = parsePhotos(record.value.before_photos)
+    afterPhotos.value = parsePhotos(record.value.after_photos)
+    signatureUrl.value = record.value.signature_path || ''
+
+    // 判断只读：已完成或已验收
+    readonly.value = ['completed', 'internally_verified', 'accepted'].includes(record.value.status)
+
+    // 获取测量数据
+    if (workOrder.value.id) {
+      try {
+        const measureRes = await api.get(`/measurements/tasks/${workOrder.value.id}`)
+        const measureData = measureRes.data?.measurements?.[0]
+        if (measureData) {
+          // materials 是 JSON 字符串，需要解析
+          const mats = measureData.materials
+          if (typeof mats === 'string') {
+            measurements.value = JSON.parse(mats)
+          } else if (Array.isArray(mats)) {
+            measurements.value = mats
+          }
+        }
+      } catch {
+        measurements.value = []
+      }
     }
-    showLogDialog.value = false
-    await fetchLogs()
+
+    // 获取施工员列表
+    const usersRes = await api.get('/tenant/users?role=constructor')
+    constructors.value = usersRes.data?.data || []
   } catch (e) {
-    ElMessage.error(e.response?.data?.error || '操作失败')
+    ElMessage.error('加载失败')
   } finally {
-    savingLog.value = false
+    loading.value = false
   }
 }
 
-async function deleteLog(id) {
-  try {
-    await ElMessageBox.confirm('确定删除此日志？', '提示', { type: 'warning' })
-    await api.delete(`/construction/logs/${id}`)
-    ElMessage.success('已删除')
-    await fetchLogs()
-  } catch {}
+function parsePhotos(data) {
+  if (!data) return []
+  if (typeof data === 'string') {
+    try { data = JSON.parse(data) } catch { return [] }
+  }
+  return Array.isArray(data) ? data : []
 }
 
-// 照片管理
-function handleAddPhoto(type) {
-  currentPhotoType.value = type
+// 照片上传
+function triggerUpload(type) {
+  currentUploadType.value = type
   fileInput.value?.click()
 }
 
-async function handleFileSelect(e) {
-  const files = Array.from(e.target.files || [])
-  if (!files.length) return
+async function handleFileChange(e) {
+  const file = e.target.files?.[0]
+  if (!file) return
 
   const formData = new FormData()
-  files.forEach(f => formData.append('files', f))
+  formData.append('file', file)
 
   try {
-    const res = await api.post('/files/batch', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    })
-    const urls = res.files?.map(f => f.url) || res.data?.files?.map(f => f.url) || []
-    if (urls.length) {
-      const field = `${currentPhotoType.value}_photos`
-      const current = record.value[field] || []
-      record.value[field] = [...current, ...urls]
+    const res = await api.post('/files', formData)
+    const url = res.data?.url || res.url
+    if (url) {
+      if (currentUploadType.value === 'before') {
+        beforePhotos.value.push(url)
+      } else {
+        afterPhotos.value.push(url)
+      }
+      // 自动保存
       await savePhotos()
     }
-  } catch (err) {
+  } catch (e) {
     ElMessage.error('上传失败')
   }
   e.target.value = ''
 }
 
 async function removePhoto(type, index) {
-  try {
-    await ElMessageBox.confirm('确定删除此照片？', '提示', { type: 'warning' })
-    const field = `${type}_photos`
-    record.value[field].splice(index, 1)
-    await savePhotos()
-  } catch {}
+  if (type === 'before') {
+    beforePhotos.value.splice(index, 1)
+  } else {
+    afterPhotos.value.splice(index, 1)
+  }
+  await savePhotos()
 }
 
 async function savePhotos() {
   try {
     await api.post(`/construction/${route.params.workOrderId}`, {
-      before_photos: record.value.before_photos,
-      during_photos: record.value.during_photos,
-      after_photos: record.value.after_photos,
+      before_photos: beforePhotos.value,
+      after_photos: afterPhotos.value
     })
-    ElMessage.success('已保存')
   } catch (e) {
-    ElMessage.error(e.response?.data?.error || '保存失败')
+    ElMessage.error('保存失败')
   }
 }
 
-// 验收
-const showVerifyDialog = ref(false)
-const verifyForm = reactive({ result: true, notes: '' })
-
-function openVerifyDialog() {
-  verifyForm.result = true
-  verifyForm.notes = ''
-  showVerifyDialog.value = true
+// 签名
+function initCanvas() {
+  nextTick(() => {
+    if (!signatureCanvas.value) return
+    const canvas = signatureCanvas.value
+    canvas.width = canvas.offsetWidth
+    canvas.height = 200
+    ctx = canvas.getContext('2d')
+    ctx.strokeStyle = '#333'
+    ctx.lineWidth = 2
+  })
 }
 
-async function submitVerify() {
+function getPos(e) {
+  const canvas = signatureCanvas.value
+  const rect = canvas.getBoundingClientRect()
+  if (e.touches) {
+    return { x: e.touches[0].clientX - rect.left, y: e.touches[0].clientY - rect.top }
+  }
+  return { x: e.clientX - rect.left, y: e.clientY - rect.top }
+}
+
+function startDraw(e) {
+  isDrawing = true
+  const pos = getPos(e)
+  ctx.beginPath()
+  ctx.moveTo(pos.x, pos.y)
+}
+
+function drawing(e) {
+  if (!isDrawing) return
+  const pos = getPos(e)
+  ctx.lineTo(pos.x, pos.y)
+  ctx.stroke()
+}
+
+function endDraw() {
+  isDrawing = false
+}
+
+function clearSignature() {
+  if (!ctx) return
+  ctx.clearRect(0, 0, signatureCanvas.value.width, signatureCanvas.value.height)
+}
+
+function saveSignature() {
+  if (!signatureCanvas.value) return
+  const url = signatureCanvas.value.toDataURL('image/png')
+  signatureUrl.value = url
+}
+
+// 提交完成
+async function submitComplete() {
+  if (beforePhotos.value.length === 0 || afterPhotos.value.length === 0) {
+    return ElMessage.warning('请上传施工前后的照片')
+  }
+  if (!signatureUrl.value) {
+    return ElMessage.warning('请完成客户签名')
+  }
+
   submitting.value = true
   try {
-    await api.post(`/construction/${route.params.workOrderId}/internal-verify`, {
-      verified: verifyForm.result,
-      notes: verifyForm.notes,
+    // 上传签名图片
+    let signaturePath = signatureUrl.value
+    if (signatureUrl.value.startsWith('data:')) {
+      const blob = await fetch(signatureUrl.value).then(r => r.blob())
+      const formData = new FormData()
+      formData.append('file', blob, 'signature.png')
+      const res = await api.post('/files', formData)
+      signaturePath = res.data?.url || res.url
+    }
+
+    await api.post(`/construction/${route.params.workOrderId}`, {
+      before_photos: beforePhotos.value,
+      after_photos: afterPhotos.value,
+      signature_path: signaturePath,
+      status: 'completed'
     })
-    ElMessage.success(verifyForm.result ? '验收通过' : '已退回整改')
-    showVerifyDialog.value = false
-    await fetchDetail()
+
+    ElMessage.success('提交成功')
+    await fetchData()
   } catch (e) {
-    ElMessage.error(e.response?.data?.error || '操作失败')
+    ElMessage.error('提交失败')
   } finally {
     submitting.value = false
   }
 }
 
-// 开始施工
-async function startConstruction() {
+// 指派施工员
+async function handleAssign() {
+  if (!assignForm.value.constructor_id) {
+    return ElMessage.warning('请选择施工员')
+  }
   try {
-    await ElMessageBox.confirm('确认开始施工？', '提示', { type: 'warning' })
-    await api.post(`/construction/${route.params.workOrderId}`, { notes: '施工中' })
-    ElMessage.success('已开始施工')
-    await fetchDetail()
-  } catch {}
-}
-
-async function fetchDetail() {
-  loading.value = true
-  try {
-    const res = await api.get(`/construction/tasks/${route.params.workOrderId}`)
-    const d = res.data || {}
-    workOrder.value = d.work_order || {}
-    record.value = d.constructions?.[0] || {}
-  } catch {
-    workOrder.value = {}
-    record.value = {}
-  } finally {
-    loading.value = false
+    await api.post(`/construction/${route.params.workOrderId}/assign`, {
+      constructor_id: assignForm.value.constructor_id,
+      start_date: assignForm.value.date?.[0],
+      end_date: assignForm.value.date?.[1]
+    })
+    ElMessage.success('指派成功')
+    assignDialogVisible.value = false
+    await fetchData()
+  } catch (e) {
+    ElMessage.error('指派失败')
   }
 }
 
-async function fetchLogs() {
-  try {
-    const res = await api.get(`/construction/${route.params.workOrderId}/logs`)
-    logs.value = res.data || []
-  } catch {
-    logs.value = []
-  }
-}
-
-onMounted(async () => {
-  await fetchDetail()
-  await fetchLogs()
+onMounted(() => {
+  fetchData().then(() => {
+    if (!readonly.value) initCanvas()
+  })
 })
 </script>
 
@@ -488,24 +424,20 @@ onMounted(async () => {
   min-height: calc(100vh - 60px);
 }
 
-.top-header {
+.top-bar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 16px;
   padding: 12px 16px;
   background: #fff;
   border-radius: 8px;
+  margin-bottom: 16px;
 }
 
-.header-left {
+.top-left {
   display: flex;
   align-items: center;
   gap: 12px;
-}
-
-.back-btn {
-  padding: 4px 8px;
 }
 
 .wo-badge {
@@ -514,96 +446,125 @@ onMounted(async () => {
   padding: 4px 12px;
   border-radius: 4px;
   font-size: 13px;
-  font-weight: 500;
 }
 
-.page-title {
+.title {
   font-size: 18px;
   font-weight: 600;
   margin: 0;
-  color: var(--color-text-primary);
 }
 
-.progress-bar {
-  background: #fff;
-  padding: 16px 24px;
-  border-radius: 8px;
+.top-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--color-text-secondary);
+  font-size: 14px;
+}
+
+.install-card {
   margin-bottom: 16px;
 }
 
-.main-content {
-  display: grid;
-  grid-template-columns: 280px 1fr 1fr;
-  gap: 16px;
-}
-
-.info-card, .photo-card, .log-card {
-  border-radius: 8px;
-}
-
-.card-title {
-  font-size: 15px;
-  font-weight: 600;
-}
-
-.card-header-flex {
+.install-card :deep(.el-card__header) {
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
 
-.verify-section {
-  margin-top: 16px;
-}
-
-.divider {
-  height: 1px;
-  background: var(--color-border-light);
-  margin-bottom: 12px;
-}
-
-.section-subtitle {
-  font-size: 14px;
-  font-weight: 600;
-  margin: 0 0 12px;
+.total-area {
   color: var(--color-text-secondary);
+  font-size: 14px;
 }
 
-.photo-sections {
-  max-height: 500px;
-  overflow-y: auto;
+.install-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
-.photo-section {
-  margin-bottom: 16px;
+.install-item {
+  padding: 12px;
+  background: #f9fafb;
+  border-radius: 8px;
 }
 
-.photo-section-header {
+.mat-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   margin-bottom: 8px;
 }
 
-.photo-section-title {
-  font-size: 13px;
+.mat-type {
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.mat-area {
+  color: var(--color-primary);
   font-weight: 500;
+}
+
+.mat-faces {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.face-tag {
+  font-size: 12px;
   color: var(--color-text-secondary);
+  background: #fff;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.unified-tag {
+  font-size: 12px;
+  color: #fff;
+  background: #ea580c;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.photo-section {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.photo-col {
+  flex: 1;
+  background: #fff;
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.photo-header {
+  font-weight: 600;
+  margin-bottom: 12px;
+  color: var(--color-text-primary);
 }
 
 .photo-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  display: flex;
   gap: 8px;
-}
-
-.photo-item-wrapper {
-  position: relative;
-  aspect-ratio: 1;
+  flex-wrap: wrap;
 }
 
 .photo-item {
+  position: relative;
+  width: 100px;
+  height: 100px;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.photo-item :deep(.el-image) {
   width: 100%;
   height: 100%;
-  border-radius: 4px;
-  cursor: pointer;
 }
 
 .photo-delete {
@@ -612,115 +573,89 @@ onMounted(async () => {
   right: 4px;
   width: 20px;
   height: 20px;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(0,0,0,0.5);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  cursor: pointer;
   color: #fff;
   font-size: 12px;
+  cursor: pointer;
   opacity: 0;
   transition: opacity 0.2s;
 }
 
-.photo-item-wrapper:hover .photo-delete {
+.photo-item:hover .photo-delete {
   opacity: 1;
 }
 
-.log-list {
-  max-height: 500px;
-  overflow-y: auto;
-}
-
-.log-item {
-  padding: 12px;
-  border-bottom: 1px solid var(--color-border-lighter);
-}
-
-.log-item:last-child {
-  border-bottom: none;
-}
-
-.log-header {
+.photo-add {
+  width: 100px;
+  height: 100px;
+  border: 2px dashed #d1d5db;
+  border-radius: 8px;
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
-}
-
-.log-date {
-  font-weight: 600;
-  font-size: 14px;
-}
-
-.log-weather {
-  font-size: 12px;
-  color: var(--color-text-secondary);
-}
-
-.log-actions {
-  margin-left: auto;
-  display: flex;
-  gap: 4px;
-}
-
-.log-content {
-  font-size: 13px;
-  color: var(--color-text-primary);
-  line-height: 1.6;
-  margin-bottom: 8px;
-}
-
-.log-labor {
-  display: flex;
-  gap: 16px;
-  font-size: 12px;
-  color: var(--color-text-secondary);
-  margin-bottom: 8px;
-}
-
-.log-problem {
-  font-size: 13px;
-  color: var(--color-warning);
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  margin-bottom: 8px;
-}
-
-.log-photos {
-  display: flex;
-  gap: 4px;
-  flex-wrap: wrap;
-}
-
-.log-photo {
-  width: 48px;
-  height: 48px;
-  border-radius: 4px;
+  justify-content: center;
   cursor: pointer;
+  color: #9ca3af;
+  font-size: 24px;
 }
 
-.text-muted {
+.photo-add:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.signature-card {
+  margin-bottom: 16px;
+}
+
+.signature-area {
+  min-height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.signature-canvas {
+  width: 100%;
+  height: 200px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #fafafa;
+  touch-action: none;
+}
+
+.signature-img {
+  max-width: 100%;
+  max-height: 200px;
+}
+
+.signature-placeholder {
   color: var(--color-text-placeholder);
 }
 
-@media (max-width: 1200px) {
-  .main-content {
-    grid-template-columns: 1fr 1fr;
-  }
-  .info-card {
-    grid-column: span 2;
-  }
+.signature-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.submit-bar {
+  display: flex;
+  justify-content: center;
+  padding: 24px;
+}
+
+.submit-bar :deep(.el-button) {
+  min-width: 200px;
 }
 
 @media (max-width: 768px) {
-  .main-content {
-    grid-template-columns: 1fr;
-  }
-  .info-card {
-    grid-column: span 1;
+  .photo-section {
+    flex-direction: column;
   }
 }
 </style>
