@@ -578,8 +578,8 @@ async function createBatch(req, res) {
   const tenantId = req.tenantId || req.user.tenant_id;
   const creatorId = req.user.user_id;
 
-  // 验证工单属于当前租户
-  const woIds = items.map(i => i.work_order_id);
+  // 验证工单属于当前租户（去重，因为同一工单可能有多个材料组）
+  const woIds = [...new Set(items.map(i => i.work_order_id))];
   const workOrders = await WorkOrder.findAll({
     where: { id: { [Op.in]: woIds }, tenant_id: tenantId },
     attributes: ['id', 'work_order_no', 'title', 'current_stage'],
@@ -590,12 +590,16 @@ async function createBatch(req, res) {
   const woMap = {};
   workOrders.forEach(wo => { woMap[wo.id] = wo; });
 
-  // 构建核对清单
+  // 构建核对清单（包含材料组信息）
   const checklist = items.map(item => ({
     work_order_id: item.work_order_id,
     work_order_no: woMap[item.work_order_id]?.work_order_no || '',
     title: woMap[item.work_order_id]?.title || '',
     checked: !!item.checked,
+    group_name: item.group_name || '',
+    is_unified: item.is_unified || false,
+    group_index: item.group_index,
+    material_type: item.material_type,
   }));
 
   const completedCount = checklist.filter(i => i.checked).length;
@@ -614,35 +618,46 @@ async function createBatch(req, res) {
     notes: notes || null,
   });
 
-  // 将已勾选的工单标记为生产完成，流转到施工环节
-  const completedWoIds = checklist.filter(i => i.checked).map(i => i.work_order_id);
-  if (completedWoIds.length > 0) {
-    await WorkOrder.update(
-      { current_stage: 'construction', status: 'constructing' },
-      { where: { id: { [Op.in]: completedWoIds } } },
-    );
+  // 将已勾选的材料组标记完成，判断工单是否所有材料都完成才流转
+  const checkedItems = checklist.filter(i => i.checked);
+  const uniqueCompletedWoIds = [...new Set(checkedItems.map(i => i.work_order_id))];
 
-    // 更新生产任务状态为已完成
-    await WoProduction.update(
-      { status: 'completed' },
-      { where: { work_order_id: { [Op.in]: completedWoIds }, material_type } }
-    );
+  if (uniqueCompletedWoIds.length > 0) {
+    // 更新生产任务状态（按材料类型+工单精确匹配）
+    for (const item of checkedItems) {
+      await WoProduction.update(
+        { status: 'completed' },
+        { where: { work_order_id: item.work_order_id, material_type: item.material_type } }
+      );
+    }
 
-    // 自动创建施工记录
-    for (const woId of completedWoIds) {
-      const existing = await WoConstruction.findOne({ where: { work_order_id: woId } });
-      if (!existing) {
-        await WoConstruction.create({
-          work_order_id: woId,
-          constructor_id: null,
-          before_photos: [],
-          during_photos: [],
-          after_photos: [],
-          status: 'scheduled',
-        });
+    // 检查每个工单是否所有材料都已完成，是则流转到施工
+    for (const woId of uniqueCompletedWoIds) {
+      const remaining = await WoProduction.count({
+        where: { work_order_id: woId, status: { [Op.ne]: 'completed' } },
+      });
+      if (remaining === 0) {
+        await WorkOrder.update(
+          { current_stage: 'construction', status: 'constructing' },
+          { where: { id: woId } },
+        );
+        const existing = await WoConstruction.findOne({ where: { work_order_id: woId } });
+        if (!existing) {
+          await WoConstruction.create({
+            work_order_id: woId,
+            constructor_id: null,
+            before_photos: [],
+            during_photos: [],
+            after_photos: [],
+            status: 'scheduled',
+          });
+        }
+        await createLog(woId, req.user, 'production_completed', 'construction',
+          `生产批次 ${batchNo} 已完成，流转至施工环节`);
+      } else {
+        await createLog(woId, req.user, 'production_partial_completed', 'production',
+          `生产批次 ${batchNo} 部分材料完成，剩余 ${remaining} 项未完成`);
       }
-      await createLog(woId, req.user, 'production_completed', 'construction',
-        `生产批次 ${batchNo} 已完成，流转至施工环节`);
     }
   }
 
