@@ -65,7 +65,8 @@ async function updateSettings(req, res) {
 
     const tenant = await Tenant.findByPk(req.user.tenant_id);
     const rawSettings = tenant.settings;
-    const currentSettings = (typeof rawSettings === 'string') ? JSON.parse(rawSettings || '{}') : (rawSettings || {});
+    // 深拷贝，避免引用相同导致 Sequelize 检测不到 JSON 变化
+    const currentSettings = JSON.parse(JSON.stringify(typeof rawSettings === 'string' ? JSON.parse(rawSettings || '{}') : (rawSettings || {})));
     const updates = { ...currentSettings };
     if (project_types !== undefined) updates.project_types = project_types;
     if (material_dict !== undefined) updates.material_dict = material_dict;
@@ -90,7 +91,8 @@ async function updateSettingKey(req, res) {
 
     const tenant = await Tenant.findByPk(req.user.tenant_id);
     const rawSettings = tenant.settings;
-    const currentSettings = (typeof rawSettings === 'string') ? JSON.parse(rawSettings || '{}') : (rawSettings || {});
+    // 深拷贝，避免引用相同导致 Sequelize 检测不到 JSON 变化
+    const currentSettings = JSON.parse(JSON.stringify(typeof rawSettings === 'string' ? JSON.parse(rawSettings || '{}') : (rawSettings || {})));
     currentSettings[key] = value;
 
     await tenant.update({ settings: currentSettings });
