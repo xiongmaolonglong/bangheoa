@@ -455,7 +455,9 @@ const fetchOrder = async () => {
       try {
         const reviewRes = await reviewApi.getDetail(route.params.id)
         order.value = { ...order.value, ...reviewRes.data }
-    }
+      } catch (e) {
+        // 审核详情加载失败
+      }
     if (order.value.status === 'pending_review') await loadHandlers('designer')
   } catch (err) {
     ElMessage.error('获取订单详情失败')
