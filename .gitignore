@@ -33,3 +33,62 @@ uploads/
 # 临时文件
 tmp/
 temp/
+
+# 构建和打包
+*.apk
+*.aab
+*.app
+*.ipa
+
+# 移动端构建产物
+android-tracker/.gradle/
+android-tracker/gradle/
+android-tracker/gradlew
+android-tracker/gradlew.bat
+android-tracker/local.properties
+android-tracker/app/src/main/res/mipmap-*/
+
+# HarmonyOS 构建产物
+harmony-app/.appanalyzer/
+harmony-app/.hvigor/
+harmony-app/local.properties
+harmony-app/AppScope/
+harmony-app/entry/oh-package.json5
+harmony-app/entry/src/main/ets/pages/
+harmony-app/entry/src/main/resources/base/media/
+harmony-app/entry/src/main/resources/rawfile/
+
+# 小程序生成文件
+WeChatProjects/miniprogram/app.miniapp.json
+WeChatProjects/miniprogram/project.miniapp.json
+WeChatProjects/miniprogram/i18n/
+WeChatProjects/project.config.json
+WeChatProjects/project.private.config.json
+
+# 自动生成文件
+admin-web/artifacts/
+admin-web/test-results/
+admin-web/src/auto-imports.d.ts
+admin-web/src/components.d.ts
+admin-web/src/composables/
+admin-web/src/plugins/
+admin-web/src/utils/echarts.js
+admin-web/src/utils/photo.js
+
+# Playwright MCP 缓存
+.playwright-mcp/
+
+# 截图和报告
+dashboard-screenshot.png
+designlist-comparison.png
+full-comparison.png
+login-comparison.png
+orderdetail-comparison.png
+orderlist-comparison.png
+style-comparison.png
+
+# 部署脚本
+deploy/
+backend/deploy/
+backend/DEPLOY.md
+backend/ecosystem.config.js
