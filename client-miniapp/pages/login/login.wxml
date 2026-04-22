@@ -1,0 +1,18 @@
+<view class="login-container">
+  <view class="login-header">
+    <view class="logo-circle">
+      <text class="logo-text">广告</text>
+    </view>
+    <text class="title">广告工程申报</text>
+    <text class="subtitle">现场拍照申报 · 实时查看进度</text>
+  </view>
+
+  <view class="login-body">
+    <button class="wechat-btn" open-type="getPhoneNumber" bindgetphonenumber="onGetPhone">
+      <text class="wechat-icon">☎</text>
+      微信手机号一键登录
+    </button>
+    <text class="tip">首次登录自动注册</text>
+    <text class="tip-error" wx:if="{{errorMsg}}">{{errorMsg}}</text>
+  </view>
+</view>

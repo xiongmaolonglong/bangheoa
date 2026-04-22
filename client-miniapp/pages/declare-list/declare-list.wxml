@@ -1,0 +1,30 @@
+<view class="container">
+  <!-- Filter Tabs -->
+  <view class="filter-bar">
+    <view class="filter-tab {{activeFilter === 'all' ? 'active' : ''}}" bindtap="setFilter" data-filter="all">全部</view>
+    <view class="filter-tab {{activeFilter === 'pending' ? 'active' : ''}}" bindtap="setFilter" data-filter="pending">审批中</view>
+    <view class="filter-tab {{activeFilter === 'active' ? 'active' : ''}}" bindtap="setFilter" data-filter="active">进行中</view>
+    <view class="filter-tab {{activeFilter === 'done' ? 'active' : ''}}" bindtap="setFilter" data-filter="done">已完成</view>
+  </view>
+
+  <!-- List -->
+  <view class="list">
+    <view class="list-item" wx:for="{{filteredList}}" wx:key="id" bindtap="goDetail" data-id="{{item.id}}">
+      <view class="item-header">
+        <text class="item-no">{{item.declareNo}}</text>
+        <text class="item-stage" style="color: {{item.stageColor}}">{{item.stage}}</text>
+      </view>
+      <text class="item-title">{{item.title}}</text>
+      <view class="item-footer">
+        <text class="item-date">{{item.createdAt}}</text>
+        <text class="item-type">{{item.typeLabel}}</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="empty" wx:if="{{filteredList.length === 0}}">
+    <text class="empty-icon">📋</text>
+    <text class="empty-text">暂无申报记录</text>
+    <view class="empty-btn" bindtap="goDeclare">+ 新建申报</view>
+  </view>
+</view>

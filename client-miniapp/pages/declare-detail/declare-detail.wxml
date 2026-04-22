@@ -1,0 +1,70 @@
+<view class="container">
+  <!-- Header -->
+  <view class="header-card">
+    <text class="declare-no">{{detail.declareNo}}</text>
+    <text class="declare-title">{{detail.title}}</text>
+    <text class="declare-stage" style="color: {{detail.stageColor}}">{{detail.stage}}</text>
+  </view>
+
+  <!-- Progress Steps -->
+  <view class="card">
+    <text class="card-title">全流程进度</text>
+    <view class="timeline">
+      <view class="timeline-item {{item.done ? 'done' : ''}} {{item.current ? 'current' : ''}}" wx:for="{{stages}}" wx:key="label">
+        <view class="timeline-dot">
+          <text class="timeline-check" wx:if="{{item.done}}">✓</text>
+        </view>
+        <view class="timeline-line" wx:if="{{index < stages.length - 1}}"></view>
+        <text class="timeline-label {{item.done || item.current ? 'active' : ''}}">{{item.label}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- Project Info -->
+  <view class="card">
+    <text class="card-title">项目信息</text>
+    <view class="info-row">
+      <text class="info-label">项目名称</text>
+      <text class="info-value">{{detail.title}}</text>
+    </view>
+    <view class="info-row">
+      <text class="info-label">项目类型</text>
+      <text class="info-value">{{detail.typeLabel}}</text>
+    </view>
+    <view class="info-row">
+      <text class="info-label">项目地址</text>
+      <text class="info-value">{{detail.address}}</text>
+    </view>
+    <view class="info-row">
+      <text class="info-label">详细地址</text>
+      <text class="info-value">{{detail.detailAddress}}</text>
+    </view>
+    <view class="info-row">
+      <text class="info-label">需求描述</text>
+      <text class="info-value">{{detail.description}}</text>
+    </view>
+  </view>
+
+  <!-- Photos -->
+  <view class="card" wx:if="{{detail.photos.length > 0}}">
+    <text class="card-title">现场照片</text>
+    <view class="photo-grid">
+      <image class="photo" wx:for="{{detail.photos}}" wx:key="index" src="{{item}}" mode="aspectFill" bindtap="previewPhoto" data-index="{{index}}" />
+    </view>
+  </view>
+
+  <!-- Operation Log -->
+  <view class="card">
+    <text class="card-title">操作日志</text>
+    <view class="log-list">
+      <view class="log-item" wx:for="{{logs}}" wx:key="id">
+        <view class="log-dot"></view>
+        <view class="log-line" wx:if="{{index < logs.length - 1}}"></view>
+        <view class="log-content">
+          <text class="log-text">{{item.content}}</text>
+          <text class="log-time">{{item.time}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+</view>

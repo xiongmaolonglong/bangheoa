@@ -1,0 +1,62 @@
+<view class="container">
+  <form bindsubmit="onSubmit">
+    <!-- Project Name -->
+    <view class="form-group">
+      <text class="label">项目名称 <text class="required">*</text></text>
+      <input class="input" placeholder="请输入项目名称" value="{{form.title}}" bindinput="onInput" data-field="title" maxlength="50" />
+    </view>
+
+    <!-- Project Type -->
+    <view class="form-group">
+      <text class="label">项目类型 <text class="required">*</text></text>
+      <picker mode="selector" range="{{typeLabels}}" value="{{typeIndex}}" bindchange="onTypeChange">
+        <view class="picker-value {{typeIndex === -1 ? 'placeholder' : ''}}">
+          {{typeIndex >= 0 ? typeLabels[typeIndex] : '请选择项目类型'}}
+        </view>
+      </picker>
+    </view>
+
+    <!-- Address -->
+    <view class="form-group">
+      <text class="label">项目地址 <text class="required">*</text></text>
+      <view class="address-display" bindtap="showAddressPicker">
+        <text class="{{addressText ? '' : 'placeholder'}}">{{addressText || '请选择省/市/区/街道'}}</text>
+      </view>
+    </view>
+
+    <!-- Detail Address -->
+    <view class="form-group">
+      <text class="label">详细地址 <text class="required">*</text></text>
+      <textarea class="textarea small" placeholder="请输入详细地址（门牌号、楼层等）" value="{{form.detailAddress}}" bindinput="onInput" data-field="detailAddress" maxlength="200" />
+    </view>
+
+    <!-- Description -->
+    <view class="form-group">
+      <text class="label">需求描述 <text class="required">*</text></text>
+      <textarea class="textarea" placeholder="请描述您的需求，如尺寸要求、材质偏好等（最多500字）" value="{{form.description}}" bindinput="onInput" data-field="description" maxlength="500" auto-height />
+      <text class="char-count">{{form.description.length}}/500</text>
+    </view>
+
+    <!-- Photos -->
+    <view class="form-group">
+      <text class="label">现场照片</text>
+      <view class="photo-grid">
+        <view class="photo-item" wx:for="{{photos}}" wx:key="index">
+          <image class="photo-img" src="{{item}}" mode="aspectFill" bindtap="previewPhoto" data-index="{{index}}" />
+          <view class="photo-delete" catchtap="deletePhoto" data-index="{{index}}">×</view>
+        </view>
+        <view class="photo-add" bindtap="choosePhoto" wx:if="{{photos.length < 9}}">
+          <text class="photo-add-icon">+</text>
+          <text class="photo-add-text">拍照/选图</text>
+        </view>
+      </view>
+      <text class="photo-tip">最多9张，单张≤10MB</text>
+    </view>
+
+    <!-- Submit -->
+    <view class="submit-bar">
+      <button class="btn-draft" bindtap="saveDraft">保存草稿</button>
+      <button class="btn-submit" formType="submit">提交申报</button>
+    </view>
+  </form>
+</view>
