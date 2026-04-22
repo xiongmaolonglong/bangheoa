@@ -41,12 +41,12 @@
         </el-table-column>
         <el-table-column label="首次下单" width="110">
           <template #default="{ row }">
-            {{ formatDate(row.first_order_date) }}
+            {{ formatDate(row.first_order_date, 'YYYY-MM-DD') }}
           </template>
         </el-table-column>
         <el-table-column label="最近订单" width="110">
           <template #default="{ row }">
-            {{ formatDate(row.last_order_date) }}
+            {{ formatDate(row.last_order_date, 'YYYY-MM-DD') }}
           </template>
         </el-table-column>
         <el-table-column label="操作" width="120" fixed="right">
@@ -77,16 +77,15 @@ import { useRouter } from 'vue-router'
 import { Search } from '@element-plus/icons-vue'
 import request from '@/api/request'
 import dayjs from 'dayjs'
+import { formatDate } from '@/composables/useFormat'
 
 const router = useRouter()
-const loading = ref(false)
-const customers = ref([])
 const keyword = ref('')
+const customers = ref([])
+const loading = ref(false)
 const page = ref(1)
 const pageSize = ref(20)
 const total = ref(0)
-
-const formatDate = (date) => date ? dayjs(date).format('YYYY-MM-DD') : '-'
 
 const fetchCustomers = async () => {
   loading.value = true

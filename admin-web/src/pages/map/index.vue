@@ -109,7 +109,7 @@
                 </el-tag>
               </div>
               <div class="item-meta">
-                <span>{{ item.role === 'installer' ? '安装员' : '测量员' }}</span>
+                <span>{{ item.role === 'field_worker' ? '安装员' : '测量员' }}</span>
                 <span v-if="item.last_active_min !== null">{{ item.last_active_min }}分钟前</span>
               </div>
               <div v-if="item.current_order" class="item-tracker-order">
@@ -342,7 +342,7 @@ const fetchHandlers = async () => {
 // --- 人员追踪 ---
 const fetchTrackers = async () => {
   try {
-    const res = await locationTrackApi.getTrackers({ role: 'installer,measurer' })
+    const res = await locationTrackApi.getTrackers({ role: 'field_worker' })
     trackers.value = res.data?.trackers || []
 
     // 转换为地图标记

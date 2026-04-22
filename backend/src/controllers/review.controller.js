@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const { Order, User, OrderLog, MeasureReport, DesignScheme, InstallReport, Notification } = require('../models')
 const response = require('../utils/response')
 const { sequelize } = require('../config/database')
@@ -174,7 +175,7 @@ exports.approve = async (req, res) => {
         const dispatchResult = await dispatchService.autoDispatch(order, stageMap[order.status])
         if (dispatchResult) {
           finalHandlerId = dispatchResult.handler_id
-          console.log(`自动派单成功: 订单 ${order.order_no} -> 用户 ${dispatchResult.handler_id} (规则: ${dispatchResult.rule_name})`)
+          logger.info(`自动派单成功: 订单 ${order.order_no} -> 用户 ${dispatchResult.handler_id} (规则: ${dispatchResult.rule_name})`)
         }
       }
     }

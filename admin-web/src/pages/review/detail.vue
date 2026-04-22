@@ -60,6 +60,7 @@
                     :preview-teleported="true"
                     fit="cover"
                     class="photo-item"
+                    lazy
                   />
                 </div>
               </div>
@@ -346,6 +347,7 @@ import { ElMessage } from 'element-plus'
 import { ArrowLeft, Document, Clock, Camera } from '@element-plus/icons-vue'
 import { reviewApi } from '@/api'
 import dayjs from 'dayjs'
+import { formatDate } from '@/composables/useFormat'
 
 const route = useRoute()
 const router = useRouter()
@@ -375,8 +377,8 @@ const statusMap = {
 }
 
 const roleMap = {
-  admin: '管理员', reviewer: '审核主管', designer: '设计师',
-  producer: '生产员', checker: '核对员', installer: '安装员'
+  admin: '管理员', field_worker: '外勤员', designer: '设计师',
+  producer: '生产员'
 }
 
 const actionMap = {
@@ -387,7 +389,6 @@ const actionMap = {
 const getStatusText = (status) => statusMap[status]?.text || status
 const getStatusType = (status) => statusMap[status]?.type || ''
 const getActionText = (action) => actionMap[action] || action
-const formatDate = (date) => date ? dayjs(date).format('YYYY-MM-DD HH:mm') : '-'
 
 const isCurrentReviewTab = computed(() => {
   return ['pending_review', 'design_review', 'install_review'].includes(order.value.status)

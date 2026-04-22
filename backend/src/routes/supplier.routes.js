@@ -12,15 +12,15 @@ router.get('/all',
   supplierController.getAll
 );
 
-// 获取供应商列表 - 管理员、审核主管、生产员可访问
+// 获取供应商列表 - 管理员、生产员可访问
 router.get('/',
-  authorize(['admin', 'reviewer', 'producer']),
+  authorize(['admin', 'producer']),
   supplierController.getList
 );
 
 // 获取供应商详情
 router.get('/:id',
-  authorize(['admin', 'reviewer', 'producer']),
+  authorize(['admin', 'producer']),
   supplierController.getDetail
 );
 

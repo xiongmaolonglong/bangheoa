@@ -1,5 +1,5 @@
 const api = require('../../utils/api')
-const { requireLogin, getUserInfo, clearAuth } = require('../../utils/auth')
+const { requireLogin, getUserInfo, clearAuth, doWxLogin } = require('../../utils/auth')
 const { showSuccess, showError, showConfirm } = require('../../utils/util')
 
 Page({
@@ -109,12 +109,6 @@ Page({
 
     try {
       await wx.clearStorage()
-      // 保留登录态
-      const app = getApp()
-      if (app.globalData.token) {
-        wx.setStorageSync('token', app.globalData.token)
-        wx.setStorageSync('userInfo', app.globalData.userInfo)
-      }
       showSuccess('清除成功')
     } catch (err) {
       showError('清除失败')
@@ -140,8 +134,7 @@ Page({
 
     // 重新登录
     setTimeout(() => {
-      const app = getApp()
-      app.doWxLogin().then(() => {
+      doWxLogin().then(() => {
         this.loadUserInfo()
       })
     }, 1000)

@@ -14,7 +14,6 @@ onMounted(async () => {
   if (userStore.isLoggedIn) {
     const granted = await notificationService.requestPermission()
     if (granted) {
-      console.log('通知权限已授权')
     }
   }
 })

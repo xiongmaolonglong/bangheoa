@@ -168,7 +168,6 @@ const loadConfig = async () => {
       Object.assign(config, res.data)
     }
   } catch (e) {
-    console.log('自动审核配置加载失败，使用默认值')
   }
 }
 

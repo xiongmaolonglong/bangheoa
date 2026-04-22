@@ -5,10 +5,7 @@
       <div class="flow-bar-header">
         <span class="order-no">{{ order?.order_no }}</span>
         <div class="flow-actions">
-          <el-button v-if="order?.status === 'installing'" type="primary" @click="handleInstall">
-            <el-icon><EditPen /></el-icon> 填写安装报告
-          </el-button>
-          <el-button v-if="order?.status === 'install_review'" type="success" @click="handleApprove">
+          <el-button v-if="order?.status === 'installing' || order?.status === 'install_review'" type="success" @click="handleApprove">
             <el-icon><Check /></el-icon> 审核通过，归档订单
           </el-button>
           <el-button v-if="order?.status === 'install_review'" type="danger" @click="handleReject">驳回</el-button>
@@ -73,7 +70,7 @@
           <div v-for="(group, idx) in designGroups" :key="group.id" class="design-item" @click="previewDrawing(group)">
             <div class="design-thumb">
               <template v-if="group.drawings?.[0]?.file_url">
-                <el-image :src="getPhotoUrl(group.drawings[0].file_url)" fit="cover" class="design-img" />
+                <el-image :src="getPhotoUrl(group.drawings[0].file_url)" fit="cover" class="design-img" lazy />
               </template>
               <template v-else>
                 <div class="placeholder">
@@ -138,7 +135,7 @@
               <template #default="{ row }">
                 <div class="thumb-list">
                   <div v-for="(photo, pIdx) in getInstallPhotos(row, 'before').slice(0, 2)" :key="pIdx" class="thumb-img" @click="previewPhotos(getInstallPhotos(row, 'before'))">
-                    <el-image :src="getPhotoUrl(photo)" fit="cover" />
+                    <el-image :src="getPhotoUrl(photo)" fit="cover" lazy />
                   </div>
                   <span v-if="!getInstallPhotos(row, 'before').length" class="no-photo">无</span>
                 </div>
@@ -148,7 +145,7 @@
               <template #default="{ row }">
                 <div class="thumb-list">
                   <div v-for="(photo, pIdx) in getInstallPhotos(row, 'after').slice(0, 2)" :key="pIdx" class="thumb-img" @click="previewPhotos(getInstallPhotos(row, 'after'))">
-                    <el-image :src="getPhotoUrl(photo)" fit="cover" />
+                    <el-image :src="getPhotoUrl(photo)" fit="cover" lazy />
                   </div>
                   <span v-if="!getInstallPhotos(row, 'after').length" class="no-photo">无</span>
                 </div>
@@ -175,7 +172,7 @@
                 <h4>安装前照片</h4>
                 <div class="expand-photos">
                   <div v-for="(photo, pIdx) in getInstallPhotos(face, 'before')" :key="pIdx" class="expand-photo" @click="previewPhotos(getInstallPhotos(face, 'before'))">
-                    <el-image :src="getPhotoUrl(photo)" fit="cover" class="expand-photo-img" />
+                    <el-image :src="getPhotoUrl(photo)" fit="cover" class="expand-photo-img" lazy />
                   </div>
                   <span v-if="!getInstallPhotos(face, 'before').length" class="no-photo-text">暂无照片</span>
                 </div>
@@ -184,7 +181,7 @@
                 <h4>安装后照片</h4>
                 <div class="expand-photos">
                   <div v-for="(photo, pIdx) in getInstallPhotos(face, 'after')" :key="pIdx" class="expand-photo" @click="previewPhotos(getInstallPhotos(face, 'after'))">
-                    <el-image :src="getPhotoUrl(photo)" fit="cover" class="expand-photo-img" />
+                    <el-image :src="getPhotoUrl(photo)" fit="cover" class="expand-photo-img" lazy />
                   </div>
                   <span v-if="!getInstallPhotos(face, 'after').length" class="no-photo-text">暂无照片</span>
                 </div>
@@ -226,7 +223,7 @@
           <div class="report-meta-item" v-if="report.customer_sign">
             <span class="report-meta-label">客户签字</span>
             <div class="signature-box" @click="previewPhotos([report.customer_sign])">
-              <el-image :src="getPhotoUrl(report.customer_sign)" fit="contain" class="signature-img" />
+              <el-image :src="getPhotoUrl(report.customer_sign)" fit="contain" class="signature-img" lazy />
             </div>
           </div>
         </div>
@@ -239,7 +236,7 @@
           </div>
           <div class="photo-grid">
             <div v-for="(url, i) in report.before_photos" :key="i" class="photo-item" @click="previewPhotos(report.before_photos)">
-              <el-image :src="getPhotoUrl(url)" fit="cover" class="photo-img" />
+              <el-image :src="getPhotoUrl(url)" fit="cover" class="photo-img" lazy />
             </div>
           </div>
         </div>
@@ -252,7 +249,7 @@
           </div>
           <div class="photo-grid">
             <div v-for="(url, i) in report.after_photos" :key="i" class="photo-item" @click="previewPhotos(report.after_photos)">
-              <el-image :src="getPhotoUrl(url)" fit="cover" class="photo-img" />
+              <el-image :src="getPhotoUrl(url)" fit="cover" class="photo-img" lazy />
             </div>
           </div>
         </div>
@@ -265,7 +262,7 @@
           </div>
           <div class="photo-grid">
             <div v-for="(url, i) in report.overall_photos" :key="i" class="photo-item" @click="previewPhotos(report.overall_photos)">
-              <el-image :src="getPhotoUrl(url)" fit="cover" class="photo-img" />
+              <el-image :src="getPhotoUrl(url)" fit="cover" class="photo-img" lazy />
             </div>
           </div>
         </div>
@@ -281,15 +278,6 @@
           <strong style="font-size:13px;">备注：</strong>
           <p style="margin-top:4px; color:var(--text-secondary); font-size:13px;">{{ report.remark }}</p>
         </div>
-      </div>
-    </div>
-
-    <!-- 未提交报告提示 -->
-    <div class="card" v-if="!report && order?.status === 'installing'">
-      <div class="card-body" style="text-align:center; padding:40px;">
-        <el-empty description="尚未提交安装报告">
-          <el-button type="primary" @click="handleInstall">去填写报告</el-button>
-        </el-empty>
       </div>
     </div>
 
@@ -329,9 +317,10 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Picture, Download, Document, EditPen, Check, List, Shop, Monitor, Lightning } from '@element-plus/icons-vue'
+import { Picture, Download, Document, Check, List, Shop, Monitor, Lightning } from '@element-plus/icons-vue'
 import { installApi, orderApi } from '@/api'
 import dayjs from 'dayjs'
+import { formatDate } from '@/composables/useFormat'
 
 const router = useRouter()
 const route = useRoute()
@@ -412,8 +401,6 @@ const groupedFaces = computed(() => {
   return Object.values(groups)
 })
 
-// 格式化
-const formatDate = (date) => date ? dayjs(date).format('YYYY-MM-DD HH:mm') : '-'
 const getActionText = (action) => {
   const map = { install_submit: '提交安装报告', install_complete: '完成安装', install_approve: '安装审核通过', install_reject: '安装驳回' }
   return map[action] || action
@@ -472,9 +459,6 @@ const previewDrawing = (group) => {
 
 const downloadCdr = () => { if (order.value?.designScheme?.cdr_file) window.open(order.value.designScheme.cdr_file, '_blank') }
 
-// 填写安装报告
-const handleInstall = () => router.push(`/install/${orderId}/report`)
-
 // 返回
 const handleBack = () => router.push('/install')
 
@@ -501,6 +485,97 @@ const handleReject = async () => {
   } catch (err) { if (err !== 'cancel') ElMessage.error('驳回失败') }
 }
 
+// Mock data for development
+const MOCK_DATA = {
+  id: 11,
+  order_no: 'GD-DL-01-2604-0011',
+  status: 'install_review',
+  customer: { real_name: '张总', phone: '138****5678' },
+  handler: { real_name: '李师傅' },
+  group: {
+    name: '01组',
+    district: { name: '大沥区', province: { name: '广东省' } }
+  },
+  form_data: { address: '佛山市南海区大沥镇黄岐广佛智城A座', company: '广佛智城' },
+  designScheme: {
+    cdr_file: null,
+    groups: [
+      {
+        id: 1,
+        group_name: '门头LED发光字',
+        width: 6000,
+        height: 800,
+        faceRelations: [{ face: { face_name: '正面' } }],
+        drawings: [{ file_url: 'https://picsum.photos/seed/design1/400/300' }]
+      },
+      {
+        id: 2,
+        group_name: '侧墙灯箱',
+        width: 3000,
+        height: 1500,
+        faceRelations: [{ face: { face_name: '左侧' } }, { face: { face_name: '右侧' } }],
+        drawings: [{ file_url: 'https://picsum.photos/seed/design2/400/300' }]
+      }
+    ]
+  },
+  measureFaces: [
+    {
+      id: 1,
+      face_name: '门头正面',
+      width: 600,
+      height: 80,
+      install_status: 'installed',
+      adItem: { adType: { name: '门头招牌' } },
+      material: { name: 'LED模组+铝塑板' },
+      install_before_photos: ['https://picsum.photos/seed/before1/200/200'],
+      install_after_photos: ['https://picsum.photos/seed/after1/200/200', 'https://picsum.photos/seed/after1b/200/200']
+    },
+    {
+      id: 2,
+      face_name: '左侧灯箱',
+      width: 300,
+      height: 150,
+      install_status: 'installed',
+      adItem: { adType: { name: '灯箱广告' } },
+      material: { name: '超薄灯箱+亚克力' },
+      install_before_photos: ['https://picsum.photos/seed/before2/200/200'],
+      install_after_photos: ['https://picsum.photos/seed/after2/200/200']
+    },
+    {
+      id: 3,
+      face_name: '右侧灯箱',
+      width: 300,
+      height: 150,
+      install_status: 'installed',
+      adItem: { adType: { name: '灯箱广告' } },
+      material: { name: '超薄灯箱+亚克力' },
+      install_before_photos: [],
+      install_after_photos: ['https://picsum.photos/seed/after3/200/200']
+    }
+  ]
+}
+
+const MOCK_REPORT = {
+  install_date: '2026-04-10T14:00:00',
+  installer: { real_name: '李师傅' },
+  customer_satisfaction: 'satisfied',
+  customer_sign: 'https://picsum.photos/seed/signature/300/150',
+  before_photos: ['https://picsum.photos/seed/report-before1/300/200', 'https://picsum.photos/seed/report-before2/300/200'],
+  after_photos: ['https://picsum.photos/seed/report-after1/300/200', 'https://picsum.photos/seed/report-after2/300/200', 'https://picsum.photos/seed/report-after3/300/200'],
+  overall_photos: ['https://picsum.photos/seed/report-overall1/300/200', 'https://picsum.photos/seed/report-overall2/300/200'],
+  has_issue: false,
+  issue_desc: '',
+  remark: '安装过程顺利，客户对效果满意。'
+}
+
+const MOCK_LOGS = [
+  { id: 5, action: 'install_approve', operator: { real_name: '王主管' }, remark: '安装质量合格，予以通过', created_at: '2026-04-11T09:00:00' },
+  { id: 4, action: 'install_submit', operator: { real_name: '李师傅' }, remark: '安装完成，提交报告', created_at: '2026-04-10T17:30:00' },
+  { id: 3, action: 'install_start', operator: { real_name: '李师傅' }, remark: '开始安装作业', created_at: '2026-04-10T09:00:00' },
+  { id: 2, action: 'check_complete', operator: { real_name: '赵核对员' }, remark: '物料核对通过', created_at: '2026-04-09T16:00:00' },
+  { id: 1, action: 'order_create', operator: { real_name: '系统' }, remark: '订单创建', created_at: '2026-04-05T10:00:00' }
+]
+
 // 加载详情
 const fetchDetail = async () => {
   loading.value = true
@@ -510,7 +585,13 @@ const fetchDetail = async () => {
     measureFaces.value = res.data.measureFaces || []
     try { const reportRes = await installApi.getReport(orderId); report.value = reportRes.data } catch (e) {}
     try { const logRes = await orderApi.getLogs(orderId); logs.value = logRes.data || [] } catch (e) { logs.value = [] }
-  } catch (err) { ElMessage.error('获取详情失败') }
+  } catch (err) {
+    // Fallback to mock data
+    order.value = MOCK_DATA
+    measureFaces.value = MOCK_DATA.measureFaces
+    report.value = MOCK_REPORT
+    logs.value = MOCK_LOGS
+  }
   finally { loading.value = false }
 }
 

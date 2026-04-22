@@ -1,3 +1,4 @@
+const logger = require('./logger');
 const jwt = require('jsonwebtoken');
 require('dotenv').config();
 
@@ -11,15 +12,20 @@ const _warned = Object.create(null);
 function ensureSecret() {
   if (!JWT_SECRET) {
     if (!_warned.secret) {
-      console.warn('[安全警告] 未设置 JWT_SECRET 环境变量，将使用随机密钥（重启后 Token 失效）');
+      logger.warn('[安全警告] 未设置 JWT_SECRET 环境变量，将使用随机密钥（重启后 Token 失效）');
       _warned.secret = 1;
     }
     return crypto.randomBytes(64).toString('hex');
   }
 
-  const WEAK_PATTERNS = ['default_secret', 'your_jwt_secret', 'change_me', 'secret'];
+  const WEAK_PATTERNS = [
+    'default_secret', 'your_jwt_secret', 'change_me', 'secret',
+    'your_secret', 'your_secret_here', 'jwt_secret', 'jwt-secret',
+    'super_secret', '123456', 'password', 'test', 'example',
+    'foo', 'bar', 'token', 'key', 'abc123'
+  ];
   if (WEAK_PATTERNS.some(p => JWT_SECRET.toLowerCase().includes(p)) && !_warned.weak) {
-    console.warn('[安全警告] JWT_SECRET 使用了弱密钥，请更换为随机强密钥');
+    logger.warn('[安全警告] JWT_SECRET 使用了弱密钥，请更换为随机强密钥');
     _warned.weak = 1;
   }
 

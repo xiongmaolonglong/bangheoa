@@ -1,4 +1,5 @@
-import { LoginViewModel, AppViewModel } from '../viewmodel/AppViewModel'
+import { LoginViewModel, AppViewModel, LoginResult } from '../viewmodel/AppViewModel'
+import { router } from '@kit.ArkUI'
 
 @Entry
 @Component
@@ -28,13 +29,13 @@ struct Login {
     this.isLoading = true
     this.errorMsg = ''
 
-    const success = await LoginViewModel.login(this.username.trim(), this.password)
+    const result: LoginResult = await LoginViewModel.login(this.username.trim(), this.password)
     this.isLoading = false
 
-    if (success) {
+    if (result.success) {
       router.replaceUrl({ url: 'pages/Home' })
     } else {
-      this.errorMsg = '用户名或密码错误'
+      this.errorMsg = result.message
     }
   }
 
@@ -42,7 +43,7 @@ struct Login {
     Column() {
       // 顶部留白
       Column() {
-        Text('户外广告外勤')
+        Text('邦和广告')
           .fontSize(28)
           .fontWeight(FontWeight.Bold)
           .fontColor('#303133')
@@ -53,7 +54,7 @@ struct Login {
           .fontColor('#909399')
       }
       .width('100%')
-      .padding({ top: 120, bottom: 60 })
+      .padding({ top: 0, bottom: 30 })
       .alignItems(HorizontalAlign.Start)
       .padding({ left: 32 })
 
@@ -124,5 +125,7 @@ struct Login {
     .width('100%')
     .height('100%')
     .backgroundColor('#FFFFFF')
+    .padding({ top: 120 })
+    .alignItems(HorizontalAlign.Center)
   }
 }

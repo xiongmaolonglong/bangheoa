@@ -41,7 +41,7 @@ const options = {
             phone: { type: 'string' },
             role: {
               type: 'string',
-              enum: ['admin', 'reviewer', 'designer', 'producer', 'checker', 'installer']
+              enum: ['admin', 'designer', 'producer', 'field_worker', 'customer']
             },
             status: { type: 'string', enum: ['active', 'inactive'] },
             created_at: { type: 'string', format: 'date-time' }

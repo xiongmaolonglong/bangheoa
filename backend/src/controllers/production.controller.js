@@ -2,6 +2,7 @@ const { Order, MeasureFace, User, OrderLog, DesignScheme, DesignGroup, DesignGro
 const response = require('../utils/response')
 const { sequelize } = require('../config/database')
 const { Op } = require('sequelize')
+const dispatchService = require('../services/dispatch.service')
 
 // 获取生产任务列表
 exports.getTasks = async (req, res) => {
@@ -145,9 +146,16 @@ exports.submitCheck = async (req, res) => {
       return response.error(res, '订单状态不允许核对', 1, 400)
     }
 
+    // 自动派单：分配安装人员
+    const dispatchResult = await dispatchService.autoDispatch(order, 'install')
+    const handlerId = dispatchResult?.handler_id || null
+
     // 更新订单状态
     const oldStatus = order.status
-    await order.update({ status: 'installing' }, { transaction })
+    await order.update({
+      status: 'installing',
+      current_handler_id: handlerId
+    }, { transaction })
 
     // 记录日志
     await OrderLog.create({
@@ -156,7 +164,7 @@ exports.submitCheck = async (req, res) => {
       action: 'check_submit',
       from_status: oldStatus,
       to_status: 'installing',
-      remark: remark || '核对完成'
+      remark: remark || '核对完成，自动派单'
     }, { transaction })
 
     await transaction.commit()

@@ -155,7 +155,7 @@
               <span v-for="item in getAdTypes(row)" :key="item" class="task-tag">{{ item }}</span>
               <span class="task-area">{{ calculateArea(row) }}㎡</span>
               <span class="task-group" v-if="row.group?.district?.province">{{ row.group.district.province.name }}-{{ row.group.district.name }}-{{ row.group.group_name || row.group.code }}</span>
-              <span class="task-created">{{ formatDate(row.created_at) }}</span>
+              <span class="task-created">{{ formatShortDate(row.created_at) }}</span>
               <span v-if="row.status === 'designing'" class="task-created">{{ getDuration(row) }}</span>
             </div>
           </div>
@@ -165,7 +165,6 @@
           </div>
           <div class="task-actions" @click.stop>
             <el-button size="small" @click="handleView(row)">详情</el-button>
-            <el-button v-if="row.status === 'designing'" class="task-btn primary" size="small" @click="handleView(row)">设计</el-button>
             <el-button size="small" @click="handleEdit(row)">编辑</el-button>
           </div>
         </div>
@@ -197,6 +196,7 @@ import { Briefcase, Clock, EditPen, Setting, Tools, User, Location, Plus, Downlo
 import { orderApi, statisticsApi, formApi } from '@/api'
 import dayjs from 'dayjs'
 import { getStatusText, getStatusType } from '@/utils/constants'
+import { formatShortDate } from '@/composables/useFormat'
 import OrderKanban from '@/components/OrderKanban.vue'
 
 const router = useRouter()
@@ -235,8 +235,6 @@ const flowStats = reactive({
 })
 
 const areaStats = reactive({ month: '0', year: '0' })
-
-const formatDate = (date) => date ? dayjs(date).format('MM-DD HH:mm') : '-'
 
 const getDuration = (row) => {
   const hours = dayjs().diff(dayjs(row.created_at), 'hour')

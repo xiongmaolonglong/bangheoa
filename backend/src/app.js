@@ -1,3 +1,4 @@
+const logger = require('./utils/logger');
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
@@ -46,7 +47,7 @@ if (isDev || process.env.ENABLE_SWAGGER === 'true') {
     res.send(swaggerSpec);
   });
 
-  console.log('API 文档地址: http://localhost:3000/api-docs');
+  logger.info('API 文档地址: http://localhost:3000/api-docs');
 }
 
 // API 路由
@@ -73,19 +74,21 @@ async function startServer() {
     //   try {
     //     await syncDatabase({ alter: false });
     //   } catch (syncError) {
-    //     console.warn('数据库模型同步警告:', syncError.message);
+    //     logger.warn('数据库模型同步警告:', syncError.message);
     //   }
     // }
 
     // 启动自动审核定时任务
     const autoReviewService = require('./services/autoReview.service');
     autoReviewService.startScheduler();
-    console.log('自动审核调度器已启动');
+    logger.info('自动审核调度器已启动');
 
     // 启动监听
-    const server = app.listen(PORT, () => {
-      console.log(`服务器运行在 http://localhost:${PORT}`);
-      console.log(`API 文档: http://localhost:${PORT}/api-docs`);
+    const server = app.listen(PORT, '0.0.0.0', () => {
+      logger.info(`服务器运行在 http://0.0.0.0:${PORT}`);
+      if (isDev) {
+        logger.info(`API 文档: http://localhost:${PORT}/api-docs`);
+      }
     });
 
     // 初始化 WebSocket (可选)
@@ -94,7 +97,7 @@ async function startServer() {
 
     return server;
   } catch (error) {
-    console.error('服务器启动失败:', error);
+    logger.error('服务器启动失败:', error);
     process.exit(1);
   }
 }

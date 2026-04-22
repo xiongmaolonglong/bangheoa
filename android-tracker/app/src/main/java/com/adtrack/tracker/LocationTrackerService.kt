@@ -101,11 +101,11 @@ class LocationTrackerService : LifecycleService() {
         // 请求位置更新
         val locationRequest = LocationRequest.Builder(
             com.google.android.gms.location.Priority.PRIORITY_HIGH_ACCURACY,
-            5_000L // 5秒获取一次定位
+            5_000L
         ).apply {
             setMinUpdateIntervalMillis(2_000L)
             setWaitForAccurateLocation(false)
-        }
+        }.build()
 
         locationCallback = object : LocationCallback() {
             override fun onLocationResult(result: LocationResult) {

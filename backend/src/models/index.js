@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const { sequelize } = require('../config/database');
 
 // 导入所有模型
@@ -217,9 +218,9 @@ module.exports = {
   syncDatabase: async (options = {}) => {
     try {
       await sequelize.sync(options);
-      console.log('数据库同步成功');
+      logger.info('数据库同步成功');
     } catch (error) {
-      console.error('数据库同步失败:', error);
+      logger.error('数据库同步失败:', error);
       throw error;
     }
   }

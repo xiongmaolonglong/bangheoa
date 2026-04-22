@@ -31,7 +31,7 @@ const DispatchRule = sequelize.define('DispatchRule', {
   },
   target_role: {
     type: DataTypes.STRING(50),
-    comment: '目标角色：measurer/designer/producer/installer'
+    comment: '目标角色：field_worker/designer/producer'
   },
   target_user_id: {
     type: DataTypes.INTEGER,

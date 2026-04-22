@@ -109,7 +109,7 @@
           <el-select v-model="form.target_role" placeholder="选择角色" clearable>
             <el-option label="设计师" value="designer" />
             <el-option label="生产员" value="producer" />
-            <el-option label="安装员" value="installer" />
+            <el-option label="外勤员" value="field_worker" />
           </el-select>
         </el-form-item>
         <el-form-item label="负载均衡">
@@ -197,7 +197,7 @@ const stageMap = {
 const roleMap = {
   designer: '设计师',
   producer: '生产员',
-  installer: '安装员'
+  field_worker: '外勤员'
 }
 
 const fetchRules = async () => {

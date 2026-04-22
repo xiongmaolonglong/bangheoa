@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const bcrypt = require('bcryptjs');
 const jwtUtil = require('../utils/jwt');
 const response = require('../utils/response');
@@ -43,7 +44,7 @@ const authController = {
 
       return response.success(res, { id: user.id, username: user.username }, '注册成功');
     } catch (error) {
-      console.error('注册错误:', error);
+      logger.error('注册错误:', error);
       return response.serverError(res, '注册失败');
     }
   },
@@ -115,7 +116,7 @@ const authController = {
         user: user.toSafeJSON()
       }, '登录成功');
     } catch (error) {
-      console.error('登录错误:', error);
+      logger.error('登录错误:', error);
       return response.serverError(res, '登录失败');
     }
   },
@@ -153,7 +154,7 @@ const authController = {
 
       return response.success(res, user);
     } catch (error) {
-      console.error('获取用户信息错误:', error);
+      logger.error('获取用户信息错误:', error);
       return response.serverError(res, '获取用户信息失败');
     }
   },
@@ -192,7 +193,7 @@ const authController = {
 
       return response.success(res, null, '密码修改成功');
     } catch (error) {
-      console.error('修改密码错误:', error);
+      logger.error('修改密码错误:', error);
       return response.serverError(res, '修改密码失败');
     }
   },
@@ -223,7 +224,7 @@ const authController = {
       const wxData = await wxRes.json();
 
       if (wxData.errcode) {
-        console.error('微信登录失败:', wxData);
+        logger.error('微信登录失败:', wxData);
         return response.error(res, '微信登录失败: ' + wxData.errmsg);
       }
 
@@ -296,7 +297,7 @@ const authController = {
         isNewUser: !user.password // 标记是否需要设置密码绑定
       }, '登录成功');
     } catch (error) {
-      console.error('微信登录错误:', error);
+      logger.error('微信登录错误:', error);
       return response.serverError(res, '登录失败');
     }
   },
@@ -350,7 +351,7 @@ const authController = {
         user: existUser.toSafeJSON()
       }, '绑定成功');
     } catch (error) {
-      console.error('绑定账号错误:', error);
+      logger.error('绑定账号错误:', error);
       return response.serverError(res, '绑定失败');
     }
   }

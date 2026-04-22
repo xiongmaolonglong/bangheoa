@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 /**
  * 消息通知服务
  * 支持数据库存储 + WebSocket 实时推送
@@ -23,13 +24,13 @@ function initWebSocket(httpServer) {
   });
 
   io.on('connection', (socket) => {
-    console.log('WebSocket 连接:', socket.id);
+    logger.info('WebSocket 连接:', socket.id);
 
     // 用户登录绑定
     socket.on('authenticate', (userId) => {
       socket.userId = userId;
       userConnections.set(userId, socket);
-      console.log(`用户 ${userId} 已连接`);
+      logger.info(`用户 ${userId} 已连接`);
 
       // 加入用户房间
       socket.join(`user:${userId}`);
@@ -44,7 +45,7 @@ function initWebSocket(httpServer) {
     socket.on('disconnect', () => {
       if (socket.userId) {
         userConnections.delete(socket.userId);
-        console.log(`用户 ${socket.userId} 已断开`);
+        logger.info(`用户 ${socket.userId} 已断开`);
       }
     });
   });
@@ -221,12 +222,12 @@ async function notifyStatusChange(order, newStatus, operator) {
     case 'pending_review':
     case 'design_review':
     case 'install_review':
-      // 审核状态通知审核员和管理员
-      const reviewers = await User.findAll({
-        where: { role: { [Op.in]: ['admin', 'reviewer'] }, status: 'active' },
+      // 审核状态通知管理员
+      const admins = await User.findAll({
+        where: { role: 'admin', status: 'active' },
         attributes: ['id']
       });
-      recipients.push(...reviewers.map(u => u.id));
+      recipients.push(...admins.map(u => u.id));
       break;
 
     case 'designing':
@@ -248,11 +249,13 @@ async function notifyStatusChange(order, newStatus, operator) {
       if (order.customer_id) {
         recipients.push(order.customer_id);
       }
-      const admins = await User.findAll({
-        where: { role: 'admin', status: 'active' },
-        attributes: ['id']
-      });
-      recipients.push(...admins.map(u => u.id));
+      {
+        const archivedAdmins = await User.findAll({
+          where: { role: 'admin', status: 'active' },
+          attributes: ['id']
+        });
+        recipients.push(...archivedAdmins.map(u => u.id));
+      }
       break;
   }
 

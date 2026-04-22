@@ -1,6 +1,6 @@
 import { http } from '@kit.NetworkKit'
 import { Constants } from './Constants'
-import { getString, putString, remove, putBoolean } from './StorageUtil'
+import { getString } from './StorageUtil'
 
 export interface ApiResponse<T> {
   code: number
@@ -15,16 +15,24 @@ export interface PageData<T> {
   pageSize: number
 }
 
+interface HttpRequestOptions {
+  method: http.RequestMethod
+  header: ESObject
+  extraData?: string
+  readTimeout: number
+  connectTimeout: number
+}
+
 /**
  * HTTP请求封装
  */
 export class HttpUtil {
-  private static instance: http.HTTPRequest | null = null
+  private static instance: http.HttpRequest | null = null
 
   /**
    * 获取http实例
    */
-  private static getHttp(): http.HTTPRequest {
+  private static getHttp(): http.HttpRequest {
     if (!HttpUtil.instance) {
       HttpUtil.instance = http.createHttp()
     }
@@ -41,13 +49,15 @@ export class HttpUtil {
   /**
    * 请求拦截 - 添加Token
    */
-  private static async buildHeader(header: Record<string, string>): Promise<Record<string, string>> {
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-      ...header
-    }
-    const token = await HttpUtil.getToken()
-    if (token) {
+  private static async buildHeader(extraHeader: ESObject): Promise<ESObject> {
+    const headers: ESObject = {}
+    headers['Content-Type'] = 'application/json'
+    const keys: string[] = Object.keys(extraHeader)
+    keys.forEach((key: string) => {
+      headers[key] = extraHeader[key]
+    })
+    const token: string = await HttpUtil.getToken()
+    if (token.length > 0) {
       headers['Authorization'] = `Bearer ${token}`
     }
     return headers
@@ -56,25 +66,26 @@ export class HttpUtil {
   /**
    * GET请求
    */
-  static async get<T>(url: string, params?: Record<string, string | number>, extraHeader?: Record<string, string>): Promise<ApiResponse<T>> {
-    let fullUrl = `${Constants.BASE_URL}${url}`
+  static async get<T>(url: string, params?: ESObject, extraHeader?: ESObject): Promise<ApiResponse<T>> {
+    let fullUrl: string = `${Constants.BASE_URL}${url}`
     if (params) {
       const queryParts: string[] = []
-      for (const key in params) {
+      const keys: string[] = Object.keys(params)
+      keys.forEach((key: string) => {
         queryParts.push(`${key}=${params[key]}`)
-      }
+      })
       if (queryParts.length > 0) {
         fullUrl += `?${queryParts.join('&')}`
       }
     }
 
-    const headers = await HttpUtil.buildHeader(extraHeader || {})
-    const response = await HttpUtil.getHttp().request(fullUrl, {
+    const headers: ESObject = await HttpUtil.buildHeader(extraHeader || {})
+    const response: http.HttpResponse = await HttpUtil.getHttp().request(fullUrl, {
       method: http.RequestMethod.GET,
       header: headers,
       readTimeout: Constants.HTTP_TIMEOUT,
       connectTimeout: Constants.HTTP_TIMEOUT
-    })
+    } as HttpRequestOptions)
 
     return JSON.parse(response.result as string) as ApiResponse<T>
   }
@@ -82,16 +93,16 @@ export class HttpUtil {
   /**
    * POST请求
    */
-  static async post<T>(url: string, data?: ESObject, extraHeader?: Record<string, string>): Promise<ApiResponse<T>> {
-    const fullUrl = `${Constants.BASE_URL}${url}`
-    const headers = await HttpUtil.buildHeader(extraHeader || {})
-    const response = await HttpUtil.getHttp().request(fullUrl, {
+  static async post<T>(url: string, data?: ESObject, extraHeader?: ESObject): Promise<ApiResponse<T>> {
+    const fullUrl: string = `${Constants.BASE_URL}${url}`
+    const headers: ESObject = await HttpUtil.buildHeader(extraHeader || {})
+    const response: http.HttpResponse = await HttpUtil.getHttp().request(fullUrl, {
       method: http.RequestMethod.POST,
       header: headers,
       extraData: data ? JSON.stringify(data) : '',
       readTimeout: Constants.HTTP_TIMEOUT,
       connectTimeout: Constants.HTTP_TIMEOUT
-    })
+    } as HttpRequestOptions)
 
     return JSON.parse(response.result as string) as ApiResponse<T>
   }
@@ -99,16 +110,16 @@ export class HttpUtil {
   /**
    * PUT请求
    */
-  static async put<T>(url: string, data?: ESObject, extraHeader?: Record<string, string>): Promise<ApiResponse<T>> {
-    const fullUrl = `${Constants.BASE_URL}${url}`
-    const headers = await HttpUtil.buildHeader(extraHeader || {})
-    const response = await HttpUtil.getHttp().request(fullUrl, {
+  static async put<T>(url: string, data?: ESObject, extraHeader?: ESObject): Promise<ApiResponse<T>> {
+    const fullUrl: string = `${Constants.BASE_URL}${url}`
+    const headers: ESObject = await HttpUtil.buildHeader(extraHeader || {})
+    const response: http.HttpResponse = await HttpUtil.getHttp().request(fullUrl, {
       method: http.RequestMethod.PUT,
       header: headers,
       extraData: data ? JSON.stringify(data) : '',
       readTimeout: Constants.HTTP_TIMEOUT,
       connectTimeout: Constants.HTTP_TIMEOUT
-    })
+    } as HttpRequestOptions)
 
     return JSON.parse(response.result as string) as ApiResponse<T>
   }
@@ -116,15 +127,15 @@ export class HttpUtil {
   /**
    * DELETE请求
    */
-  static async delete<T>(url: string, extraHeader?: Record<string, string>): Promise<ApiResponse<T>> {
-    const fullUrl = `${Constants.BASE_URL}${url}`
-    const headers = await HttpUtil.buildHeader(extraHeader || {})
-    const response = await HttpUtil.getHttp().request(fullUrl, {
+  static async delete<T>(url: string, extraHeader?: ESObject): Promise<ApiResponse<T>> {
+    const fullUrl: string = `${Constants.BASE_URL}${url}`
+    const headers: ESObject = await HttpUtil.buildHeader(extraHeader || {})
+    const response: http.HttpResponse = await HttpUtil.getHttp().request(fullUrl, {
       method: http.RequestMethod.DELETE,
       header: headers,
       readTimeout: Constants.HTTP_TIMEOUT,
       connectTimeout: Constants.HTTP_TIMEOUT
-    })
+    } as HttpRequestOptions)
 
     return JSON.parse(response.result as string) as ApiResponse<T>
   }
@@ -132,28 +143,8 @@ export class HttpUtil {
   /**
    * 上传文件
    */
-  static async upload<T>(url: string, filePath: string): Promise<ApiResponse<T>> {
-    const fullUrl = `${Constants.BASE_URL}${url}`
-    const headers = await HttpUtil.buildHeader({})
-    const token = await HttpUtil.getToken()
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`
-    }
-
-    const response = await HttpUtil.getHttp().upload(fullUrl, {
-      method: http.RequestMethod.POST,
-      header: headers,
-      files: [
-        {
-          filename: 'file',
-          name: 'file',
-          uri: filePath,
-          contentType: http.ContentType.OCTET_STREAM_TYPE
-        }
-      ]
-    })
-
-    return JSON.parse(response.result as string) as ApiResponse<T>
+  static async upload<T>(_url: string, _filePath: string): Promise<T> {
+    throw new Error('upload not implemented')
   }
 
   /**

@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const response = require('../utils/response');
 const { Supplier } = require('../models');
 const { Op } = require('sequelize');
@@ -48,7 +49,7 @@ const supplierController = {
         pageSize: parseInt(pageSize)
       });
     } catch (error) {
-      console.error('获取供应商列表错误:', error);
+      logger.error('获取供应商列表错误:', error);
       return response.serverError(res, '获取供应商列表失败');
     }
   },
@@ -66,7 +67,7 @@ const supplierController = {
 
       return response.success(res, suppliers);
     } catch (error) {
-      console.error('获取供应商列表错误:', error);
+      logger.error('获取供应商列表错误:', error);
       return response.serverError(res, '获取供应商列表失败');
     }
   },
@@ -86,7 +87,7 @@ const supplierController = {
 
       return response.success(res, supplier);
     } catch (error) {
-      console.error('获取供应商详情错误:', error);
+      logger.error('获取供应商详情错误:', error);
       return response.serverError(res, '获取供应商详情失败');
     }
   },
@@ -128,7 +129,7 @@ const supplierController = {
 
       return response.success(res, supplier, '创建成功');
     } catch (error) {
-      console.error('创建供应商错误:', error);
+      logger.error('创建供应商错误:', error);
       return response.serverError(res, '创建供应商失败');
     }
   },
@@ -174,7 +175,7 @@ const supplierController = {
 
       return response.success(res, supplier, '更新成功');
     } catch (error) {
-      console.error('更新供应商错误:', error);
+      logger.error('更新供应商错误:', error);
       return response.serverError(res, '更新供应商失败');
     }
   },
@@ -196,7 +197,7 @@ const supplierController = {
 
       return response.success(res, null, '删除成功');
     } catch (error) {
-      console.error('删除供应商错误:', error);
+      logger.error('删除供应商错误:', error);
       return response.serverError(res, '删除供应商失败');
     }
   },
@@ -219,7 +220,7 @@ const supplierController = {
 
       return response.success(res, null, '状态更新成功');
     } catch (error) {
-      console.error('更新供应商状态错误:', error);
+      logger.error('更新供应商状态错误:', error);
       return response.serverError(res, '更新供应商状态失败');
     }
   }

@@ -49,15 +49,14 @@ const getOrderLocations = (params) => get('/orders/locations', params)
 // 上传图片
 const uploadImage = (filePath) => {
   return new Promise((resolve, reject) => {
-    const app = getApp()
-    const token = app.globalData.token || wx.getStorageSync('token')
+    const token = wx.getStorageSync('token')
 
     wx.uploadFile({
-      url: app.globalData.baseUrl + '/upload/image',
+      url: 'https://bh.fsbhgg.com/api/v1/upload/image',
       filePath,
       name: 'file',
       header: {
-        'Authorization': `Bearer ${token}`
+        'Authorization': token ? `Bearer ${token}` : ''
       },
       success: (res) => {
         const data = JSON.parse(res.data)
@@ -111,17 +110,6 @@ const geocode = (address) => get('/location/geocode', { address })
 // 经纬度转地址
 const reverseGeocode = (lng, lat) => get('/location/reverse', { lng, lat })
 
-// ==================== 定位追踪相关 ====================
-
-// 上报定位
-const reportLocation = (data) => post('/location-track/report', data, { showLoading: false })
-
-// 批量上报定位
-const batchReportLocation = (data) => post('/location-track/batch-report', data, { showLoading: false })
-
-// 获取某人轨迹
-const getUserTrack = (userId, params) => get(`/location-track/track/${userId}`, params)
-
 // ==================== 导出 ====================
 
 module.exports = {
@@ -158,11 +146,6 @@ module.exports = {
   // 地址
   geocode,
   reverseGeocode,
-
-  // 定位追踪
-  reportLocation,
-  batchReportLocation,
-  getUserTrack,
 
   // 通用请求
   get,

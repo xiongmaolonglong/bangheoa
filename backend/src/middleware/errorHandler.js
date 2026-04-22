@@ -1,10 +1,11 @@
+const logger = require('../utils/logger');
 const response = require('../utils/response');
 
 /**
  * 全局错误处理中间件
  */
 const errorHandler = (err, req, res, next) => {
-  console.error('错误:', err);
+  logger.error('错误:', err);
 
   // Sequelize 验证错误
   if (err.name === 'SequelizeValidationError') {

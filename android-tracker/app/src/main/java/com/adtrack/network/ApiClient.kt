@@ -9,13 +9,17 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
 
+private const val DEFAULT_BASE_URL = "http://192.168.1.100:3000"
+
 class ApiClient private constructor(context: Context) {
 
     private val prefs: SharedPreferences = context.getSharedPreferences("adtrack_prefs", Context.MODE_PRIVATE)
 
-    private var baseUrl: String
-        get() = prefs.getString("base_url", BuildConfig.DEFAULT_BASE_URL)!!
+    private var _baseUrl: String
+        get() = prefs.getString("base_url", DEFAULT_BASE_URL)!!
         set(value) = prefs.edit().putString("base_url", value).apply()
+
+    val baseUrl: String get() = _baseUrl
 
     var token: String?
         get() = prefs.getString("auth_token", null)
@@ -43,7 +47,7 @@ class ApiClient private constructor(context: Context) {
         .build()
 
     private val retrofit = Retrofit.Builder()
-        .baseUrl(baseUrl)
+        .baseUrl(_baseUrl)
         .addConverterFactory(GsonConverterFactory.create())
         .client(okHttpClient)
         .build()
@@ -51,7 +55,7 @@ class ApiClient private constructor(context: Context) {
     val api: ApiService = retrofit.create(ApiService::class.java)
 
     fun setBaseUrl(url: String) {
-        baseUrl = url
+        _baseUrl = url
     }
 
     fun clearSession() {

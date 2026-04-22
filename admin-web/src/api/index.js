@@ -292,7 +292,22 @@ export const statisticsApi = {
   getAlerts: () => request.get('/statistics/alerts'),
 
   // 我的待办任务
-  getMyTasks: () => request.get('/statistics/my-tasks')
+  getMyTasks: () => request.get('/statistics/my-tasks'),
+
+  // 项目流水线
+  getPipeline: () => request.get('/statistics/pipeline'),
+
+  // 团队活跃
+  getTeamActivity: () => request.get('/statistics/team-activity'),
+
+  // 通知列表
+  getNotifications: (params) => request.get('/statistics/notifications', { params }),
+
+  // 标记单个通知已读
+  markNotificationRead: (id) => request.put(`/statistics/notifications/${id}/read`),
+
+  // 标记全部通知已读
+  markAllNotificationsRead: () => request.put('/statistics/notifications/read-all')
 }
 
 /**

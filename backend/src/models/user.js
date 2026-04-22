@@ -70,7 +70,7 @@ User.init(
     role: {
       type: DataTypes.ENUM(Object.values(USER_ROLES)),
       allowNull: false,
-      defaultValue: USER_ROLES.MEASURER,
+      defaultValue: USER_ROLES.FIELD_WORKER,
       comment: '角色'
     },
     department_id: {

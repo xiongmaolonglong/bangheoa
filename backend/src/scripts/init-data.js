@@ -34,11 +34,9 @@ async function init() {
 
     // 创建测试用户
     const testUsers = [
-      { username: 'reviewer', real_name: '审核主管', role: 'reviewer' },
+      { username: 'field_worker', real_name: '外勤人员', role: 'field_worker' },
       { username: 'designer', real_name: '设计师李四', role: 'designer' },
-      { username: 'producer', real_name: '生产员王五', role: 'producer' },
-      { username: 'checker', real_name: '核对员赵六', role: 'checker' },
-      { username: 'installer', real_name: '安装员孙七', role: 'installer' }
+      { username: 'producer', real_name: '生产员王五', role: 'producer' }
     ];
 
     for (const u of testUsers) {

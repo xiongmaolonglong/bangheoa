@@ -1,17 +1,4 @@
 {
-  "modelVersion": "5.0.0",
-  "dependencies": {
-    "type": "dependencies",
-    "list": []
-  },
-  "execution": {
-    "analyzeMode": ["dynamic"]
-  },
-  "logging": {
-    "level": "info"
-  },
-  "debugging": {
-    "enableStackOverflowCheck": true
-  },
-  "nodeOptions": {}
+  "modelVersion": "6.0.2",
+  "dependencies": {}
 }

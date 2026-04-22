@@ -70,10 +70,10 @@ const userStore = useUserStore()
 const navGroups = computed(() => {
   const all = [
     { path: '/orders', title: '订单', icon: 'Document' },
-    { path: '/design', title: '设计', icon: 'Edit', roles: ['admin', 'designer', 'reviewer'] },
+    { path: '/design', title: '设计', icon: 'Edit', roles: ['admin', 'designer'] },
     { path: '/production', title: '生产', icon: 'Setting', roles: ['admin', 'producer'] },
-    { path: '/install', title: '安装', icon: 'Position', roles: ['admin', 'installer'] },
-    { path: '/statistics', title: '统计', icon: 'DataAnalysis', roles: ['admin', 'reviewer'] },
+    { path: '/install', title: '安装', icon: 'Position', roles: ['admin', 'field_worker'] },
+    { path: '/statistics', title: '统计', icon: 'DataAnalysis', roles: ['admin'] },
     { path: '/customers', title: '客户', icon: 'User' },
     { path: '/map', title: '地图', icon: 'Location' },
     { path: '/settings', title: '设置', icon: 'Tools', roles: ['admin'] }

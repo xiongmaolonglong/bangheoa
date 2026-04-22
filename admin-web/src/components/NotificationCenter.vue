@@ -180,7 +180,6 @@ const initWebSocket = () => {
   socket = new WebSocket(wsUrl)
 
   socket.onopen = () => {
-    console.log('WebSocket 已连接')
     // 发送认证
     const user = JSON.parse(localStorage.getItem('user') || '{}')
     if (user.id) {
@@ -227,7 +226,6 @@ const initWebSocket = () => {
   }
 
   socket.onclose = () => {
-    console.log('WebSocket 已断开')
     // 重连
     setTimeout(() => {
       initWebSocket()

@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const response = require('../utils/response');
 const { User, Department, Group } = require('../models');
 const { Op } = require('sequelize');
@@ -72,7 +73,7 @@ const userController = {
         pageSize: parseInt(pageSize)
       });
     } catch (error) {
-      console.error('获取用户列表错误:', error);
+      logger.error('获取用户列表错误:', error);
       return response.serverError(res, '获取用户列表失败');
     }
   },
@@ -102,7 +103,7 @@ const userController = {
 
       return response.success(res, user);
     } catch (error) {
-      console.error('获取用户详情错误:', error);
+      logger.error('获取用户详情错误:', error);
       return response.serverError(res, '获取用户详情失败');
     }
   },
@@ -151,7 +152,7 @@ const userController = {
 
       return response.success(res, user.toSafeJSON(), '创建成功');
     } catch (error) {
-      console.error('创建用户错误:', error);
+      logger.error('创建用户错误:', error);
       return response.serverError(res, '创建用户失败');
     }
   },
@@ -189,7 +190,7 @@ const userController = {
 
       return response.success(res, user.toSafeJSON(), '更新成功');
     } catch (error) {
-      console.error('更新用户错误:', error);
+      logger.error('更新用户错误:', error);
       return response.serverError(res, '更新用户失败');
     }
   },
@@ -216,7 +217,7 @@ const userController = {
 
       return response.success(res, null, '删除成功');
     } catch (error) {
-      console.error('删除用户错误:', error);
+      logger.error('删除用户错误:', error);
       return response.serverError(res, '删除用户失败');
     }
   },
@@ -244,7 +245,7 @@ const userController = {
 
       return response.success(res, null, '状态更新成功');
     } catch (error) {
-      console.error('更新用户状态错误:', error);
+      logger.error('更新用户状态错误:', error);
       return response.serverError(res, '更新用户状态失败');
     }
   },
@@ -269,7 +270,7 @@ const userController = {
 
       return response.success(res, null, '密码重置成功');
     } catch (error) {
-      console.error('重置密码错误:', error);
+      logger.error('重置密码错误:', error);
       return response.serverError(res, '重置密码失败');
     }
   },
@@ -297,7 +298,7 @@ const userController = {
 
       return response.success(res, users);
     } catch (error) {
-      console.error('获取处理人列表错误:', error);
+      logger.error('获取处理人列表错误:', error);
       return response.serverError(res, '获取处理人列表失败');
     }
   },
@@ -329,7 +330,7 @@ const userController = {
 
       return response.success(res, user.toSafeJSON(), '更新成功');
     } catch (error) {
-      console.error('更新用户信息错误:', error);
+      logger.error('更新用户信息错误:', error);
       return response.serverError(res, '更新用户信息失败');
     }
   }

@@ -58,6 +58,7 @@ import { ArrowLeft } from '@element-plus/icons-vue'
 import request from '@/api/request'
 import dayjs from 'dayjs'
 import { getStatusText, getStatusType } from '@/utils/constants'
+import { formatDate } from '@/composables/useFormat'
 
 const router = useRouter()
 const route = useRoute()
@@ -65,8 +66,6 @@ const loading = ref(false)
 
 const customer = ref({})
 const recentOrders = ref([])
-
-const formatDate = (date) => date ? dayjs(date).format('YYYY-MM-DD') : '-'
 
 const fetchCustomer = async () => {
   loading.value = true

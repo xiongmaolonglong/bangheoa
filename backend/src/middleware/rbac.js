@@ -1,3 +1,4 @@
+const { Op } = require('sequelize');
 const response = require('../utils/response');
 
 /**
@@ -19,12 +20,10 @@ const PERMISSIONS = {
     statistics: ['read', 'export'],
     settings: ['read', 'update']
   },
-  reviewer: {
-    order: ['read', 'update_status', 'assign'],
-    design: ['read', 'approve'],
-    measure: ['read', 'approve'],
-    install: ['read', 'approve'],
-    statistics: ['read']
+  field_worker: {
+    order: ['read'],
+    measure: ['create', 'read', 'update', 'approve'],
+    install: ['create', 'read', 'update', 'approve']
   },
   designer: {
     order: ['read'],
@@ -33,14 +32,6 @@ const PERMISSIONS = {
   producer: {
     order: ['read'],
     production: ['create', 'read', 'update']
-  },
-  checker: {
-    order: ['read'],
-    production: ['read', 'update']
-  },
-  installer: {
-    order: ['read'],
-    install: ['create', 'read', 'update']
   }
 };
 
@@ -195,11 +186,8 @@ const filterByDataScope = (req, res, next) => {
     case 'designer':
       where.designer_id = userId;
       break;
-    case 'installer':
+    case 'field_worker':
       where.installer_id = userId;
-      break;
-    case 'reviewer':
-      // 审核员可以看到所有待审核的订单
       break;
     default:
       // 其他角色只能看到自己相关的订单

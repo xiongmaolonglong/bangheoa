@@ -13,7 +13,6 @@ class NotificationService {
    */
   async requestPermission() {
     if (!this.supported) {
-      console.warn('浏览器不支持通知功能')
       return false
     }
 
@@ -22,7 +21,6 @@ class NotificationService {
     }
 
     if (this.permission === 'denied') {
-      console.warn('通知权限已被拒绝')
       return false
     }
 

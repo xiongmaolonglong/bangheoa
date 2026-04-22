@@ -10,21 +10,21 @@ router.use(authenticate);
 // 更新当前用户信息（业务员信息）
 router.put('/profile', userController.updateProfile);
 
-// 获取用户列表 - 管理员、审核主管可访问
+// 获取用户列表 - 管理员可访问
 router.get('/',
-  authorize(['admin', 'reviewer']),
+  authorize(['admin']),
   userController.getList
 );
 
 // 获取可选处理人列表（派单用）
 router.get('/handlers',
-  authorize(['admin', 'reviewer']),
+  authorize(['admin']),
   userController.getHandlers
 );
 
 // 获取用户详情
 router.get('/:id',
-  authorize(['admin', 'reviewer']),
+  authorize(['admin']),
   userController.getDetail
 );
 

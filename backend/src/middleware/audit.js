@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 /**
  * 操作审计中间件
  * 记录所有关键操作日志
@@ -84,11 +85,11 @@ async function recordAudit(req, res, action, startTime, responseBody) {
 
     // 异步保存日志
     await AuditLog.create(auditData).catch(err => {
-      console.error('保存审计日志失败:', err);
+      logger.error('保存审计日志失败:', err);
     });
 
   } catch (err) {
-    console.error('记录审计日志错误:', err);
+    logger.error('记录审计日志错误:', err);
   }
 }
 

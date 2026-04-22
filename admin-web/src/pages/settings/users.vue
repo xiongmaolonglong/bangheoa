@@ -209,11 +209,10 @@
         <el-form-item label="角色" prop="role">
           <el-select v-model="userForm.role" style="width: 100%">
             <el-option label="管理员" value="admin" />
-            <el-option label="审核主管" value="reviewer" />
             <el-option label="设计师" value="designer" />
             <el-option label="生产员" value="producer" />
-            <el-option label="核对员" value="checker" />
-            <el-option label="安装员" value="installer" />
+            <el-option label="外勤员" value="field_worker" />
+            <el-option label="客户" value="customer" />
           </el-select>
         </el-form-item>
 
@@ -315,29 +314,26 @@ import { Plus, Search, Refresh, Edit, Delete, Key } from '@element-plus/icons-vu
 import { userApi, regionApi } from '@/api'
 import request from '@/api/request'
 import dayjs from 'dayjs'
+import { formatDate } from '@/composables/useFormat'
 
 const roleMap = {
   admin: '管理员',
-  reviewer: '审核主管',
   designer: '设计师',
   producer: '生产员',
-  checker: '核对员',
-  installer: '安装员'
+  field_worker: '外勤员',
+  customer: '客户'
 }
 
 const getRoleTagType = (role) => {
   const types = {
     admin: 'danger',
-    reviewer: 'warning',
     designer: 'success',
     producer: 'info',
-    checker: 'info',
-    installer: ''
+    field_worker: 'warning',
+    customer: ''
   }
   return types[role] || ''
 }
-
-const formatDate = (date) => date ? dayjs(date).format('YYYY-MM-DD HH:mm') : '-'
 
 // 筛选
 const filterForm = reactive({

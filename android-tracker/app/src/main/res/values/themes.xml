@@ -5,5 +5,12 @@
         <item name="colorPrimaryDark">#4f46e5</item>
         <item name="colorAccent">#6366f1</item>
         <item name="android:statusBarColor">#6366f1</item>
+        <item name="appBarLayoutStyle">@style/AppBarStyle</item>
     </style>
+
+    <style name="AppBarStyle" parent="Widget.Material3.AppBarLayout">
+        <item name="android:background">#6366f1</item>
+    </style>
+
+    <style name="Theme.AdTrack.AppBarOverlay" parent="ThemeOverlay.Material3.Dark.ActionBar" />
 </resources>

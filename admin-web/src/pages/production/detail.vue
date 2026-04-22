@@ -78,7 +78,7 @@
             <div v-for="(group, idx) in designGroups" :key="group.id" class="design-item" @click="previewDrawing(group)">
               <div class="design-thumb">
                 <template v-if="group.drawings?.[0]?.file_url">
-                  <el-image :src="getPhotoUrl(group.drawings[0].file_url)" fit="cover" class="design-img" />
+                  <el-image :src="getPhotoUrl(group.drawings[0].file_url)" fit="cover" class="design-img" lazy />
                 </template>
                 <template v-else>
                   <div class="placeholder">
@@ -194,7 +194,7 @@
                       <h4>实物照片</h4>
                       <div class="expand-photos">
                         <div v-for="(photo, pIdx) in getFacePhotos(row)" :key="pIdx" class="expand-photo" @click="previewPhoto(getFacePhotos(row))">
-                          <el-image :src="getPhotoUrl(photo)" fit="cover" :preview-src-list="[]" class="expand-photo-img" />
+                          <el-image :src="getPhotoUrl(photo)" fit="cover" :preview-src-list="[]" class="expand-photo-img" lazy />
                         </div>
                         <span v-if="!getFacePhotos(row).length" class="no-photo-text">暂无照片</span>
                       </div>
@@ -204,7 +204,7 @@
                       <div class="expand-photos">
                         <template v-if="getFaceDesign(row.id)">
                           <div class="expand-photo" @click="previewPhoto([getFaceDesign(row.id)])">
-                            <el-image :src="getPhotoUrl(getFaceDesign(row.id))" fit="cover" class="expand-photo-img" />
+                            <el-image :src="getPhotoUrl(getFaceDesign(row.id))" fit="cover" class="expand-photo-img" lazy />
                           </div>
                         </template>
                         <span v-else class="no-photo-text">暂无设计图</span>
@@ -248,7 +248,7 @@
               <template #default="{ row }">
                 <div class="thumb-list">
                   <div v-for="(photo, pIdx) in getFacePhotos(row).slice(0, 2)" :key="pIdx" class="thumb-img" @click="previewPhoto(getFacePhotos(row))">
-                    <el-image :src="getPhotoUrl(photo)" fit="cover" :preview-src-list="[]" />
+                    <el-image :src="getPhotoUrl(photo)" fit="cover" :preview-src-list="[]" lazy />
                   </div>
                   <span v-if="!getFacePhotos(row).length" class="no-photo">无</span>
                 </div>
@@ -362,6 +362,7 @@ import {
 } from '@element-plus/icons-vue'
 import { productionApi, orderApi } from '@/api'
 import dayjs from 'dayjs'
+import { formatDate } from '@/composables/useFormat'
 
 const router = useRouter()
 const route = useRoute()
@@ -479,8 +480,6 @@ const filteredGroupedFaces = computed(() => {
   })).filter(g => g.faces.length > 0)
 })
 
-// 格式化
-const formatDate = (date) => date ? dayjs(date).format('YYYY-MM-DD HH:mm') : '-'
 const getActionText = (action) => {
   const map = { design_approve: '设计审核通过', design_reject: '设计审核驳回', production_start: '开始生产', production_complete: '完成生产', check_pass: '核对通过', check_reject: '核对返工' }
   return map[action] || action
@@ -578,11 +577,21 @@ const batchSetCompleted = async () => {
 
 // 批量通过
 const handleBatchPass = async () => {
+  if (pendingCount.value === 0) return ElMessage.warning('没有待核对的项')
   try {
-    await ElMessageBox.confirm(`确认将所有待核对的 ${pendingCount.value} 项标记为通过？`, '批量通过')
+    await ElMessageBox.confirm(`确认将 ${pendingCount.value} 项全部标记为通过并提交核对？`, '批量通过')
+    submitting.value = true
+    // 先更新前端状态
     measureFaces.value.forEach(f => { if (f.check_status === 'pending' || !f.check_status) f.check_status = 'passed' })
-    ElMessage.success('已全部标记为通过')
-  } catch (err) {}
+    // 调用后端推进订单状态
+    await productionApi.submitCheck(orderId, {
+      remark: checkForm.remark,
+      checkItems: measureFaces.value.map(f => ({ id: f.id, check_status: f.check_status, check_remark: f.check_remark }))
+    })
+    ElMessage.success('全部通过，已进入安装阶段')
+    router.push('/install')
+  } catch (err) { if (err !== 'cancel') ElMessage.error(err.response?.data?.message || '操作失败') }
+  finally { submitting.value = false }
 }
 
 // 完成生产
@@ -627,7 +636,7 @@ const handleCheckPass = async () => {
       checkItems: measureFaces.value.map(f => ({ id: f.id, check_status: f.check_status, check_remark: f.check_remark }))
     })
     ElMessage.success('核对完成，已进入安装阶段')
-    router.push('/production')
+    router.push('/install')
   } catch (err) { if (err !== 'cancel') ElMessage.error(err.response?.data?.message || '操作失败') }
   finally { submitting.value = false }
 }

@@ -27,12 +27,9 @@ const PRODUCTION_TYPE = {
 // 用户角色常量
 const USER_ROLES = {
   ADMIN: 'admin',           // 管理员
-  REVIEWER: 'reviewer',     // 审核主管
   DESIGNER: 'designer',     // 设计师
   PRODUCER: 'producer',     // 生产员
-  CHECKER: 'checker',       // 核对员
-  INSTALLER: 'installer',   // 安装员
-  MEASURER: 'measurer',     // 测量员
+  FIELD_WORKER: 'field_worker', // 外勤人员（测量/安装/核对）
   CUSTOMER: 'customer'      // 客户（小程序用户）
 };
 

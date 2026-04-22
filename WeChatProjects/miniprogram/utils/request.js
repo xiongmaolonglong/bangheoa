@@ -2,7 +2,12 @@
  * 网络请求封装
  */
 
-const app = getApp()
+/**
+ * 获取 app 实例（延迟获取避免 getApp() 返回 undefined）
+ */
+function getAppInstance() {
+  return getApp()
+}
 
 /**
  * 通用请求方法
@@ -18,6 +23,7 @@ const request = (options) => {
   }
 
   // 获取 token
+  const app = getAppInstance()
   const token = app.globalData.token || wx.getStorageSync('token')
 
   return new Promise((resolve, reject) => {
@@ -52,6 +58,7 @@ const request = (options) => {
           }
         } else if (statusCode === 401) {
           // 未授权，跳转登录
+          const app = getAppInstance()
           app.logout()
           wx.showToast({ title: '请先登录', icon: 'none' })
           setTimeout(() => {

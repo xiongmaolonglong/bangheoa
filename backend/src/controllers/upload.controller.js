@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
@@ -94,7 +95,7 @@ async function processImage(filePath, options = {}) {
 
     return { compressed: false };
   } catch (err) {
-    console.error('图片处理失败:', err);
+    logger.error('图片处理失败:', err);
     return { compressed: false, error: err.message };
   }
 }
@@ -193,7 +194,7 @@ const uploadController = {
           compressed: processResult.compressed
         });
       } catch (error) {
-        console.error('上传图片错误:', error);
+        logger.error('上传图片错误:', error);
         if (req.file && fs.existsSync(req.file.path)) {
           fs.unlinkSync(req.file.path);
         }
@@ -243,7 +244,7 @@ const uploadController = {
 
         return response.success(res, files);
       } catch (error) {
-        console.error('上传图片错误:', error);
+        logger.error('上传图片错误:', error);
         // 清理所有文件
         if (req.files) {
           req.files.forEach(file => {
@@ -287,7 +288,7 @@ const uploadController = {
           mimetype: req.file.mimetype
         });
       } catch (error) {
-        console.error('上传文件错误:', error);
+        logger.error('上传文件错误:', error);
         if (req.file && fs.existsSync(req.file.path)) {
           fs.unlinkSync(req.file.path);
         }
@@ -328,7 +329,7 @@ const uploadController = {
           size: req.file.size
         });
       } catch (error) {
-        console.error('上传CDR文件错误:', error);
+        logger.error('上传CDR文件错误:', error);
         if (req.file && fs.existsSync(req.file.path)) {
           fs.unlinkSync(req.file.path);
         }
@@ -383,7 +384,7 @@ const uploadController = {
       fs.unlinkSync(filePath);
       return response.success(res, null, '删除成功');
     } catch (error) {
-      console.error('删除文件错误:', error);
+      logger.error('删除文件错误:', error);
       return response.error(res, '删除文件失败');
     }
   },
@@ -419,7 +420,7 @@ const uploadController = {
       return response.error(res, err.message);
     }
 
-    console.error('上传错误:', err);
+    logger.error('上传错误:', err);
     return response.error(res, '上传失败');
   }
 };

@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 /**
  * 数据导出控制器
  * 支持 Excel、PDF、JSON 导出
@@ -137,7 +138,7 @@ exports.exportOrdersExcel = async (req, res) => {
     res.end();
 
   } catch (err) {
-    console.error('导出失败:', err);
+    logger.error('导出失败:', err);
     response.error(res, '导出失败');
   }
 };
@@ -177,7 +178,7 @@ exports.exportOrderPdf = async (req, res) => {
     res.send(html);
 
   } catch (err) {
-    console.error('导出 PDF 失败:', err);
+    logger.error('导出 PDF 失败:', err);
     response.error(res, '导出失败');
   }
 };
@@ -302,7 +303,7 @@ exports.batchExport = async (req, res) => {
     });
 
   } catch (err) {
-    console.error('批量导出失败:', err);
+    logger.error('批量导出失败:', err);
     response.error(res, '导出失败');
   }
 };
@@ -343,7 +344,7 @@ exports.downloadTemplate = async (req, res) => {
     res.end();
 
   } catch (err) {
-    console.error('下载模板失败:', err);
+    logger.error('下载模板失败:', err);
     response.error(res, '下载失败');
   }
 };

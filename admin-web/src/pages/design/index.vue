@@ -114,7 +114,7 @@
         </div>
         <div class="task-side">
           <div class="task-designer">设计师：<strong>{{ row.handler?.real_name || row.designer?.real_name || '-' }}</strong></div>
-          <div class="task-created">{{ formatDate(row.created_at) }}</div>
+          <div class="task-created">{{ formatShortDate(row.created_at) }}</div>
         </div>
         <div class="task-actions" @click.stop>
           <el-button size="small" @click="handleDesign(row)">详情</el-button>
@@ -154,6 +154,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { Refresh, Briefcase, EditPen, Checked, Finished, User, Location, Clock, Check } from '@element-plus/icons-vue'
 import { designApi } from '@/api'
 import dayjs from 'dayjs'
+import { formatShortDate } from '@/composables/useFormat'
 
 const router = useRouter()
 const loading = ref(false)
@@ -246,8 +247,6 @@ const getFaceCount = (row) => {
   })
   return count
 }
-
-const formatDate = (date) => date ? dayjs(date).format('MM-DD HH:mm') : '-'
 
 const fetchTasks = async () => {
   loading.value = true

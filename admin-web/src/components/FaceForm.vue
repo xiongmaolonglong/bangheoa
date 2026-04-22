@@ -237,7 +237,6 @@ const beforeUpload = (file) => {
 
 // 上传成功
 const handleUploadSuccess = (response, file, uploadFileList) => {
-  console.log('上传响应:', response)
   let imageUrl = null
 
   if (response && response.code === 0 && response.data?.url) {

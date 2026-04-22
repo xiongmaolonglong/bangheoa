@@ -13,9 +13,9 @@ router.post('/report', locationTrackController.reportLocation);
 // 批量上报
 router.post('/batch-report', locationTrackController.batchReportLocation);
 
-// 获取所有在线追踪人员（管理员/审核主管）
+// 获取所有在线追踪人员（管理员）
 router.get('/trackers',
-  authorize(['admin', 'reviewer']),
+  authorize(['admin']),
   locationTrackController.getTrackers
 );
 

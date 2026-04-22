@@ -20,14 +20,13 @@ Page({
     safeAreaBottom: 0
   },
 
-  async onLoad() {
-    // 获取安全区域，适配各种设备
-    const systemInfo = wx.getSystemInfoSync()
-    this.setData({
-      safeAreaBottom: systemInfo.safeArea ? systemInfo.safeArea.bottom : 0
-    })
+  onLoad() {
+    this.setData({ safeAreaBottom: 0 })
+    requireLogin(this.initPage.bind(this))
+  },
 
-    await requireLogin()
+  // 页面初始化（登录成功后执行）
+  initPage: function() {
     this.loadSavedSalesman()
   },
 

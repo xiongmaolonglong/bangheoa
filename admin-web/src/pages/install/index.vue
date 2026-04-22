@@ -34,15 +34,6 @@
           <div class="stat-label">待安装</div>
         </div>
       </div>
-      <div class="stat-card" :class="{ active: filterForm.status === 'install_review' }" @click="filterByStatus('install_review')">
-        <div class="stat-icon review">
-          <el-icon><Checked /></el-icon>
-        </div>
-        <div class="stat-info">
-          <div class="stat-value">{{ stats.review }}</div>
-          <div class="stat-label">待审核</div>
-        </div>
-      </div>
       <div class="stat-card" :class="{ active: filterForm.status === 'archived' }" @click="filterByStatus('archived')">
         <div class="stat-icon archived">
           <el-icon><Finished /></el-icon>
@@ -66,7 +57,6 @@
       <div class="filter-chips">
         <span class="chip" :class="{ active: filterForm.status === '' }" @click="filterByStatus('')">全部 <span class="chip-count">{{ stats.total }}</span></span>
         <span class="chip" :class="{ active: filterForm.status === 'installing' }" @click="filterByStatus('installing')">待安装 <span class="chip-count">{{ stats.installing }}</span></span>
-        <span class="chip" :class="{ active: filterForm.status === 'install_review' }" @click="filterByStatus('install_review')">待审核 <span class="chip-count">{{ stats.review }}</span></span>
         <span class="chip" :class="{ active: filterForm.status === 'archived' }" @click="filterByStatus('archived')">已归档 <span class="chip-count">{{ stats.archived }}</span></span>
       </div>
     </div>
@@ -103,11 +93,7 @@
           <div class="task-time">{{ getTaskTimeText(row) }}</div>
         </div>
         <div class="task-actions" @click.stop>
-          <el-button v-if="row.status === 'installing'" class="task-btn primary" size="small" @click="handleInstall(row)">
-            <el-icon><EditPen /></el-icon>
-            填写报告
-          </el-button>
-          <el-button v-if="row.status === 'install_review'" class="task-btn success" size="small" @click="handleApprove(row)">
+          <el-button v-if="row.status === 'install_review' || row.status === 'installing'" class="task-btn success" size="small" @click="handleApprove(row)">
             <el-icon><Check /></el-icon>
             审核通过
           </el-button>
@@ -137,9 +123,10 @@
 import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Refresh, Briefcase, Tools, Checked, Finished, User, Location, EditPen, Check } from '@element-plus/icons-vue'
+import { Refresh, Briefcase, Tools, Finished, User, Location, Check } from '@element-plus/icons-vue'
 import { installApi } from '@/api'
 import dayjs from 'dayjs'
+import { formatShortDate } from '@/composables/useFormat'
 
 const router = useRouter()
 const loading = ref(false)
@@ -159,7 +146,6 @@ const pagination = reactive({
 const stats = reactive({
   total: 0,
   installing: 0,
-  review: 0,
   archived: 0
 })
 
@@ -179,14 +165,11 @@ const getStatusText = (status) => statusMap[status]?.text || status
 const getStatusClass = (status) => statusMap[status]?.class || 'pending'
 
 const getTaskTimeText = (row) => {
-  const time = formatDate(row.updated_at || row.created_at)
+  const time = formatShortDate(row.updated_at || row.created_at)
   if (row.status === 'installing') return `等待安装 · ${time}`
-  if (row.status === 'install_review') return `安装报告已提交 · ${time}`
   if (row.status === 'archived') return `已归档 · ${time}`
   return time
 }
-
-const formatDate = (date) => date ? dayjs(date).format('MM-DD HH:mm') : '-'
 
 const fetchTasks = async () => {
   loading.value = true
@@ -204,10 +187,6 @@ const fetchTasks = async () => {
     try {
       const allRes = await installApi.getTasks({ status: 'installing', page: 1, pageSize: 1 })
       stats.installing = allRes.data?.total || 0
-    } catch {}
-    try {
-      const allRes = await installApi.getTasks({ status: 'install_review', page: 1, pageSize: 1 })
-      stats.review = allRes.data?.total || 0
     } catch {}
     try {
       const allRes = await installApi.getTasks({ status: 'archived', page: 1, pageSize: 1 })
@@ -294,7 +273,7 @@ onMounted(() => {
 /* ===== 统计卡片 ===== */
 .stats-row {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 12px;
 }
 .stat-card {
@@ -330,7 +309,6 @@ onMounted(() => {
   flex-shrink: 0;
 }
 .stat-icon.pending { background: #6366f1; }
-.stat-icon.review { background: #f59e0b; }
 .stat-icon.archived { background: #10b981; }
 .stat-icon.total { background: #64748b; }
 .stat-info { flex: 1; }

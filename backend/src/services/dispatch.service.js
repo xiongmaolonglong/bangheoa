@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const { sequelize } = require('../config/database');
 const { Op } = require('sequelize');
 
@@ -44,7 +45,7 @@ class DispatchService {
     }
 
     if (!matchedRule) {
-      console.log(`未找到订单 ${order.order_no} 的派单规则`);
+      logger.info(`未找到订单 ${order.order_no} 的派单规则`);
       return null;
     }
 
@@ -69,7 +70,7 @@ class DispatchService {
     }
 
     if (!handlerId) {
-      console.log(`规则 ${matchedRule.name} 未找到合适的处理人`);
+      logger.info(`规则 ${matchedRule.name} 未找到合适的处理人`);
       return null;
     }
 

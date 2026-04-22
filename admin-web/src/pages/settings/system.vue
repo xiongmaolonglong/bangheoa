@@ -41,27 +41,6 @@
           </el-form-item>
         </el-form>
       </div>
-
-      <el-divider />
-
-      <div class="config-section">
-        <h3>默认材质选项</h3>
-        <p class="section-desc">配置快速添加属性时的材质下拉选项</p>
-        <div class="materials-tags">
-          <el-tag
-            v-for="(material, index) in materials"
-            :key="index"
-            closable
-            @close="materials.splice(index, 1)"
-          >
-            {{ material }}
-          </el-tag>
-        </div>
-        <div class="materials-input">
-          <el-input v-model="newMaterial" placeholder="输入新材质" size="small" @keyup.enter="addMaterial" style="width: 150px" />
-          <el-button size="small" @click="addMaterial">添加</el-button>
-        </div>
-      </div>
     </el-card>
   </div>
 </template>
@@ -78,22 +57,13 @@ const amapConfig = reactive({
   securityCode: '',
   webKey: ''
 })
-const materials = ref(['亚克力', '不锈钢', '铝塑板', 'PVC', '喷绘布'])
-const newMaterial = ref('')
 const saving = ref(false)
 
 const loadConfig = async () => {
   try {
-    const res = await configApi.getMaterials()
-    if (res.data && Array.isArray(res.data)) materials.value = res.data
-  } catch (e) {
-    console.log('材质配置加载失败，使用默认值')
-  }
-  try {
     const res = await formApi.getFeatures()
     if (res.data) features.locationParse = res.data.locationParse ?? 0
   } catch (e) {
-    console.log('功能开关配置不存在，使用默认值')
   }
   // 加载高德地图配置
   try {
@@ -106,15 +76,6 @@ const loadConfig = async () => {
     amapConfig.securityCode = securityRes.data?.value || ''
     amapConfig.webKey = webKeyRes.data?.value || ''
   } catch (e) {
-    console.log('地图配置加载失败')
-  }
-}
-
-const addMaterial = () => {
-  const m = newMaterial.value.trim()
-  if (m && !materials.value.includes(m)) {
-    materials.value.push(m)
-    newMaterial.value = ''
   }
 }
 
@@ -122,7 +83,6 @@ const handleSave = async () => {
   saving.value = true
   try {
     await formApi.saveFeatures({ locationParse: features.locationParse })
-    await configApi.updateMaterials(materials.value)
     // 保存高德地图配置
     await Promise.all([
       configApi.updateConfig('amap_js_key', { value: amapConfig.jsKey, type: 'string', description: '高德地图 JS API Key' }),
@@ -150,7 +110,5 @@ onMounted(() => { loadConfig() })
 .toggle-info { display: flex; flex-direction: column; gap: 4px; }
 .toggle-name { font-weight: 500; color: var(--text-primary); }
 .toggle-desc { font-size: 12px; color: var(--text-secondary); }
-.materials-tags { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
-.materials-input { display: flex; gap: 8px; }
 .form-item-tip { font-size: 11px; color: var(--text-secondary); margin-top: 4px; }
 </style>

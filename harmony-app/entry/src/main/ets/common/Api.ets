@@ -19,7 +19,7 @@ export class AuthApi {
 }
 
 export class OrderApi {
-  static getList(params?: Record<string, string | number>): Promise<ApiResponse<PageData<ESObject>>> {
+  static getList(params?: ESObject): Promise<ApiResponse<PageData<ESObject>>> {
     return HttpUtil.get('/orders', params)
   }
   static getDetail(id: string | number): Promise<ApiResponse<ESObject>> {
@@ -40,7 +40,7 @@ export class OrderApi {
   static advance(id: string | number, data: ESObject): Promise<ApiResponse<ESObject>> {
     return HttpUtil.post(`/orders/${id}/advance`, data)
   }
-  static getLocations(params?: Record<string, string | number>): Promise<ApiResponse<ESObject[]>> {
+  static getLocations(params?: ESObject): Promise<ApiResponse<ESObject[]>> {
     return HttpUtil.get('/orders/locations', params)
   }
 }
@@ -56,7 +56,7 @@ export class MeasureApi {
 }
 
 export class InstallApi {
-  static getTasks(params?: Record<string, string | number>): Promise<ApiResponse<PageData<ESObject>>> {
+  static getTasks(params?: ESObject): Promise<ApiResponse<PageData<ESObject>>> {
     return HttpUtil.get('/installs/tasks', params)
   }
   static getDetail(orderId: string | number): Promise<ApiResponse<ESObject>> {
@@ -72,19 +72,23 @@ export class InstallApi {
     return HttpUtil.post(`/installs/${orderId}/approve`)
   }
   static reject(orderId: string | number, reason: string): Promise<ApiResponse<ESObject>> {
-    return HttpUtil.post(`/installs/${orderId}/reject`, { reason })
+    const body: ESObject = {}
+    body['reason'] = reason
+    return HttpUtil.post(`/installs/${orderId}/reject`, body)
   }
 }
 
 export class NotificationApi {
-  static getList(params?: Record<string, string | number>): Promise<ApiResponse<PageData<ESObject>>> {
+  static getList(params?: ESObject): Promise<ApiResponse<PageData<ESObject>>> {
     return HttpUtil.get('/notifications', params)
   }
-  static getUnreadCount(): Promise<ApiResponse<{ count: number }>> {
+  static getUnreadCount(): Promise<ApiResponse<ESObject>> {
     return HttpUtil.get('/notifications/unread-count')
   }
   static markRead(ids: number[]): Promise<ApiResponse<void>> {
-    return HttpUtil.post('/notifications/read', { ids })
+    const body: ESObject = {}
+    body['ids'] = ids
+    return HttpUtil.post('/notifications/read', body)
   }
   static markAllRead(): Promise<ApiResponse<void>> {
     return HttpUtil.post('/notifications/read-all')
@@ -95,7 +99,7 @@ export class NotificationApi {
 }
 
 export class ReviewApi {
-  static getPendingList(params?: Record<string, string | number>): Promise<ApiResponse<PageData<ESObject>>> {
+  static getPendingList(params?: ESObject): Promise<ApiResponse<PageData<ESObject>>> {
     return HttpUtil.get('/review/pending', params)
   }
   static getDetail(orderId: string | number): Promise<ApiResponse<ESObject>> {
@@ -114,10 +118,15 @@ export class ReviewApi {
 
 export class LocationApi {
   static geocode(address: string): Promise<ApiResponse<ESObject>> {
-    return HttpUtil.get('/location/geocode', { address })
+    const body: ESObject = {}
+    body['address'] = address
+    return HttpUtil.get('/location/geocode', body)
   }
   static reverseGeocode(lng: number, lat: number): Promise<ApiResponse<ESObject>> {
-    return HttpUtil.get('/location/reverse', { lng, lat })
+    const params: ESObject = {}
+    params['lng'] = lng
+    params['lat'] = lat
+    return HttpUtil.get('/location/reverse', params)
   }
 }
 
@@ -125,10 +134,10 @@ export class LocationTrackApi {
   static reportLocation(data: ESObject): Promise<ApiResponse<void>> {
     return HttpUtil.post('/location-track/report', data)
   }
-  static getTrackers(params?: Record<string, string | number>): Promise<ApiResponse<ESObject[]>> {
+  static getTrackers(params?: ESObject): Promise<ApiResponse<ESObject[]>> {
     return HttpUtil.get('/location-track/trackers', params)
   }
-  static getUserTrack(userId: string | number, params?: Record<string, string | number>): Promise<ApiResponse<ESObject[]>> {
+  static getUserTrack(userId: string | number, params?: ESObject): Promise<ApiResponse<ESObject[]>> {
     return HttpUtil.get(`/location-track/track/${userId}`, params)
   }
 }
@@ -148,5 +157,26 @@ export class ConfigApi {
   }
   static getOrderStatus(): Promise<ApiResponse<ESObject[]>> {
     return HttpUtil.get('/config/order-status')
+  }
+}
+
+export class RegionApi {
+  static getProvinces(): Promise<ApiResponse<ESObject[]>> {
+    return HttpUtil.get('/regions/provinces')
+  }
+  static getDistricts(provinceId: number): Promise<ApiResponse<ESObject[]>> {
+    return HttpUtil.get(`/regions/provinces/${provinceId}/districts`)
+  }
+  static getGroups(districtId: number): Promise<ApiResponse<ESObject[]>> {
+    return HttpUtil.get(`/regions/districts/${districtId}/groups`)
+  }
+}
+
+export class AdTypeApi {
+  static getList(params?: ESObject): Promise<ApiResponse<ESObject[]>> {
+    return HttpUtil.get('/ad-types', params)
+  }
+  static getConfig(id: number): Promise<ApiResponse<ESObject>> {
+    return HttpUtil.get(`/ad-types/${id}/config`)
   }
 }

@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const { success, error } = require('../utils/response');
 const { UserLocationTrack, User, Order } = require('../models');
 const { Op, Sequelize } = require('sequelize');
@@ -62,14 +63,14 @@ const reportLocation = async (req, res) => {
       checkin_allowed: distanceToOrder === null || distanceToOrder <= 500
     });
   } catch (e) {
-    console.error('定位上报失败:', e.message);
+    logger.error('定位上报失败:', e.message);
     return error(res, '定位上报失败', 500);
   }
 };
 
 /**
  * 获取所有在线追踪中的外勤人员位置（最新一条轨迹）
- * GET /api/v1/location/trackers?role=installer,measurer
+ * GET /api/v1/location/trackers?role=field_worker
  */
 const getTrackers = async (req, res) => {
   try {
@@ -162,7 +163,7 @@ const getTrackers = async (req, res) => {
 
     return success(res, { trackers });
   } catch (e) {
-    console.error('获取追踪列表失败:', e.message);
+    logger.error('获取追踪列表失败:', e.message);
     return error(res, '获取追踪列表失败', 500);
   }
 };
@@ -220,7 +221,7 @@ const getUserTrack = async (req, res) => {
       }))
     });
   } catch (e) {
-    console.error('获取轨迹失败:', e.message);
+    logger.error('获取轨迹失败:', e.message);
     return error(res, '获取轨迹失败', 500);
   }
 };
@@ -254,7 +255,7 @@ const batchReportLocation = async (req, res) => {
 
     return success(res, { received: tracks.length });
   } catch (e) {
-    console.error('批量定位上报失败:', e.message);
+    logger.error('批量定位上报失败:', e.message);
     return error(res, '批量定位上报失败', 500);
   }
 };

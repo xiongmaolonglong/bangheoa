@@ -131,19 +131,20 @@
               </div>
             </div>
             <div v-show="isTypeExpanded(typeName)" class="type-body">
-              <!-- 设计资料 -->
-              <div class="design-data" v-if="getTypeDesignData(typeName).length">
-                <div class="data-header">设计资料（点击复制）</div>
-                <div class="data-items">
-                  <div v-for="(item, idx) in getTypeDesignData(typeName)" :key="idx" class="data-item" @click="copyText(item.name)">
-                    <span class="data-name">{{ item.name }}</span>
-                    <span class="data-face">{{ item.faceName }}</span>
+              <div class="type-content">
+                <!-- 设计资料 -->
+                <div class="design-data-sidebar" v-if="getTypeDesignData(typeName).length">
+                  <div class="data-header">设计资料</div>
+                  <div class="data-items">
+                    <div v-for="(item, idx) in getTypeDesignData(typeName)" :key="idx" class="data-item" @click="copyText(item.name)">
+                      <span class="data-name">{{ item.name }}</span>
+                      <span class="data-face">{{ item.faceName }}</span>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <!-- 面卡片网格 -->
-              <div class="faces-grid">
+                <!-- 面卡片网格 -->
+                <div class="faces-grid">
                 <!-- 合并组 -->
                 <div
                   v-for="(g, gIndex) in getTypeGroups(typeName)"
@@ -262,6 +263,7 @@
                     </div>
                   </div>
                 </div>
+                </div>
               </div>
             </div>
           </div>
@@ -296,6 +298,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { ArrowLeft, ArrowRight, Document, Location, DataLine, EditPen, Files, Plus, Close, Check } from '@element-plus/icons-vue'
 import { designApi, designManageApi } from '@/api'
 import { useUserStore } from '@/store/user'
+import { formatDate } from '@/composables/useFormat'
 
 const router = useRouter()
 const route = useRoute()
@@ -333,7 +336,7 @@ const canEdit = computed(() => {
   return (role === 'designer' && isHandler) || role === 'admin'
 })
 
-const canManage = computed(() => ['admin', 'reviewer'].includes(userStore.user?.role))
+const canManage = computed(() => ['admin'].includes(userStore.user?.role))
 
 const statusMap = {
   designing: { text: '设计中', badgeClass: 'designing' },
@@ -344,11 +347,6 @@ const statusMap = {
 
 const getStatusText = (status) => statusMap[status]?.text || status
 const getStatusBadgeClass = (status) => statusMap[status]?.badgeClass || 'done'
-
-const formatDate = (date) => {
-  if (!date) return '-'
-  return new Date(date).toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
-}
 
 const measureFaces = computed(() => {
   if (order.value?.adItems) {
@@ -1029,34 +1027,47 @@ onMounted(() => { fetchDetail() })
 
 .type-body { padding: 16px; }
 
+.type-content {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
+@media (max-width: 1200px) {
+  .type-content { grid-template-columns: 1fr; }
+}
+
 /* 设计资料 */
-.design-data {
-  margin-bottom: 16px;
+.design-data-sidebar {
   background: var(--brand-primary-light);
   border: 1px solid var(--brand-primary-border);
   border-radius: var(--radius-md);
   overflow: hidden;
+  position: sticky;
+  top: 16px;
 }
 .data-header {
-  padding: 8px 12px;
+  padding: 10px 12px;
   font-size: 12px;
   font-weight: 600;
   color: var(--brand-primary);
-  background: rgba(99,102,241,0.05);
+  background: rgba(99,102,241,0.06);
+  border-bottom: 1px solid var(--brand-primary-border);
 }
 .data-items {
   padding: 8px;
   display: flex;
   flex-direction: column;
   gap: 4px;
-  max-height: 150px;
+  max-height: 500px;
   overflow-y: auto;
 }
 .data-item {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 6px 10px;
+  gap: 8px;
+  padding: 8px 10px;
   border-radius: var(--radius-sm);
   cursor: pointer;
   transition: background 0.15s;
@@ -1064,12 +1075,13 @@ onMounted(() => { fetchDetail() })
 .data-item:hover { background: rgba(99,102,241,0.1); }
 .data-name {
   flex: 1;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 500;
   color: var(--text-primary);
   font-family: 'SF Mono', Monaco, monospace;
+  word-break: break-all;
 }
-.data-face { font-size: 11px; color: var(--text-tertiary); }
+.data-face { font-size: 10px; color: var(--text-tertiary); flex-shrink: 0; }
 
 /* 面卡片网格 */
 .faces-grid {

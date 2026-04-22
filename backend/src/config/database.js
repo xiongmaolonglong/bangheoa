@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const { Sequelize } = require('sequelize');
 require('dotenv').config();
 
@@ -35,9 +36,9 @@ const sequelize = new Sequelize(
 async function testConnection() {
   try {
     await sequelize.authenticate();
-    console.log('数据库连接成功');
+    logger.info('数据库连接成功');
   } catch (error) {
-    console.error('数据库连接失败:', error);
+    logger.error('数据库连接失败:', error);
   }
 }
 

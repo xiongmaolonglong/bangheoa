@@ -5,7 +5,7 @@ const { authMiddleware } = require('../middleware/auth')
 
 // 角色检查中间件
 const checkRole = (req, res, next) => {
-  const allowedRoles = ['admin', 'reviewer']
+  const allowedRoles = ['admin']
   if (!allowedRoles.includes(req.user.role)) {
     return res.status(403).json({ code: 1, message: '权限不足' })
   }

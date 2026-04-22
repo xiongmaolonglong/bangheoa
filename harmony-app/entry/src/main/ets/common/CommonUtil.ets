@@ -30,19 +30,18 @@ export function formatDate(dateStr: string, format: string = 'YYYY-MM-DD HH:mm')
  * 获取订单状态文本
  */
 export function getStatusText(status: string): string {
-  const map: Record<string, string> = {
-    'pending_review': '待审核',
-    'measuring': '测量中',
-    'measure_review': '待审测量',
-    'designing': '设计中',
-    'design_review': '待审设计',
-    'producing': '生产中',
-    'checking': '核对中',
-    'installing': '安装中',
-    'install_review': '待审安装',
-    'archived': '已归档',
-    'rejected': '已驳回'
-  }
+  const map: ESObject = {}
+  map['pending_review'] = '待审核'
+  map['measuring'] = '测量中'
+  map['measure_review'] = '待审测量'
+  map['designing'] = '设计中'
+  map['design_review'] = '待审设计'
+  map['producing'] = '生产中'
+  map['checking'] = '核对中'
+  map['installing'] = '安装中'
+  map['install_review'] = '待审安装'
+  map['archived'] = '已归档'
+  map['rejected'] = '已驳回'
   return map[status] || status
 }
 
@@ -50,19 +49,18 @@ export function getStatusText(status: string): string {
  * 获取订单状态颜色
  */
 export function getStatusColor(status: string): string {
-  const map: Record<string, string> = {
-    'pending_review': '#E6A23C',
-    'measuring': '#409EFF',
-    'measure_review': '#E6A23C',
-    'designing': '#909399',
-    'design_review': '#E6A23C',
-    'producing': '#409EFF',
-    'checking': '#E6A23C',
-    'installing': '#67C23A',
-    'install_review': '#E6A23C',
-    'archived': '#909399',
-    'rejected': '#F56C6C'
-  }
+  const map: ESObject = {}
+  map['pending_review'] = '#E6A23C'
+  map['measuring'] = '#409EFF'
+  map['measure_review'] = '#E6A23C'
+  map['designing'] = '#909399'
+  map['design_review'] = '#E6A23C'
+  map['producing'] = '#409EFF'
+  map['checking'] = '#E6A23C'
+  map['installing'] = '#67C23A'
+  map['install_review'] = '#E6A23C'
+  map['archived'] = '#909399'
+  map['rejected'] = '#F56C6C'
   return map[status] || '#909399'
 }
 
@@ -73,7 +71,7 @@ export function safeParseJSON(str: string): ESObject | null {
   if (!str) return null
   try {
     return JSON.parse(str)
-  } catch (e) {
+  } catch (_e) {
     return null
   }
 }

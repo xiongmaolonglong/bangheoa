@@ -1,5 +1,6 @@
-import { HomeViewModel, AppViewModel, NotificationViewModel } from '../viewmodel/AppViewModel'
+import { HomeViewModel, AppViewModel, NotificationViewModel, TaskResult } from '../viewmodel/AppViewModel'
 import { getStatusText, getStatusColor, relativeTime } from '../common/CommonUtil'
+import { router } from '@kit.ArkUI'
 
 // 状态筛选Tab
 interface StatusTab {
@@ -29,7 +30,6 @@ struct Home {
   }
 
   onPageShow(): void {
-    // 每次显示时刷新
     this.loadTasks()
     this.loadUnreadCount()
   }
@@ -41,8 +41,8 @@ struct Home {
 
   async loadTasks(): Promise<void> {
     this.loading = true
-    const tab = STATUS_TABS[this.currentTab]
-    const result = await HomeViewModel.getMyTasks(tab.status, 1, 50)
+    const tab: StatusTab = STATUS_TABS[this.currentTab]
+    const result: TaskResult = await HomeViewModel.getMyTasks(tab.status, 1, 50)
     this.orderList = result.list as ESObject[]
     this.loading = false
   }
@@ -80,10 +80,21 @@ struct Home {
         }
         .width(36)
         .height(36)
-        .justifyContent(FlexAlign.Center)
+        .alignContent(Alignment.Center)
         .onClick(() => {
           router.pushUrl({ url: 'pages/Notifications' })
         })
+
+        // 新建订单按钮
+        Text('+')
+          .fontSize(28)
+          .fontColor('#409EFF')
+          .width(36)
+          .height(36)
+          .textAlign(TextAlign.Center)
+          .onClick(() => {
+            router.pushUrl({ url: 'pages/OrderCreate' })
+          })
       }
       .width('100%')
       .height(56)
@@ -97,10 +108,6 @@ struct Home {
             .fontColor(this.currentTab === index ? '#409EFF' : '#909399')
             .fontWeight(this.currentTab === index ? FontWeight.Medium : FontWeight.Normal)
             .padding({ left: 12, right: 12, top: 8, bottom: 8 })
-            .borderBottom({
-              width: this.currentTab === index ? 2 : 0,
-              color: '#409EFF'
-            })
             .onClick(() => {
               this.onTabChange(index)
             })
@@ -201,7 +208,8 @@ struct Home {
       .width('100%')
       .height(56)
       .backgroundColor('#FFFFFF')
-      .border({ width: 1, color: '#EBEEF5', position: Position.Top })
+      .borderWidth({ top: 1 })
+      .borderColor('#EBEEF5')
     }
     .width('100%')
     .height('100%')
@@ -210,89 +218,105 @@ struct Home {
 }
 
 /**
- * 订单卡片组件
+ * 订单卡片组件 - 仿 admin-web 风格
  */
 @Component
 struct OrderCard {
   @Prop order: ESObject
 
   build() {
-    Column() {
-      // 标题行
-      Row() {
-        Text(this.order.order_no || '')
-          .fontSize(15)
-          .fontWeight(FontWeight.Medium)
-          .fontColor('#303133')
-          .layoutWeight(1)
+    Row() {
+      // 左侧强调色条
+      Column()
+        .width(4)
+        .borderRadius(2)
+        .backgroundColor(this.accentColor())
+        .margin({ right: 12 })
 
-        Text(getStatusText(this.order.status as string))
-          .fontSize(12)
-          .fontColor(getStatusColor(this.order.status as string))
-          .padding({ left: 8, right: 8, top: 4, bottom: 4 })
-          .borderRadius(4)
-          .backgroundColor(`${getStatusColor(this.order.status as string)}15`)
-      }
-      .width('100%')
-
-      // 信息行
+      // 主内容区
       Column() {
+        // 第一行: 订单号 + 状态
         Row() {
-          Text('客户:')
-            .fontSize(13)
-            .fontColor('#909399')
-            .width(40)
-          Text(this.order.customer_name || '-')
-            .fontSize(13)
-            .fontColor('#606266')
+          Text(this.order.order_no || '')
+            .fontSize(15)
+            .fontWeight(FontWeight.Medium)
+            .fontColor('#303133')
             .layoutWeight(1)
+
+          // 状态徽标 (圆点+文字)
+          Row() {
+            Circle({ width: 6, height: 6 })
+              .fill(getStatusColor(this.order.status as string))
+              .margin({ right: 4 })
+            Text(getStatusText(this.order.status as string))
+              .fontSize(12)
+              .fontColor(getStatusColor(this.order.status as string))
+          }
+          .padding({ left: 8, right: 12, top: 4, bottom: 4 })
+          .backgroundColor(`${getStatusColor(this.order.status as string)}15`)
+          .borderRadius(12)
         }
         .width('100%')
-        .margin({ bottom: 6 })
+        .margin({ bottom: 8 })
 
+        // 第二行: 客户名
+        Text(this.order.customer_name || '-')
+          .fontSize(14)
+          .fontColor('#303133')
+          .fontWeight(FontWeight.Medium)
+          .width('100%')
+          .margin({ bottom: 8 })
+
+        // 第三行: 标签 + 面积 + 地址
         Row() {
-          Text('地址:')
-            .fontSize(13)
-            .fontColor('#909399')
-            .width(40)
+          if (this.order.ad_type) {
+            Text(this.order.ad_type as string)
+              .fontSize(11)
+              .fontColor('#909399')
+              .padding({ left: 6, right: 6, top: 2, bottom: 2 })
+              .border({ width: 0.5, color: '#EBEEF5', radius: 3 })
+              .margin({ right: 8 })
+          }
+
+          if (this.order.total_area) {
+            Text(`${this.order.total_area}m²`)
+              .fontSize(12)
+              .fontColor('#409EFF')
+              .fontWeight(FontWeight.Medium)
+              .margin({ right: 8 })
+          }
+
           Text(this.order.address || '-')
-            .fontSize(13)
-            .fontColor('#606266')
-            .layoutWeight(1)
-            .maxLines(2)
+            .fontSize(12)
+            .fontColor('#909399')
+            .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
+            .layoutWeight(1)
         }
         .width('100%')
         .margin({ bottom: 6 })
 
+        // 第四行: 时间 + 已耗时
         Row() {
-          Text('时间:')
-            .fontSize(13)
-            .fontColor('#909399')
-            .width(40)
           Text(relativeTime(this.order.created_at as string))
-            .fontSize(13)
-            .fontColor('#909399')
-            .layoutWeight(1)
+            .fontSize(12)
+            .fontColor('#C0C4CC')
+
+          Text(`已耗时 ${this.elapsedText()}`)
+            .fontSize(12)
+            .fontColor('#C0C4CC')
+            .margin({ left: 12 })
         }
         .width('100%')
       }
-      .alignItems(VerticalAlign.Top)
-
-      // 操作按钮行
-      if (this.order.assignee_name) {
-        Text(`负责人: ${this.order.assignee_name}`)
-          .fontSize(12)
-          .fontColor('#409EFF')
-          .margin({ top: 4 })
-          .alignSelf(ItemAlign.Start)
-      }
+      .layoutWeight(1)
+      .alignItems(HorizontalAlign.Start)
     }
     .width('100%')
-    .padding(14)
+    .padding({ top: 14, bottom: 14, right: 14 })
     .backgroundColor('#FFFFFF')
-    .borderRadius(8)
-    .shadow({ radius: 4, color: '#00000010', offsetY: 2 })
+    .borderRadius(12)
+    .shadow({ radius: 6, color: '#00000008', offsetY: 2 })
     .onClick(() => {
       if (this.order.id) {
         router.pushUrl({
@@ -301,5 +325,22 @@ struct OrderCard {
         })
       }
     })
+  }
+
+  private accentColor(): string {
+    const s: string = this.order.status as string
+    return getStatusColor(s)
+  }
+
+  private elapsedText(): string {
+    const created: string = this.order.created_at as string
+    if (!created) return ''
+    const date: Date = new Date(created)
+    const now: Date = new Date()
+    const diff: number = now.getTime() - date.getTime()
+    const hours: number = Math.floor(diff / 3600000)
+    const days: number = Math.floor(hours / 24)
+    if (days > 0) return `${days}d`
+    return `${hours}h`
   }
 }

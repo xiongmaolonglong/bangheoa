@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const response = require('../utils/response');
 const { AttributeTemplate, AttributeField, sequelize } = require('../models');
 
@@ -24,7 +25,7 @@ const attributeController = {
       });
       return response.success(res, templates);
     } catch (error) {
-      console.error('获取模板列表错误:', error);
+      logger.error('获取模板列表错误:', error);
       return response.serverError(res, '获取模板列表失败');
     }
   },
@@ -47,7 +48,7 @@ const attributeController = {
       }
       return response.success(res, template);
     } catch (error) {
-      console.error('获取模板详情错误:', error);
+      logger.error('获取模板详情错误:', error);
       return response.serverError(res, '获取模板详情失败');
     }
   },
@@ -78,7 +79,7 @@ const attributeController = {
 
       return response.success(res, template, '创建成功');
     } catch (error) {
-      console.error('创建模板错误:', error);
+      logger.error('创建模板错误:', error);
       return response.serverError(res, '创建模板失败');
     }
   },
@@ -105,7 +106,7 @@ const attributeController = {
 
       return response.success(res, template, '更新成功');
     } catch (error) {
-      console.error('更新模板错误:', error);
+      logger.error('更新模板错误:', error);
       return response.serverError(res, '更新模板失败');
     }
   },
@@ -128,7 +129,7 @@ const attributeController = {
 
       return response.success(res, null, '删除成功');
     } catch (error) {
-      console.error('删除模板错误:', error);
+      logger.error('删除模板错误:', error);
       return response.serverError(res, '删除模板失败');
     }
   },
@@ -154,7 +155,7 @@ const attributeController = {
 
       return response.success(res, fields);
     } catch (error) {
-      console.error('获取字段列表错误:', error);
+      logger.error('获取字段列表错误:', error);
       return response.serverError(res, '获取字段列表失败');
     }
   },
@@ -202,7 +203,7 @@ const attributeController = {
 
       return response.success(res, field, '创建成功');
     } catch (error) {
-      console.error('创建字段错误:', error);
+      logger.error('创建字段错误:', error);
       return response.serverError(res, '创建字段失败');
     }
   },
@@ -245,7 +246,7 @@ const attributeController = {
 
       return response.success(res, field, '更新成功');
     } catch (error) {
-      console.error('更新字段错误:', error);
+      logger.error('更新字段错误:', error);
       return response.serverError(res, '更新字段失败');
     }
   },
@@ -265,7 +266,7 @@ const attributeController = {
       await field.destroy();
       return response.success(res, null, '删除成功');
     } catch (error) {
-      console.error('删除字段错误:', error);
+      logger.error('删除字段错误:', error);
       return response.serverError(res, '删除字段失败');
     }
   }

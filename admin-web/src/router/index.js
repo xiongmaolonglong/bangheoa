@@ -47,7 +47,7 @@ const routes = [
         path: 'review',
         name: 'Review',
         component: () => import('@/pages/review/index.vue'),
-        meta: { title: '待审核', navGroup: '/orders', roles: ['admin', 'reviewer'] }
+        meta: { title: '待审核', navGroup: '/orders', roles: ['admin'] }
       },
       {
         path: 'review/:id(\\d+)',
@@ -59,7 +59,7 @@ const routes = [
         path: 'design',
         name: 'Design',
         component: () => import('@/pages/design/index.vue'),
-        meta: { title: '设计任务', navGroup: '/design', roles: ['admin', 'designer', 'reviewer'] }
+        meta: { title: '设计任务', navGroup: '/design', roles: ['admin', 'designer'] }
       },
       {
         path: 'design/:id(\\d+)',
@@ -83,7 +83,7 @@ const routes = [
         path: 'install',
         name: 'Install',
         component: () => import('@/pages/install/index.vue'),
-        meta: { title: '安装任务', navGroup: '/install', roles: ['admin', 'installer'] }
+        meta: { title: '安装任务', navGroup: '/install', roles: ['admin', 'field_worker'] }
       },
       {
         path: 'install/:id(\\d+)',
@@ -113,7 +113,7 @@ const routes = [
         path: 'statistics',
         name: 'Statistics',
         component: () => import('@/pages/statistics/index.vue'),
-        meta: { title: '统计报表', navGroup: '/statistics', roles: ['admin', 'reviewer'] }
+        meta: { title: '统计报表', navGroup: '/statistics', roles: ['admin'] }
       },
       {
         path: 'customers',
@@ -173,7 +173,7 @@ const routes = [
         path: 'settings/dispatch',
         name: 'DispatchRules',
         component: () => import('@/pages/settings/dispatch.vue'),
-        meta: { title: '派单规则', navGroup: '/settings', roles: ['admin', 'reviewer'] }
+        meta: { title: '派单规则', navGroup: '/settings', roles: ['admin'] }
       },
       {
         path: 'settings/auto-review',
@@ -195,6 +195,8 @@ const router = createRouter({
   routes
 })
 
+let profileFetching = false
+
 router.beforeEach(async (to) => {
   document.title = to.meta.title ? `${to.meta.title} - 户外广告派单系统` : '户外广告派单系统'
 
@@ -205,7 +207,8 @@ router.beforeEach(async (to) => {
   if (!token) return { path: '/login', query: { redirect: to.fullPath } }
 
   const user = JSON.parse(localStorage.getItem('user') || '{}')
-  if (!user.id) {
+  if (!user.id && !profileFetching) {
+    profileFetching = true
     try {
       const res = await authApi.getProfile()
       localStorage.setItem('user', JSON.stringify(res.data))
@@ -213,6 +216,8 @@ router.beforeEach(async (to) => {
       localStorage.removeItem('token')
       localStorage.removeItem('user')
       return { path: '/login', query: { redirect: to.fullPath } }
+    } finally {
+      profileFetching = false
     }
   }
 })

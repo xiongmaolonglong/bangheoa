@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 /**
  * 系统配置控制器
  * 提供常量、枚举等配置信息
@@ -34,20 +35,16 @@ const ORDER_STATUS_CONFIG = {
 // 用户角色
 const USER_ROLES = {
   ADMIN: 'admin',
-  REVIEWER: 'reviewer',
   DESIGNER: 'designer',
   PRODUCER: 'producer',
-  CHECKER: 'checker',
-  INSTALLER: 'installer'
+  FIELD_WORKER: 'field_worker'
 };
 
 const USER_ROLES_CONFIG = {
   [USER_ROLES.ADMIN]: { label: '系统管理员' },
-  [USER_ROLES.REVIEWER]: { label: '审核主管' },
   [USER_ROLES.DESIGNER]: { label: '设计师' },
   [USER_ROLES.PRODUCER]: { label: '生产员' },
-  [USER_ROLES.CHECKER]: { label: '核对员' },
-  [USER_ROLES.INSTALLER]: { label: '安装员' }
+  [USER_ROLES.FIELD_WORKER]: { label: '外勤人员' }
 };
 
 // 生产状态
@@ -210,7 +207,7 @@ async function getConstants(req, res) {
       data
     });
   } catch (error) {
-    console.error('获取常量配置失败:', error);
+    logger.error('获取常量配置失败:', error);
     res.status(500).json({
       code: 500,
       success: false,
@@ -289,7 +286,7 @@ async function getDefaultMaterials(req, res) {
           materials = parsed;
         }
       } catch (e) {
-        console.error('解析材质配置失败:', e);
+        logger.error('解析材质配置失败:', e);
       }
     }
 
@@ -301,7 +298,7 @@ async function getDefaultMaterials(req, res) {
       data: materials
     });
   } catch (error) {
-    console.error('获取默认材质失败:', error);
+    logger.error('获取默认材质失败:', error);
     res.status(500).json({
       success: false,
       message: '获取默认材质失败'
@@ -341,7 +338,7 @@ async function updateDefaultMaterials(req, res) {
       data: materials
     });
   } catch (error) {
-    console.error('更新默认材质失败:', error);
+    logger.error('更新默认材质失败:', error);
     res.status(500).json({
       success: false,
       message: '更新默认材质失败'
@@ -404,7 +401,7 @@ async function getSystemConfig(req, res) {
       }
     });
   } catch (error) {
-    console.error('获取系统配置失败:', error);
+    logger.error('获取系统配置失败:', error);
     res.status(500).json({
       success: false,
       message: '获取系统配置失败'
@@ -442,7 +439,7 @@ async function updateSystemConfig(req, res) {
       message: '配置已更新'
     });
   } catch (error) {
-    console.error('更新系统配置失败:', error);
+    logger.error('更新系统配置失败:', error);
     res.status(500).json({
       success: false,
       message: '更新系统配置失败'
@@ -475,7 +472,7 @@ async function getAllConfigs(req, res) {
       data: result
     });
   } catch (error) {
-    console.error('获取所有配置失败:', error);
+    logger.error('获取所有配置失败:', error);
     res.status(500).json({
       success: false,
       message: '获取所有配置失败'

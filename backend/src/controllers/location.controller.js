@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const https = require('https');
 const { success, error } = require('../utils/response');
 const { SystemConfig } = require('../models');
@@ -15,7 +16,7 @@ const getAmapKey = async () => {
       return config.config_value;
     }
   } catch (e) {
-    console.error('读取高德地图配置失败:', e);
+    logger.error('读取高德地图配置失败:', e);
   }
   return process.env.AMAP_KEY || 'your_amap_key_here';
 };
@@ -93,7 +94,7 @@ const reverseGeocode = async (req, res) => {
     const response = await httpsGet(apiUrl);
 
     if (response.status !== '1') {
-      console.error('高德API返回错误:', response);
+      logger.error('高德API返回错误:', response);
       return error(res, response.info || '逆地理编码失败', 500);
     }
 
@@ -114,7 +115,7 @@ const reverseGeocode = async (req, res) => {
       lat: latitude
     });
   } catch (e) {
-    console.error('逆地理编码失败:', e.message);
+    logger.error('逆地理编码失败:', e.message);
     if (e.message === '请求超时') {
       return error(res, '请求超时，请稍后重试', 504);
     }
@@ -147,7 +148,7 @@ const geocode = async (req, res) => {
     const response = await httpsGet(apiUrl);
 
     if (response.status !== '1') {
-      console.error('高德API返回错误:', response);
+      logger.error('高德API返回错误:', response);
       return error(res, response.info || '地理编码失败', 500);
     }
 
@@ -163,7 +164,7 @@ const geocode = async (req, res) => {
       lat: parseFloat(location[1])
     });
   } catch (e) {
-    console.error('地理编码失败:', e.message);
+    logger.error('地理编码失败:', e.message);
     if (e.message === '请求超时') {
       return error(res, '请求超时，请稍后重试', 504);
     }
@@ -235,7 +236,7 @@ const batchGeocode = async (req, res) => {
 
     return success(res, { processed: orders.length, ...results });
   } catch (e) {
-    console.error('批量地理编码失败:', e.message);
+    logger.error('批量地理编码失败:', e.message);
     return error(res, '批量地理编码服务异常', 500);
   }
 };

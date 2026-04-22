@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const response = require('../utils/response');
 const { Face } = require('../models');
 
@@ -15,7 +16,7 @@ const faceController = {
       });
       return response.success(res, list);
     } catch (error) {
-      console.error('获取面列表错误:', error);
+      logger.error('获取面列表错误:', error);
       return response.serverError(res, '获取面列表失败');
     }
   },
@@ -32,7 +33,7 @@ const faceController = {
       }
       return response.success(res, face);
     } catch (error) {
-      console.error('获取面详情错误:', error);
+      logger.error('获取面详情错误:', error);
       return response.serverError(res, '获取面详情失败');
     }
   },
@@ -64,7 +65,7 @@ const faceController = {
 
       return response.success(res, face, '创建成功');
     } catch (error) {
-      console.error('创建面错误:', error);
+      logger.error('创建面错误:', error);
       return response.serverError(res, '创建面失败');
     }
   },
@@ -91,7 +92,7 @@ const faceController = {
 
       return response.success(res, face, '更新成功');
     } catch (error) {
-      console.error('更新面错误:', error);
+      logger.error('更新面错误:', error);
       return response.serverError(res, '更新面失败');
     }
   },
@@ -111,7 +112,7 @@ const faceController = {
       await face.destroy();
       return response.success(res, null, '删除成功');
     } catch (error) {
-      console.error('删除面错误:', error);
+      logger.error('删除面错误:', error);
       return response.serverError(res, '删除面失败');
     }
   }

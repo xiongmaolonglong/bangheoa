@@ -115,7 +115,7 @@
             <div class="task-bottom">
               <span v-for="item in row.adItems" :key="item.id" class="task-tag">{{ item.adType?.name }}</span>
               <span class="task-area">{{ calculateTotalArea(row) }}㎡</span>
-              <span class="task-created">{{ formatDate(row.updated_at) }}</span>
+              <span class="task-created">{{ formatShortDate(row.updated_at) }}</span>
               <span class="task-duration" :class="getDurationClass(row)">
                 耗时 {{ getDuration(row) }}
               </span>
@@ -151,6 +151,7 @@ import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { orderApi, regionApi, adTypeApi } from '@/api'
 import dayjs from 'dayjs'
+import { formatShortDate } from '@/composables/useFormat'
 import { Folder, Calendar, Ticket, Grid, User, Location, Download, Refresh } from '@element-plus/icons-vue'
 
 const router = useRouter()
@@ -182,8 +183,6 @@ const pagination = reactive({
   pageSize: 20,
   total: 0
 })
-
-const formatDate = (date) => date ? dayjs(date).format('MM-DD HH:mm') : '-'
 
 const calculateTotalArea = (order) => {
   if (!order.adItems) return '0.00'

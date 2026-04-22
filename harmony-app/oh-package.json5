@@ -1,8 +1,8 @@
 {
-  "modelVersion": "5.0.0",
+  "modelVersion": "6.0.2",
+  "name": "outdoor-ad-fieldwork",
+  "version": "1.0.0",
   "description": "户外广告测量安装派单系统 - 鸿蒙外勤APP",
   "dependencies": {},
-  "devDependencies": {
-    "@ohos/hypium": "1.0.18"
-  }
+  "dynamicDependencies": {}
 }

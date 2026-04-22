@@ -1,39 +1,18 @@
 import { createApp } from 'vue'
-import ElementPlus from 'element-plus'
-import zhCn from 'element-plus/dist/locale/zh-cn.mjs'
-import 'element-plus/dist/index.css'
 
 import App from './App.vue'
 import router from './router'
 import pinia from './store'
 import { useConstantsStore } from './store/constants'
+import { setupIcons } from './plugins/icons'
 
 // 深色模式样式必须在 Element Plus 之后加载
 import './assets/styles/main.css'
 
 const app = createApp(App)
 
-import {
-  Plus, View, Check, Rank, Edit, Location, OfficeBuilding,
-  UserFilled, Select, Clock, Aim, Position, Bell, ArrowDown,
-  House, Document, CircleCheck, Setting, Checked, DataAnalysis, Tools, User
-} from '@element-plus/icons-vue'
+setupIcons(app)
 
-const icons = {
-  Plus, View, Check, Rank, Edit, Location, OfficeBuilding,
-  UserFilled, Select, Clock, Aim, Position, Bell, ArrowDown,
-  House, Document, CircleCheck, Setting, Checked, DataAnalysis, Tools, User
-}
-
-for (const [key, component] of Object.entries(icons)) {
-  app.component(key, component)
-}
-
-app.use(ElementPlus, {
-  locale: zhCn,
-  // 设置全局 z-index，确保弹窗等组件层级正确
-  zIndex: 3000
-})
 app.use(router)
 app.use(pinia)
 

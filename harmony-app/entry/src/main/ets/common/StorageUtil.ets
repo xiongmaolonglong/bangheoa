@@ -1,25 +1,23 @@
 import { preferences } from '@kit.ArkData'
-import { Context } from '@kit.AbilityKit'
+import { common } from '@kit.AbilityKit'
 
-let context: Context | null = null
-let dataPreferences: preferences.Preferences | null = null
+let dataPreferencesInstance: preferences.Preferences | null = null
 
 /**
  * 初始化首选项存储
  */
-export async function initStorage(ctx: Context): Promise<void> {
-  context = ctx
-  dataPreferences = await preferences.getPreferences(ctx, 'app_prefs')
+export async function initStorage(context: common.UIAbilityContext): Promise<void> {
+  dataPreferencesInstance = await preferences.getPreferences(context, 'app_prefs')
 }
 
 /**
  * 获取Preferences实例
  */
 function getPrefs(): preferences.Preferences {
-  if (!dataPreferences) {
+  if (!dataPreferencesInstance) {
     throw new Error('StorageUtil not initialized. Call initStorage first.')
   }
-  return dataPreferences
+  return dataPreferencesInstance
 }
 
 /**
@@ -36,7 +34,7 @@ export async function putString(key: string, value: string): Promise<void> {
  */
 export async function getString(key: string, defValue: string = ''): Promise<string> {
   const prefs = getPrefs()
-  const val = await prefs.get(key, defValue)
+  const val: string | number = await prefs.get(key, defValue) as string | number
   return val as string
 }
 
@@ -54,7 +52,7 @@ export async function putNumber(key: string, value: number): Promise<void> {
  */
 export async function getNumber(key: string, defValue: number = 0): Promise<number> {
   const prefs = getPrefs()
-  const val = await prefs.get(key, defValue)
+  const val: string | number = await prefs.get(key, defValue) as string | number
   return val as number
 }
 
@@ -72,7 +70,7 @@ export async function putBoolean(key: string, value: boolean): Promise<void> {
  */
 export async function getBoolean(key: string, defValue: boolean = false): Promise<boolean> {
   const prefs = getPrefs()
-  const val = await prefs.get(key, defValue)
+  const val: string | boolean = await prefs.get(key, defValue) as string | boolean
   return val as boolean
 }
 

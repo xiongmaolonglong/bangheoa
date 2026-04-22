@@ -1,10 +1,24 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import path from 'path'
+import AutoImport from 'unplugin-auto-import/vite'
+import Components from 'unplugin-vue-components/vite'
+import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [vue()],
+  plugins: [
+    vue(),
+    AutoImport({
+      resolvers: [ElementPlusResolver()],
+      imports: ['vue', 'vue-router', 'pinia'],
+      dts: 'src/auto-imports.d.ts'
+    }),
+    Components({
+      resolvers: [ElementPlusResolver()],
+      dts: 'src/components.d.ts'
+    })
+  ],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, 'src')
@@ -35,9 +49,13 @@ export default defineConfig({
             if (id.includes('vue') || id.includes('vue-router') || id.includes('pinia')) {
               return 'vue-vendor'
             }
-            // Element Plus
-            if (id.includes('element-plus') || id.includes('@element-plus')) {
+            // Element Plus 组件（不含图标）
+            if (id.includes('element-plus') && !id.includes('icons')) {
               return 'element-plus'
+            }
+            // Element Plus 图标
+            if (id.includes('@element-plus/icons-vue')) {
+              return 'element-icons'
             }
             // ECharts
             if (id.includes('echarts')) {
@@ -70,13 +88,8 @@ export default defineConfig({
       'vue',
       'vue-router',
       'pinia',
-      'element-plus/es',
-      'element-plus/es/components/message/style/css',
-      'element-plus/es/components/notification/style/css',
-      'element-plus/es/components/message-box/style/css',
       'axios',
-      'dayjs',
-      'echarts'
+      'dayjs'
     ]
   }
 })

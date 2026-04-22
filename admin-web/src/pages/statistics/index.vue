@@ -88,7 +88,7 @@
 import { ref, reactive, onMounted, onUnmounted, nextTick } from 'vue'
 import { ElMessage } from 'element-plus'
 import { statisticsApi } from '@/api'
-import * as echarts from 'echarts'
+import echarts from '@/utils/echarts'
 
 const statusChartRef = ref(null)
 const trendChartRef = ref(null)
@@ -143,11 +143,10 @@ const performanceData = ref([])
 
 const roleMap = {
   admin: '管理员',
-  reviewer: '审核主管',
   designer: '设计师',
   producer: '生产员',
-  checker: '核对员',
-  installer: '安装员'
+  field_worker: '外勤员',
+  customer: '客户'
 }
 
 // 获取数据
@@ -191,7 +190,7 @@ const loadMockData = () => {
   orderStats.totalArea = 4580.5
 
   performanceData.value = [
-    { real_name: '张三', role: 'installer', completed_count: 45, total_area: 1250, avg_duration: 2.3, rating: 5 },
+    { real_name: '张三', role: 'field_worker', completed_count: 45, total_area: 1250, avg_duration: 2.3, rating: 5 },
     { real_name: '李四', role: 'designer', completed_count: 38, total_area: 980, avg_duration: 1.5, rating: 4 },
     { real_name: '王五', role: 'designer', completed_count: 32, total_area: 860, avg_duration: 3.2, rating: 4 },
     { real_name: '赵六', role: 'producer', completed_count: 28, total_area: 720, avg_duration: 4.1, rating: 3 }

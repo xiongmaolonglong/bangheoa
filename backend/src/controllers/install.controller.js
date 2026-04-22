@@ -12,7 +12,7 @@ exports.getTasks = async (req, res) => {
     }
 
     // 根据角色过滤
-    if (req.user.role === 'installer') {
+    if (req.user.role === 'field_worker') {
       where.current_handler_id = req.user.id
     }
 

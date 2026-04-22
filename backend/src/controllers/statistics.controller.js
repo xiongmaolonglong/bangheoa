@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const { Order, User, MeasureFace, OrderAdItem, sequelize } = require('../models')
 const response = require('../utils/response')
 const { Op } = require('sequelize')
@@ -77,7 +78,7 @@ const statisticsController = {
         statusDistribution
       })
     } catch (error) {
-      console.error('订单统计错误:', error)
+      logger.error('订单统计错误:', error)
       return response.serverError(res, '获取订单统计失败')
     }
   },
@@ -172,7 +173,7 @@ const statisticsController = {
 
       return response.success(res, performanceData)
     } catch (error) {
-      console.error('人员绩效错误:', error)
+      logger.error('人员绩效错误:', error)
       return response.serverError(res, '获取人员绩效失败')
     }
   },
@@ -233,7 +234,7 @@ const statisticsController = {
 
       return response.success(res, regionData)
     } catch (error) {
-      console.error('区域统计错误:', error)
+      logger.error('区域统计错误:', error)
       return response.serverError(res, '获取区域统计失败')
     }
   },
@@ -308,7 +309,7 @@ const statisticsController = {
 
       return response.success(res, result)
     } catch (error) {
-      console.error('收入统计错误:', error)
+      logger.error('收入统计错误:', error)
       return response.serverError(res, '获取收入统计失败')
     }
   },
@@ -376,7 +377,7 @@ const statisticsController = {
         recentOrders
       })
     } catch (error) {
-      console.error('仪表盘数据错误:', error)
+      logger.error('仪表盘数据错误:', error)
       return response.serverError(res, '获取仪表盘数据失败')
     }
   },
@@ -461,7 +462,7 @@ const statisticsController = {
         weekCompleted
       })
     } catch (error) {
-      console.error('效率指标错误:', error)
+      logger.error('效率指标错误:', error)
       return response.serverError(res, '获取效率指标失败')
     }
   },
@@ -550,7 +551,7 @@ const statisticsController = {
 
       return response.success(res, alerts)
     } catch (error) {
-      console.error('预警提醒错误:', error)
+      logger.error('预警提醒错误:', error)
       return response.serverError(res, '获取预警提醒失败')
     }
   },
@@ -565,10 +566,10 @@ const statisticsController = {
 
       let tasks = []
       const statusMap = {
-        reviewer: ['pending_review', 'design_review', 'install_review'],
+        admin: ['pending_review', 'design_review', 'install_review'],
         designer: ['designing'],
         producer: ['producing', 'checking'],
-        installer: ['installing']
+        field_worker: ['installing']
       }
 
       const statuses = statusMap[userRole] || []
@@ -576,8 +577,8 @@ const statisticsController = {
       if (statuses.length > 0) {
         const where = { status: { [Op.in]: statuses } }
 
-        // 非审核角色只看自己的任务
-        if (!['admin', 'reviewer'].includes(userRole)) {
+        // 非管理员角色只看自己的任务
+        if (userRole !== 'admin') {
           where.current_handler_id = userId
         }
 
@@ -591,8 +592,199 @@ const statisticsController = {
 
       return response.success(res, tasks)
     } catch (error) {
-      console.error('待办任务错误:', error)
+      logger.error('待办任务错误:', error)
       return response.serverError(res, '获取待办任务失败')
+    }
+  },
+
+  /**
+   * 项目流水线（各阶段订单数）
+   */
+  getPipeline: async (req, res) => {
+    try {
+      const stages = [
+        { key: 'pending_review', label: '待审核（订单）', next: 'measuring' },
+        { key: 'measuring', label: '测量中', next: 'measure_review' },
+        { key: 'measure_review', label: '待审核（测量）', next: 'designing' },
+        { key: 'designing', label: '设计中', next: 'design_review' },
+        { key: 'design_review', label: '待审核（设计）', next: 'producing' },
+        { key: 'producing', label: '生产中', next: 'checking' },
+        { key: 'checking', label: '核对中', next: 'installing' },
+        { key: 'installing', label: '安装中', next: 'install_review' },
+        { key: 'install_review', label: '待审核（安装）', next: 'archived' },
+        { key: 'archived', label: '已归档', next: null }
+      ]
+
+      const statusCounts = await Order.findAll({
+        attributes: ['status', [Sequelize.fn('COUNT', Sequelize.col('id')), 'count']],
+        group: ['status'],
+        raw: true
+      })
+
+      const countMap = Object.fromEntries(statusCounts.map(s => [s.status, parseInt(s.count)]))
+
+      // 各环节平均人数（活跃处理者）
+      const activeHandlers = await Order.findAll({
+        attributes: ['status', [Sequelize.fn('COUNT', Sequelize.fn('DISTINCT', Sequelize.col('current_handler_id'))), 'activeCount']],
+        where: { current_handler_id: { [Op.ne]: null } },
+        group: ['status'],
+        raw: true
+      })
+
+      const handlerMap = Object.fromEntries(activeHandlers.map(s => [s.status, parseInt(s.activeCount)]))
+
+      const pipelineData = stages.map(stage => ({
+        ...stage,
+        count: countMap[stage.key] || 0,
+        activeCount: handlerMap[stage.key] || 0
+      }))
+
+      return response.success(res, pipelineData)
+    } catch (error) {
+      logger.error('流水线数据错误:', error)
+      return response.serverError(res, '获取流水线数据失败')
+    }
+  },
+
+  /**
+   * 团队活跃状态
+   */
+  getTeamActivity: async (req, res) => {
+    try {
+      const { OrderAdItem, MeasureFace } = require('../models')
+
+      // 获取各角色当前处理的订单及面积
+      const activeOrders = await Order.findAll({
+        where: {
+          status: { [Op.ne]: 'archived' },
+          current_handler_id: { [Op.ne]: null }
+        },
+        include: [
+          { model: User, as: 'handler', attributes: ['id', 'real_name', 'role', 'avatar'] },
+          {
+            model: OrderAdItem,
+            as: 'adItems',
+            required: false,
+            include: [{ model: MeasureFace, as: 'faces', attributes: ['area'], required: false }]
+          }
+        ],
+        order: [['updated_at', 'DESC']]
+      })
+
+      // 按处理者分组
+      const handlerMap = {}
+      activeOrders.forEach(order => {
+        const h = order.handler
+        if (!h) return
+        const hid = h.id
+        if (!handlerMap[hid]) {
+          handlerMap[hid] = {
+            id: h.id,
+            real_name: h.real_name,
+            role: h.role,
+            avatar: h.avatar,
+            orderCount: 0,
+            totalArea: 0,
+            statuses: {},
+            recentOrders: []
+          }
+        }
+        const data = handlerMap[hid]
+        data.orderCount++
+        data.statuses[order.status] = (data.statuses[order.status] || 0) + 1
+
+        order.adItems?.forEach(item => {
+          item.faces?.forEach(face => {
+            data.totalArea += parseFloat(face.area) || 0
+          })
+        })
+
+        if (data.recentOrders.length < 3) {
+          data.recentOrders.push({
+            id: order.id,
+            order_no: order.order_no,
+            status: order.status,
+            updated_at: order.updated_at
+          })
+        }
+      })
+
+      const teamData = Object.values(handlerMap)
+        .sort((a, b) => b.orderCount - a.orderCount)
+
+      return response.success(res, teamData)
+    } catch (error) {
+      logger.error('团队活跃错误:', error)
+      return response.serverError(res, '获取团队活跃失败')
+    }
+  },
+
+  /**
+   * 通知列表
+   */
+  getNotifications: async (req, res) => {
+    try {
+      const { Notification } = require('../models')
+      const { limit = 20, unreadOnly = false } = req.query
+      const userId = req.user?.id
+
+      const where = { user_id: userId }
+      if (unreadOnly === 'true' || unreadOnly === '1') {
+        where.is_read = 0
+      }
+
+      const notifications = await Notification.findAll({
+        where,
+        order: [['created_at', 'DESC']],
+        limit: parseInt(limit),
+        raw: true
+      })
+
+      return response.success(res, notifications)
+    } catch (error) {
+      logger.error('通知列表错误:', error)
+      return response.serverError(res, '获取通知列表失败')
+    }
+  },
+
+  /**
+   * 标记通知为已读
+   */
+  markNotificationRead: async (req, res) => {
+    try {
+      const { Notification } = require('../models')
+      const { id } = req.params
+      const userId = req.user?.id
+
+      await Notification.update(
+        { is_read: 1 },
+        { where: { id, user_id: userId } }
+      )
+
+      return response.success(res)
+    } catch (error) {
+      logger.error('标记已读错误:', error)
+      return response.serverError(res, '标记已读失败')
+    }
+  },
+
+  /**
+   * 标记所有通知为已读
+   */
+  markAllNotificationsRead: async (req, res) => {
+    try {
+      const { Notification } = require('../models')
+      const userId = req.user?.id
+
+      await Notification.update(
+        { is_read: 1 },
+        { where: { user_id: userId, is_read: 0 } }
+      )
+
+      return response.success(res)
+    } catch (error) {
+      logger.error('全部已读错误:', error)
+      return response.serverError(res, '操作失败')
     }
   }
 }

@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const response = require('../utils/response');
 const { FormGroup, FormField, FormFeature } = require('../models');
 const { sequelize } = require('../config/database');
@@ -26,7 +27,7 @@ const formController = {
 
       return response.success(res, groups);
     } catch (error) {
-      console.error('获取表单配置错误:', error);
+      logger.error('获取表单配置错误:', error);
       return response.serverError(res, '获取表单配置失败');
     }
   },
@@ -49,7 +50,7 @@ const formController = {
 
       return response.success(res, groups);
     } catch (error) {
-      console.error('获取分组列表错误:', error);
+      logger.error('获取分组列表错误:', error);
       return response.serverError(res, '获取分组列表失败');
     }
   },
@@ -80,7 +81,7 @@ const formController = {
 
       return response.success(res, group, '创建成功');
     } catch (error) {
-      console.error('创建分组错误:', error);
+      logger.error('创建分组错误:', error);
       return response.serverError(res, '创建分组失败');
     }
   },
@@ -106,7 +107,7 @@ const formController = {
 
       return response.success(res, group, '更新成功');
     } catch (error) {
-      console.error('更新分组错误:', error);
+      logger.error('更新分组错误:', error);
       return response.serverError(res, '更新分组失败');
     }
   },
@@ -129,7 +130,7 @@ const formController = {
 
       return response.success(res, null, '删除成功');
     } catch (error) {
-      console.error('删除分组错误:', error);
+      logger.error('删除分组错误:', error);
       return response.serverError(res, '删除分组失败');
     }
   },
@@ -155,7 +156,7 @@ const formController = {
 
       return response.success(res, fields);
     } catch (error) {
-      console.error('获取字段列表错误:', error);
+      logger.error('获取字段列表错误:', error);
       return response.serverError(res, '获取字段列表失败');
     }
   },
@@ -214,7 +215,7 @@ const formController = {
 
       return response.success(res, field, '创建成功');
     } catch (error) {
-      console.error('创建字段错误:', error);
+      logger.error('创建字段错误:', error);
       return response.serverError(res, '创建字段失败');
     }
   },
@@ -237,7 +238,7 @@ const formController = {
         status
       } = req.body;
 
-      console.log(`[更新字段] ID=${id}, field_name=${field_name}, field_type=${field_type}, options=`, options);
+      logger.info(`[更新字段] ID=${id}, field_name=${field_name}, field_type=${field_type}, options=`, options);
 
       const field = await FormField.findByPk(id);
       if (!field) {
@@ -266,11 +267,11 @@ const formController = {
         status: status !== undefined ? status : field.status
       });
 
-      console.log(`[更新字段成功] ID=${id}, 新options=`, field.options);
+      logger.info(`[更新字段成功] ID=${id}, 新options=`, field.options);
 
       return response.success(res, field, '更新成功');
     } catch (error) {
-      console.error('更新字段错误:', error);
+      logger.error('更新字段错误:', error);
       return response.serverError(res, '更新字段失败');
     }
   },
@@ -291,7 +292,7 @@ const formController = {
 
       return response.success(res, null, '删除成功');
     } catch (error) {
-      console.error('删除字段错误:', error);
+      logger.error('删除字段错误:', error);
       return response.serverError(res, '删除字段失败');
     }
   },
@@ -323,7 +324,7 @@ const formController = {
         throw err;
       }
     } catch (error) {
-      console.error('更新排序错误:', error);
+      logger.error('更新排序错误:', error);
       return response.serverError(res, '更新排序失败');
     }
   },
@@ -345,7 +346,7 @@ const formController = {
 
       return response.success(res, result);
     } catch (error) {
-      console.error('获取功能开关错误:', error);
+      logger.error('获取功能开关错误:', error);
       return response.serverError(res, '获取功能开关失败');
     }
   },
@@ -375,7 +376,7 @@ const formController = {
 
       return response.success(res, null, '保存成功');
     } catch (error) {
-      console.error('保存功能开关错误:', error);
+      logger.error('保存功能开关错误:', error);
       return response.serverError(res, '保存功能开关失败');
     }
   }

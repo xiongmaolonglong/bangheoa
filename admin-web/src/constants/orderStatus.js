@@ -22,7 +22,18 @@ export const ORDER_SOURCE = {
 
 // 审核类型
 export const REVIEW_TYPES = {
-  pending_review: '申请审核',     // 小程序申请
-  design_review: '设计审核',      // 设计方案
-  install_review: '安装审核'      // 安装结果
+  pending_review: '申请审核',
+  design_review: '设计审核',
+  install_review: '安装审核'
 }
+
+// 角色映射
+export const ROLE_MAP = {
+  admin: '管理员',
+  designer: '设计师',
+  producer: '生产员',
+  field_worker: '外勤员',
+  customer: '客户'
+}
+
+export const getRoleText = (role) => ROLE_MAP[role] || role

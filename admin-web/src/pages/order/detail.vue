@@ -1,31 +1,30 @@
 <template>
   <div class="order-detail" v-loading="loading">
-    <!-- 顶部导航栏 -->
-    <div class="top-bar">
-      <div class="top-bar-left">
-        <button class="back-btn" @click="handleBack">
+    <!-- 顶部品牌色条 -->
+    <div class="detail-banner">
+      <div class="banner-content">
+        <button class="back-btn-white" @click="handleBack">
           <el-icon><ArrowLeft /></el-icon>
         </button>
-        <div>
-          <div class="order-header">
-            <span class="order-no">{{ order.order_no }}</span>
-            <span class="status-badge" :class="getStatusBadgeClass(order.status)">
+        <div class="banner-info">
+          <div class="banner-order-no">{{ order.order_no }}</div>
+          <div class="banner-meta">
+            <span class="status-badge-white" :class="getStatusBadgeClass(order.status)">
               <span class="dot"></span>
               {{ getStatusText(order.status) }}
             </span>
-          </div>
-          <div class="breadcrumb">
-            <template v-if="order.group?.district?.province">{{ order.group.district.province.name }}</template>
-            <template v-if="order.group?.district"> · {{ order.group.district.name }}</template>
-            <template v-if="order.group"> · {{ order.group.name }}</template>
-            <span> · {{ getYearMonth(order.created_at) }}</span>
+            <span class="banner-location" v-if="order.group?.district?.province">
+              {{ order.group.district.province.name }} · {{ order.group.district.name }} · {{ order.group.group_name || order.group.code }}
+            </span>
+            <span class="banner-date">{{ formatShortDate(order.created_at) }}</span>
           </div>
         </div>
-      </div>
-      <div class="top-bar-actions">
-        <el-button type="success" size="small" v-if="isReviewStatus" @click="handleApprove">审核通过</el-button>
-        <el-button type="danger" size="small" v-if="isReviewStatus" @click="handleReject">驳回</el-button>
-        <el-button size="small" v-if="canEditOrder" @click="handleEdit">编辑</el-button>
+        <div class="banner-actions">
+          <el-button type="default" size="small" @click="handleBack">返回列表</el-button>
+          <el-button size="small" v-if="canEditOrder" @click="handleEdit">编辑</el-button>
+          <el-button type="success" size="small" v-if="isReviewStatus" @click="handleApprove">审核通过</el-button>
+          <el-button type="danger" size="small" v-if="isReviewStatus" @click="handleReject">驳回</el-button>
+        </div>
       </div>
     </div>
 
@@ -34,7 +33,7 @@
       <!-- 左侧信息面板 -->
       <div class="info-panel">
         <!-- 订单信息 -->
-        <div class="info-card">
+        <div class="info-card card-accent-blue">
           <div class="info-card-header">
             <el-icon><Document /></el-icon>
             订单信息
@@ -54,13 +53,13 @@
             </div>
             <div class="info-row">
               <span class="info-label">创建时间</span>
-              <span class="info-value">{{ formatDate(order.created_at) }}</span>
+              <span class="info-value">{{ formatShortDate(order.created_at) }}</span>
             </div>
           </div>
         </div>
 
         <!-- 客户信息 -->
-        <div class="info-card">
+        <div class="info-card card-accent-green">
           <div class="info-card-header">
             <el-icon><User /></el-icon>
             客户信息
@@ -98,7 +97,7 @@
         </div>
 
         <!-- 需求说明 -->
-        <div class="info-card" v-if="order.requirement">
+        <div class="info-card card-accent-orange" v-if="order.requirement">
           <div class="info-card-header">
             <el-icon><Memo /></el-icon>
             需求说明
@@ -109,7 +108,7 @@
         </div>
 
         <!-- 流程进度 -->
-        <div class="info-card">
+        <div class="info-card card-accent-purple">
           <div class="info-card-header">
             <el-icon><TrendCharts /></el-icon>
             流程进度
@@ -230,7 +229,7 @@
                     <span class="log-action">{{ getActionText(log.action) }}</span>
                     <span class="log-remark" v-if="log.remark">· {{ log.remark }}</span>
                   </div>
-                  <span class="log-time">{{ formatDate(log.created_at) }}</span>
+                  <span class="log-time">{{ formatShortDate(log.created_at) }}</span>
                 </div>
               </div>
             </div>
@@ -280,6 +279,7 @@ import { ArrowLeft, ArrowRight, Document, User, Phone, Location, Memo, TrendChar
 import { orderApi, reviewApi, formApi } from '@/api'
 import { useUserStore } from '@/store/user'
 import dayjs from 'dayjs'
+import { formatShortDate } from '@/composables/useFormat'
 
 const route = useRoute()
 const router = useRouter()
@@ -341,7 +341,6 @@ const actionMap = {
 const getStatusText = (status) => statusMap[status]?.text || status
 const getStatusType = (status) => statusMap[status]?.type || ''
 const getActionText = (action) => actionMap[action] || action
-const formatDate = (date) => date ? dayjs(date).format('MM-DD HH:mm') : '-'
 const getYearMonth = (date) => date ? dayjs(date).format('YYYY年MM月') : '-'
 
 const getStatusBadgeClass = (status) => {
@@ -456,7 +455,6 @@ const fetchOrder = async () => {
       try {
         const reviewRes = await reviewApi.getDetail(route.params.id)
         order.value = { ...order.value, ...reviewRes.data }
-      } catch (err) { console.log('审核详情加载失败') }
     }
     if (order.value.status === 'pending_review') await loadHandlers('designer')
   } catch (err) {
@@ -514,90 +512,114 @@ onMounted(() => { loadFormConfig(); fetchOrder() })
   padding: 20px;
 }
 
-/* Top Bar */
-.top-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px 24px;
-  background: var(--bg-white);
+/* Detail Banner */
+.detail-banner {
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a78bfa 100%);
   border-radius: var(--radius-md);
-  border: 1px solid var(--border);
+  padding: 20px 28px;
+  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.25);
 }
 
-.top-bar-left {
+.banner-content {
   display: flex;
   align-items: center;
   gap: 16px;
 }
 
-.back-btn {
+.back-btn-white {
   width: 36px;
   height: 36px;
   border-radius: var(--radius-sm);
-  border: 1px solid var(--border);
-  background: var(--bg-white);
+  border: 1px solid rgba(255,255,255,0.3);
+  background: rgba(255,255,255,0.15);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: all 0.2s;
-  color: #8c8c8c;
+  color: #fff;
   font-size: 18px;
   flex-shrink: 0;
+  backdrop-filter: blur(4px);
 }
 
-.back-btn:hover { background: var(--bg-tertiary); border-color: var(--brand-primary); color: var(--brand-primary); }
+.back-btn-white:hover { background: rgba(255,255,255,0.3); border-color: rgba(255,255,255,0.5); }
 
-.order-header {
+.banner-info { flex: 1; min-width: 0; }
+
+.banner-order-no {
+  font-size: 20px;
+  font-weight: 800;
+  font-family: 'SF Mono', Monaco, monospace;
+  color: #fff;
+  margin-bottom: 6px;
+}
+
+.banner-meta {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 2px;
+  flex-wrap: wrap;
 }
 
-.order-no {
-  font-size: 18px;
-  font-weight: 700;
-  font-family: 'SF Mono', Monaco, monospace;
-  color: #1a1a2e;
-}
-
-.status-badge {
+.status-badge-white {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 4px 12px;
+  gap: 5px;
+  padding: 3px 10px;
   border-radius: 20px;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
+  background: rgba(255,255,255,0.2);
+  color: #fff;
+  backdrop-filter: blur(4px);
 }
 
-.status-badge .dot {
+.status-badge-white .dot {
   width: 6px;
   height: 6px;
   border-radius: 50%;
+  background: #fff;
 }
 
-.status-badge.designing { background: #ecf5ff; color: #409eff; }
-.status-badge.designing .dot { background: #409eff; }
-.status-badge.review { background: #fdf6ec; color: #e6a23c; }
-.status-badge.review .dot { background: #e6a23c; }
-.status-badge.done { background: #f0f9eb; color: #67c23a; }
-.status-badge.done .dot { background: #67c23a; }
-.status-badge.archived { background: #f0f9eb; color: #67c23a; }
-.status-badge.archived .dot { background: #67c23a; }
-.status-badge.rejected { background: #fef0f0; color: #f56c6c; }
-.status-badge.rejected .dot { background: #f56c6c; }
-
-.breadcrumb {
+.banner-location {
   font-size: 13px;
-  color: #8c8c8c;
+  color: rgba(255,255,255,0.85);
 }
 
-.top-bar-actions { display: flex; gap: 8px; }
+.banner-date {
+  font-size: 12px;
+  color: rgba(255,255,255,0.7);
+}
 
-.top-bar-actions .el-button { border-radius: var(--radius-sm); }
+.banner-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.banner-actions .el-button {
+  background: rgba(255,255,255,0.15);
+  border-color: rgba(255,255,255,0.3);
+  color: #fff;
+  backdrop-filter: blur(4px);
+  border-radius: var(--radius-sm);
+}
+
+.banner-actions .el-button:hover {
+  background: rgba(255,255,255,0.25);
+  border-color: rgba(255,255,255,0.5);
+}
+
+.banner-actions .el-button.el-button--success {
+  background: rgba(16, 185, 129, 0.9);
+  border-color: #10b981;
+}
+
+.banner-actions .el-button.el-button--danger {
+  background: rgba(239, 68, 68, 0.9);
+  border-color: #ef4444;
+}
 
 /* Main Layout */
 .main-layout {
@@ -623,6 +645,12 @@ onMounted(() => { loadFormConfig(); fetchOrder() })
   overflow: hidden;
 }
 
+/* 左侧色条标识 */
+.info-card.card-accent-blue { border-left: 4px solid #6366f1; }
+.info-card.card-accent-green { border-left: 4px solid #10b981; }
+.info-card.card-accent-orange { border-left: 4px solid #f59e0b; }
+.info-card.card-accent-purple { border-left: 4px solid #8b5cf6; }
+
 .info-card-header {
   display: flex;
   align-items: center;
@@ -631,8 +659,13 @@ onMounted(() => { loadFormConfig(); fetchOrder() })
   border-bottom: 1px solid var(--border-light);
   font-size: 13px;
   font-weight: 600;
-  color: #8c8c8c;
+  color: var(--text-secondary);
 }
+
+.info-card.card-accent-blue .info-card-header { background: rgba(99,102,241,0.05); color: #6366f1; }
+.info-card.card-accent-green .info-card-header { background: rgba(16,185,129,0.05); color: #10b981; }
+.info-card.card-accent-orange .info-card-header { background: rgba(245,158,11,0.05); color: #f59e0b; }
+.info-card.card-accent-purple .info-card-header { background: rgba(139,92,246,0.05); color: #8b5cf6; }
 
 .info-card-header .el-icon {
   color: #667eea;

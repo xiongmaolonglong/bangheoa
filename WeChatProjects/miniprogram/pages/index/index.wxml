@@ -3,7 +3,7 @@
     <!-- Logo -->
     <view class="logo-section">
       <view class="logo-circle">
-        <text class="logo-icon">📐</text>
+        <image class="logo-img" src="/images/logo.png" mode="aspectFit" />
       </view>
       <text class="logo-title">广告测量申请</text>
       <text class="logo-subtitle">邦和广告一站式服务平台</text>

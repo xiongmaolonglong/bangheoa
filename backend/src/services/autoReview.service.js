@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 /**
  * 自动审核服务
  * 方案B: 智能预审核风险评估
@@ -54,14 +55,14 @@ async function getConfig() {
         const parsed = JSON.parse(config.config_value)
         result = { ...result, ...parsed }
       } catch (e) {
-        console.error('解析自动审核配置失败:', e)
+        logger.error('解析自动审核配置失败:', e)
       }
     }
 
     await cacheService.set('auto_review_config', result, 300)
     return result
   } catch (err) {
-    console.error('获取自动审核配置失败:', err)
+    logger.error('获取自动审核配置失败:', err)
     return { ...DEFAULT_CONFIG }
   }
 }
@@ -210,17 +211,17 @@ async function runPreReview() {
 
           await transaction.commit()
           autoApproved++
-          console.log(`[预审核] 订单 ${order.order_no} 自动通过，风险分: ${risk.score}`)
+          logger.info(`[预审核] 订单 ${order.order_no} 自动通过，风险分: ${risk.score}`)
         } catch (err) {
           await transaction.rollback()
-          console.error(`[预审核] 订单 ${order.order_no} 自动通过失败:`, err.message)
+          logger.error(`[预审核] 订单 ${order.order_no} 自动通过失败:`, err.message)
         }
       } else if (risk.level === 'high') {
         flagged++
-        console.log(`[预审核] 订单 ${order.order_no} 标记高风险，风险分: ${risk.score}，标签: ${risk.tags.map(t => t.label).join(', ')}`)
+        logger.info(`[预审核] 订单 ${order.order_no} 标记高风险，风险分: ${risk.score}，标签: ${risk.tags.map(t => t.label).join(', ')}`)
       }
     } catch (err) {
-      console.error(`[预审核] 订单 ${order.order_no} 评估失败:`, err.message)
+      logger.error(`[预审核] 订单 ${order.order_no} 评估失败:`, err.message)
     }
   }
 
@@ -267,7 +268,7 @@ async function runTimeoutAutoApprove() {
             remark: `超时自动通过（等待超过${config.timeout_hours}小时）`
           }, { transaction })
           actioned++
-          console.log(`[超时] 订单 ${order.order_no} 超时自动通过`)
+          logger.info(`[超时] 订单 ${order.order_no} 超时自动通过`)
         } else if (config.timeout_action === 'escalate' && config.timeout_escalate_user_id) {
           await order.update({
             current_handler_id: config.timeout_escalate_user_id
@@ -281,16 +282,16 @@ async function runTimeoutAutoApprove() {
             remark: `超时转派给用户ID ${config.timeout_escalate_user_id}`
           }, { transaction })
           escalated++
-          console.log(`[超时] 订单 ${order.order_no} 超时转派给用户 ${config.timeout_escalate_user_id}`)
+          logger.info(`[超时] 订单 ${order.order_no} 超时转派给用户 ${config.timeout_escalate_user_id}`)
         }
 
         await transaction.commit()
       } catch (err) {
         await transaction.rollback()
-        console.error(`[超时] 订单 ${order.order_no} 处理失败:`, err.message)
+        logger.error(`[超时] 订单 ${order.order_no} 处理失败:`, err.message)
       }
     } catch (err) {
-      console.error(`[超时] 订单 ${order.order_no} 处理异常:`, err.message)
+      logger.error(`[超时] 订单 ${order.order_no} 处理异常:`, err.message)
     }
   }
 
@@ -321,10 +322,10 @@ function startScheduler() {
     try {
       const result = await runPreReview()
       if (result.processed > 0) {
-        console.log(`[自动审核] 预审核完成: 处理${result.processed}单，自动通过${result.autoApproved}单，标记高风险${result.flagged}单`)
+        logger.info(`[自动审核] 预审核完成: 处理${result.processed}单，自动通过${result.autoApproved}单，标记高风险${result.flagged}单`)
       }
     } catch (err) {
-      console.error('[自动审核] 预审核任务异常:', err.message)
+      logger.error('[自动审核] 预审核任务异常:', err.message)
     }
   }, 30 * 60 * 1000) // 30分钟
 
@@ -333,10 +334,10 @@ function startScheduler() {
     try {
       const result = await runTimeoutAutoApprove()
       if (result.processed > 0) {
-        console.log(`[自动审核] 超时检查完成: 处理${result.processed}单，自动通过${result.actioned}单，转派${result.escalated}单`)
+        logger.info(`[自动审核] 超时检查完成: 处理${result.processed}单，自动通过${result.actioned}单，转派${result.escalated}单`)
       }
     } catch (err) {
-      console.error('[自动审核] 超时检查任务异常:', err.message)
+      logger.error('[自动审核] 超时检查任务异常:', err.message)
     }
   }, 60 * 60 * 1000) // 1小时
 
@@ -346,10 +347,10 @@ function startScheduler() {
       const preResult = await runPreReview()
       const timeoutResult = await runTimeoutAutoApprove()
       if (preResult.processed > 0 || timeoutResult.processed > 0) {
-        console.log(`[自动审核] 初始化检查完成: 预审核${preResult.processed}单，超时检查${timeoutResult.processed}单`)
+        logger.info(`[自动审核] 初始化检查完成: 预审核${preResult.processed}单，超时检查${timeoutResult.processed}单`)
       }
     } catch (err) {
-      console.error('[自动审核] 初始化检查异常:', err.message)
+      logger.error('[自动审核] 初始化检查异常:', err.message)
     }
   }, 5000) // 启动后 5 秒执行
 

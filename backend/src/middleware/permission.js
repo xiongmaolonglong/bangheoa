@@ -40,23 +40,11 @@ const isAdmin = (req, res, next) => {
   next();
 };
 
-/**
- * 检查是否为审核员
- */
-const isReviewer = (req, res, next) => {
-  const reviewerRoles = [USER_ROLES.ADMIN, USER_ROLES.REVIEWER];
-  if (!req.user || !reviewerRoles.includes(req.user.role)) {
-    return response.forbidden(res, '需要审核员权限');
-  }
-  next();
-};
-
 module.exports = {
   // 旧版兼容
   checkPermission,
   authorize: checkPermission,
   isAdmin,
-  isReviewer,
 
   // 新版 RBAC
   rbac,
